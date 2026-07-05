@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LAVOËT — Malletier à Paris depuis 1869</title>
+<title>LAVOËT</title>
 <meta name="description" content="Lavoët, malletier à Paris depuis 1869 — 175, Boulevard Haussmann. The archive of one of the rarest French trunk-making houses.">
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="%23F4EFE4"/><rect x="12" width="4" height="32" fill="%232F5240"/><rect x="16" width="4" height="32" fill="%238C3B31"/></svg>'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,6 +101,19 @@ section{position:relative}
 .hero-meta.l{left:60px}.hero-meta.r{right:60px}
 .hero h1{font-weight:600;font-size:clamp(3.4rem,9vw,7.5rem);letter-spacing:.22em;
   text-indent:.22em;margin:26px 0 10px}
+/* the diaeresis, rebuilt so it can play: hover reveals the stripe pair */
+.hero h1 .euml{position:relative;display:inline-block;font-style:normal;text-indent:0}
+/* dot size/position measured from the font's own Ë glyph (canvas-diffed) */
+.hero h1 .dot{position:absolute;width:.105em;height:.105em;border-radius:50%;
+  background:currentColor;top:.035em;transition:background-color .5s ease}
+.hero h1 .d1{left:.155em}
+.hero h1 .d2{left:.33em}
+@media (hover:hover) and (pointer:fine){
+  .hero h1:hover .d1{background:var(--green);animation:dotHop .55s var(--ease)}
+  .hero h1:hover .d2{background:var(--red);animation:dotHop .55s var(--ease) .12s}
+}
+@keyframes dotHop{0%{transform:translateY(0)}45%{transform:translateY(-.16em)}
+  70%{transform:translateY(.05em)}100%{transform:translateY(0)}}
 .hero .sub{font-style:italic;font-size:clamp(16px,2.2vw,21px);color:var(--sepia);margin-bottom:44px}
 .hero-fig{width:min(660px,86vw);margin:0 auto}
 .hero-fig svg{width:100%;height:auto;max-height:46vh;margin:0 auto;will-change:transform}
@@ -268,6 +281,7 @@ section{position:relative}
   .js [data-reveal]{opacity:1;transform:none;transition:none}
   .js svg[data-draw] .hatchg{opacity:var(--o,1);transition:none}
   .js .rule{transform:scaleX(1);transition:none}
+  .hero h1:hover .d1,.hero h1:hover .d2{animation:none}
   .hero-foot svg{animation:none}
   .js .plaque-tilt[data-reveal]{transform:none}
 }
@@ -404,7 +418,7 @@ section{position:relative}
 
   <div>
     <p class="eyebrow" lang="fr" data-reveal><span class="rule" style="margin:0 auto 14px"></span>Archives de la Maison · Paris</p>
-    <h1 data-reveal style="--d:90ms">LAVOËT</h1>
+    <h1 data-reveal style="--d:90ms" aria-label="LAVOËT">LAVO<span class="euml" aria-hidden="true">E<i class="dot d1"></i><i class="dot d2"></i></span>T</h1>
     <p class="sub" lang="fr" data-reveal style="--d:180ms">Malletier à Paris depuis 1869 — 175, Boulevard Haussmann</p>
 
     <figure class="hero-fig" data-reveal style="--d:270ms">
