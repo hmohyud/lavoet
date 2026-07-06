@@ -548,6 +548,7 @@ section{position:relative}
         <defs>
           <clipPath id="heroLid"><rect x="96" y="90" width="728" height="162"/></clipPath>
           <clipPath id="heroBase"><rect x="96" y="252" width="728" height="340"/></clipPath>
+          <clipPath id="heroPack"><rect x="132" y="176" width="656" height="80"/></clipPath>
         </defs>
         <!-- ground shadow -->
         <g class="hatchg" style="--o:.45">
@@ -591,34 +592,51 @@ section{position:relative}
           <rect x="132" y="176" width="656" height="80" fill="#241E18"/>
           <g opacity=".12"><rect x="132" y="184" width="656" height="72" fill="url(#hLight)"/></g>
           <rect x="132" y="176" width="656" height="8" fill="#000" opacity=".35"/>
-          <!-- a stack of folded shirts, edges staggered as a valet would leave them -->
-          <rect x="156" y="238" width="168" height="16" rx="5" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
-          <rect x="163" y="222" width="154" height="18" rx="5" fill="#EFE7D2" stroke="#6E6350" stroke-width=".7"/>
-          <rect x="158" y="205" width="162" height="19" rx="5" fill="#F4EFE4" stroke="#6E6350" stroke-width=".7"/>
-          <path d="M221 205 L239 214 L257 205" fill="none" stroke="#6E6350" stroke-width=".7" opacity=".7"/>
-          <circle cx="239" cy="218" r="1.2" fill="#6E6350"/>
-          <line x1="172" y1="231" x2="308" y2="231" stroke="#6E6350" stroke-width=".5" opacity=".5"/>
-          <!-- the travelling rug, rolled and strapped, wearing the house stripes -->
-          <rect x="352" y="200" width="150" height="52" rx="26" fill="#E7DDC4" stroke="#6E6350" stroke-width=".8"/>
-          <rect x="415" y="200" width="11" height="52" fill="#8C3B31" opacity=".85"/>
-          <rect x="426" y="200" width="11" height="52" fill="#2F5240" opacity=".85"/>
-          <circle cx="378" cy="226" r="26" fill="#EFE7D2" stroke="#6E6350" stroke-width=".8"/>
-          <circle cx="378" cy="226" r="17" fill="none" stroke="#6E6350" stroke-width=".6" opacity=".6"/>
-          <circle cx="378" cy="226" r="9" fill="none" stroke="#6E6350" stroke-width=".6" opacity=".6"/>
-          <circle cx="378" cy="226" r="2.6" fill="none" stroke="#6E6350" stroke-width=".6" opacity=".7"/>
-          <rect x="458" y="197" width="8" height="58" rx="2.5" fill="#4A382A" stroke="#26201A" stroke-width=".6"/>
-          <rect x="456" y="221" width="12" height="10" rx="1.6" fill="url(#brassG)" stroke="#6B5530" stroke-width=".5"/>
-          <!-- tissue paper, creased -->
-          <path d="M518 252 Q526 222 542 230 Q548 214 562 226 Q574 212 582 230 Q592 222 596 252 Z" fill="#F4EFE4" stroke="#6E6350" stroke-width=".6" opacity=".92"/>
-          <path d="M542 230 Q550 240 548 252 M562 226 Q566 238 563 252" fill="none" stroke="#6E6350" stroke-width=".45" opacity=".5"/>
-          <!-- a card tucked against the side -->
-          <g transform="rotate(-2.5 700 224)">
-            <rect x="606" y="198" width="182" height="56" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
-            <rect x="611" y="203" width="172" height="46" fill="none" stroke="#2B2620" stroke-width=".5" opacity=".5"/>
-            <text x="697" y="220" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="16" fill="#2B2620" lang="fr">Cabine de 1ʳᵉ classe</text>
-            <line x1="636" y1="228" x2="758" y2="228" stroke="#6E6350" stroke-width=".6"/>
-            <text x="697" y="243" text-anchor="middle" font-family="Archivo,sans-serif" font-size="9" letter-spacing="1.6" fill="#6E6350">LE HAVRE → NEW YORK</text>
+          <!-- packed past the rim: everything overlaps and sinks below the front wall -->
+          <g clip-path="url(#heroPack)">
+            <!-- a linen bale, mostly hidden behind the shirts -->
+            <rect x="168" y="194" width="128" height="70" rx="5" fill="#D9CFB4" stroke="#6E6350" stroke-width=".7"/>
+            <line x1="178" y1="205" x2="286" y2="205" stroke="#6E6350" stroke-width=".5" opacity=".5"/>
+            <!-- folded shirts, staggered, sinking below the rim -->
+            <rect x="150" y="240" width="168" height="30" rx="5" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
+            <rect x="157" y="224" width="154" height="20" rx="5" fill="#EFE7D2" stroke="#6E6350" stroke-width=".7"/>
+            <rect x="152" y="207" width="162" height="20" rx="5" fill="#F4EFE4" stroke="#6E6350" stroke-width=".7"/>
+            <path d="M215 207 L233 216 L251 207" fill="none" stroke="#6E6350" stroke-width=".7" opacity=".7"/>
+            <circle cx="233" cy="221" r="1.2" fill="#6E6350"/>
+            <!-- books wedged spine-up between the linens -->
+            <g transform="rotate(-2 349 235)">
+              <rect x="336" y="204" width="26" height="72" rx="2" fill="#5C4632" stroke="#3E2F23" stroke-width=".8"/>
+              <line x1="336" y1="214" x2="362" y2="214" stroke="#D9C08A" stroke-width=".7" opacity=".7"/>
+              <line x1="336" y1="219" x2="362" y2="219" stroke="#D9C08A" stroke-width=".5" opacity=".5"/>
+            </g>
+            <rect x="366" y="198" width="24" height="80" rx="2" fill="#3E4C46" stroke="#2B3530" stroke-width=".8"/>
+            <line x1="366" y1="210" x2="390" y2="210" stroke="#D9C08A" stroke-width=".7" opacity=".7"/>
+            <g transform="rotate(3 408 240)">
+              <rect x="394" y="208" width="27" height="70" rx="2" fill="#6E5B3F" stroke="#4A3E2C" stroke-width=".8"/>
+              <line x1="394" y1="220" x2="421" y2="220" stroke="#D9C08A" stroke-width=".6" opacity=".7"/>
+            </g>
+            <!-- tissue rising behind -->
+            <path d="M430 260 Q436 220 452 230 Q458 214 472 226 Q482 216 488 234 L492 260 Z" fill="#F4EFE4" stroke="#6E6350" stroke-width=".6" opacity=".9"/>
+            <path d="M452 230 Q458 242 456 258" fill="none" stroke="#6E6350" stroke-width=".45" opacity=".5"/>
+            <!-- the cabin card, propped among the packing -->
+            <g transform="rotate(-3 640 232)">
+              <rect x="556" y="204" width="182" height="56" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
+              <rect x="561" y="209" width="172" height="46" fill="none" stroke="#2B2620" stroke-width=".5" opacity=".5"/>
+              <text x="647" y="226" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="16" fill="#2B2620" lang="fr">Cabine de 1ʳᵉ classe</text>
+              <line x1="586" y1="234" x2="708" y2="234" stroke="#6E6350" stroke-width=".6"/>
+              <text x="647" y="249" text-anchor="middle" font-family="Archivo,sans-serif" font-size="9" letter-spacing="1.6" fill="#6E6350">LE HAVRE → NEW YORK</text>
+            </g>
+            <!-- a leather nécessaire in front, tucking the card's corner behind it -->
+            <g transform="rotate(2 740 250)">
+              <rect x="700" y="224" width="84" height="54" rx="7" fill="#8A6D4C" stroke="#4A382A" stroke-width=".9"/>
+              <path d="M720 224 C720 213 740 213 740 224" fill="none" stroke="#4A382A" stroke-width="2.4"/>
+              <line x1="700" y1="241" x2="784" y2="241" stroke="#4A382A" stroke-width=".7" opacity=".7"/>
+              <rect x="736" y="237" width="13" height="9" rx="1.5" fill="url(#brassG)" stroke="#6B5530" stroke-width=".5"/>
+            </g>
           </g>
+          <!-- the shadowed lip of the front wall, over everything -->
+          <rect x="132" y="248" width="656" height="8" fill="#1A140F"/>
+          <line x1="132" y1="248" x2="788" y2="248" stroke="#8C7A55" stroke-width=".6" opacity=".3"/>
         </g>
         <!-- lid -->
         <g class="lidg">
@@ -767,6 +785,7 @@ section{position:relative}
           <defs>
             <clipPath id="courLid"><rect x="96" y="86" width="728" height="160"/></clipPath>
             <clipPath id="courBase"><rect x="96" y="246" width="728" height="330"/></clipPath>
+            <clipPath id="courPack"><rect x="132" y="170" width="656" height="78"/></clipPath>
           </defs>
           <g class="hatchg" style="--o:.45"><rect x="150" y="556" width="620" height="12" fill="url(#hMid)"/></g>
           <line class="ln2" x1="120" y1="556" x2="800" y2="556"/>
@@ -820,39 +839,50 @@ section{position:relative}
             <rect x="132" y="170" width="656" height="78" fill="#241E18"/>
             <g opacity=".12"><rect x="132" y="178" width="656" height="70" fill="url(#hLight)"/></g>
             <rect x="132" y="170" width="656" height="8" fill="#000" opacity=".35"/>
-            <!-- kraft parcel, cross-tied, stamped and postmarked -->
-            <rect x="156" y="192" width="150" height="52" rx="3" fill="#CBB68C" stroke="#6E6350" stroke-width=".8"/>
-            <path d="M290 192 L306 208" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".6"/>
-            <rect x="268" y="199" width="15" height="18" fill="#EFE7D2" stroke="#6E6350" stroke-width=".5"/>
-            <circle cx="278" cy="212" r="8" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".6"/>
-            <line x1="156" y1="215" x2="306" y2="215" stroke="#4A382A" stroke-width="1.8"/>
-            <line x1="222" y1="192" x2="222" y2="244" stroke="#4A382A" stroke-width="1.8"/>
-            <circle cx="222" cy="215" r="2.6" fill="#4A382A"/>
-            <path d="M219 212 Q213 207 214 203 M225 212 Q231 206 230 203" fill="none" stroke="#4A382A" stroke-width="1.1" opacity=".85"/>
-            <!-- a second, squatter parcel -->
-            <rect x="318" y="202" width="118" height="42" rx="3" fill="#B7A277" stroke="#6E6350" stroke-width=".8"/>
-            <line x1="318" y1="221" x2="436" y2="221" stroke="#4A382A" stroke-width="1.8"/>
-            <line x1="374" y1="202" x2="374" y2="244" stroke="#4A382A" stroke-width="1.8"/>
-            <circle cx="374" cy="221" r="2.4" fill="#4A382A"/>
-            <!-- correspondence, twine-tied, the top letter sealed in dark wax -->
-            <g transform="rotate(-4 512 220)">
-              <rect x="466" y="230" width="88" height="8" rx="1.5" fill="#EFE7D2" stroke="#6E6350" stroke-width=".55"/>
-              <rect x="470" y="222" width="84" height="9" rx="1.5" fill="#F4EFE4" stroke="#6E6350" stroke-width=".55"/>
-              <rect x="467" y="214" width="86" height="9" rx="1.5" fill="#EFE7D2" stroke="#6E6350" stroke-width=".55"/>
-              <rect x="470" y="196" width="84" height="18" rx="1.5" fill="#F4EFE4" stroke="#6E6350" stroke-width=".6"/>
-              <path d="M470 196 L512 208 L554 196" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".7"/>
-              <line x1="512" y1="191" x2="512" y2="239" stroke="#8C7A55" stroke-width="1.6"/>
-              <path d="M512 192 Q504 185 506 192 M512 192 Q520 185 518 192" fill="none" stroke="#8C7A55" stroke-width="1.1"/>
-              <circle cx="534" cy="204" r="3" fill="#5C4632"/>
-              <circle cx="534" cy="204" r="1.2" fill="none" stroke="#3E2F23" stroke-width=".5"/>
+            <g clip-path="url(#courPack)">
+              <!-- a map tube lying aslant behind the parcels -->
+              <g transform="rotate(-3 460 206)">
+                <rect x="300" y="196" width="316" height="22" rx="11" fill="#7A6248" stroke="#4A382A" stroke-width=".8"/>
+                <circle cx="616" cy="207" r="11" fill="#8A7050" stroke="#4A382A" stroke-width=".8"/>
+                <line x1="330" y1="201" x2="586" y2="201" stroke="#D9C08A" stroke-width=".5" opacity=".3"/>
+              </g>
+              <!-- second parcel, half behind the first -->
+              <rect x="286" y="206" width="128" height="62" rx="3" fill="#B7A277" stroke="#6E6350" stroke-width=".8"/>
+              <line x1="286" y1="229" x2="414" y2="229" stroke="#4A382A" stroke-width="1.7"/>
+              <line x1="346" y1="206" x2="346" y2="268" stroke="#4A382A" stroke-width="1.7"/>
+              <!-- kraft parcel in front, cross-tied, stamped, sinking below the rim -->
+              <rect x="152" y="196" width="158" height="72" rx="3" fill="#CBB68C" stroke="#6E6350" stroke-width=".8"/>
+              <path d="M294 196 L310 212" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".6"/>
+              <rect x="266" y="204" width="15" height="18" fill="#EFE7D2" stroke="#6E6350" stroke-width=".5"/>
+              <circle cx="276" cy="217" r="8" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".6"/>
+              <line x1="152" y1="224" x2="310" y2="224" stroke="#4A382A" stroke-width="1.8"/>
+              <line x1="222" y1="196" x2="222" y2="268" stroke="#4A382A" stroke-width="1.8"/>
+              <circle cx="222" cy="224" r="2.6" fill="#4A382A"/>
+              <path d="M219 221 Q213 216 214 212 M225 221 Q231 215 230 212" fill="none" stroke="#4A382A" stroke-width="1.1" opacity=".85"/>
+              <!-- correspondence leaning against the parcel, wax-sealed -->
+              <g transform="rotate(-7 470 234)">
+                <rect x="428" y="214" width="86" height="56" rx="2" fill="#F4EFE4" stroke="#6E6350" stroke-width=".6"/>
+                <rect x="433" y="220" width="76" height="44" fill="none" stroke="#6E6350" stroke-width=".4" opacity=".5"/>
+                <path d="M428 214 L471 230 L514 214" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".7"/>
+                <line x1="471" y1="210" x2="471" y2="268" stroke="#8C7A55" stroke-width="1.6"/>
+                <path d="M471 211 Q463 204 465 211 M471 211 Q479 204 477 211" fill="none" stroke="#8C7A55" stroke-width="1.1"/>
+                <circle cx="494" cy="222" r="3" fill="#5C4632"/>
+              </g>
+              <!-- routing card propped against the tube's end -->
+              <g transform="rotate(2 690 222)">
+                <rect x="600" y="196" width="188" height="58" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
+                <text x="694" y="218" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="16" fill="#2B2620" lang="fr">Messageries Calberson</text>
+                <line x1="628" y1="226" x2="760" y2="226" stroke="#6E6350" stroke-width=".6"/>
+                <text x="694" y="241" text-anchor="middle" font-family="Archivo,sans-serif" font-size="9" letter-spacing="1.6" fill="#6E6350">PARIS → GRANVILLE</text>
+              </g>
+              <!-- a small parcel slipped in front of the card's corner -->
+              <g transform="rotate(6 600 256)">
+                <rect x="560" y="236" width="76" height="42" rx="3" fill="#CBB68C" stroke="#6E6350" stroke-width=".7"/>
+                <line x1="560" y1="252" x2="636" y2="252" stroke="#4A382A" stroke-width="1.5"/>
+              </g>
             </g>
-            <!-- routing card -->
-            <g transform="rotate(2 690 218)">
-              <rect x="600" y="192" width="188" height="54" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
-              <text x="694" y="214" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="16" fill="#2B2620" lang="fr">Messageries Calberson</text>
-              <line x1="628" y1="222" x2="760" y2="222" stroke="#6E6350" stroke-width=".6"/>
-              <text x="694" y="237" text-anchor="middle" font-family="Archivo,sans-serif" font-size="9" letter-spacing="1.6" fill="#6E6350">PARIS → GRANVILLE</text>
-            </g>
+            <rect x="132" y="241" width="656" height="7" fill="#1A140F"/>
+            <line x1="132" y1="241" x2="788" y2="241" stroke="#8C7A55" stroke-width=".6" opacity=".3"/>
           </g>
           <!-- lid -->
           <g class="lidg">
@@ -1096,6 +1126,7 @@ section{position:relative}
             </clipPath>
             <clipPath id="hatLid"><rect x="96" y="80" width="468" height="220"/></clipPath>
             <clipPath id="hatBase"><rect x="96" y="300" width="468" height="352"/></clipPath>
+            <clipPath id="hatPack"><rect x="120" y="224" width="420" height="82"/></clipPath>
           </defs>
           <g class="hatchg" style="--o:.45"><rect x="150" y="652" width="360" height="12" fill="url(#hMid)"/></g>
           <line class="ln2" x1="120" y1="652" x2="540" y2="652"/>
@@ -1131,28 +1162,31 @@ section{position:relative}
             <rect x="120" y="224" width="420" height="82" fill="#241E18"/>
             <g opacity=".12"><rect x="120" y="232" width="420" height="74" fill="url(#hLight)"/></g>
             <rect x="120" y="224" width="420" height="8" fill="#000" opacity=".35"/>
-            <!-- a top hat resting in the well -->
-            <ellipse cx="248" cy="292" rx="96" ry="16" fill="#2A231B" stroke="#6E6350" stroke-width=".8"/>
-            <path d="M188 292 Q188 244 248 244 Q308 244 308 292 Z" fill="#1F1914" stroke="#6E6350" stroke-width=".8"/>
-            <ellipse cx="248" cy="246" rx="60" ry="9" fill="#2A231B" stroke="#6E6350" stroke-width=".7"/>
-            <path d="M190 286 Q248 296 306 286" fill="none" stroke="#8C7A55" stroke-width="1" opacity=".6"/>
-            <!-- a straw boater leaning against it -->
-            <g transform="rotate(-13 172 272)">
-              <ellipse cx="172" cy="284" rx="45" ry="11" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
-              <rect x="148" y="258" width="48" height="26" rx="4" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
-              <rect x="148" y="271" width="48" height="8" fill="#3E2F23"/>
-              <ellipse cx="172" cy="258" rx="24" ry="5.5" fill="#E4CFA0" stroke="#6E6350" stroke-width=".7"/>
-              <path d="M136 284 Q172 291 208 284" fill="none" stroke="#6E6350" stroke-width=".4" opacity=".5"/>
-            </g>
-            <!-- shape-keeping tissue -->
-            <path d="M324 300 Q332 268 346 276 Q352 260 364 272 Q374 262 380 278 L382 300 Z" fill="#F4EFE4" stroke="#6E6350" stroke-width=".5" opacity=".85"/>
-            <path d="M346 276 Q352 288 349 300" fill="none" stroke="#6E6350" stroke-width=".4" opacity=".5"/>
-            <!-- card -->
-            <g transform="rotate(3 452 262)">
-              <rect x="376" y="240" width="152" height="46" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
-              <text x="452" y="259" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="14" fill="#2B2620" lang="fr">Six chapeaux</text>
-              <line x1="398" y1="266" x2="506" y2="266" stroke="#6E6350" stroke-width=".5"/>
-              <text x="452" y="279" text-anchor="middle" font-family="Archivo,sans-serif" font-size="8" letter-spacing="1.4" fill="#6E6350">FORME CONSERVÉE</text>
+            <g clip-path="url(#hatPack)">
+              <!-- the boater, mostly hidden behind the top hat -->
+              <g transform="rotate(-9 176 268)">
+                <ellipse cx="176" cy="280" rx="46" ry="11" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
+                <rect x="152" y="254" width="48" height="26" rx="4" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
+                <rect x="152" y="267" width="48" height="8" fill="#3E2F23"/>
+                <ellipse cx="176" cy="254" rx="24" ry="5.5" fill="#E4CFA0" stroke="#6E6350" stroke-width=".7"/>
+              </g>
+              <!-- tissue rising between the hats -->
+              <path d="M318 306 Q326 268 340 276 Q346 258 358 272 Q368 262 374 280 L378 306 Z" fill="#F4EFE4" stroke="#6E6350" stroke-width=".5" opacity=".85"/>
+              <path d="M340 276 Q346 290 343 306" fill="none" stroke="#6E6350" stroke-width=".4" opacity=".5"/>
+              <!-- a straw brim just breaking the surface behind the card -->
+              <path d="M400 250 Q462 230 524 250 L524 258 Q462 240 400 258 Z" fill="#D8C08A" stroke="#6E6350" stroke-width=".6"/>
+              <!-- the card, propped among the hats -->
+              <g transform="rotate(4 452 270)">
+                <rect x="376" y="246" width="152" height="50" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
+                <text x="452" y="266" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="14" fill="#2B2620" lang="fr">Six chapeaux</text>
+                <line x1="398" y1="273" x2="506" y2="273" stroke="#6E6350" stroke-width=".5"/>
+                <text x="452" y="286" text-anchor="middle" font-family="Archivo,sans-serif" font-size="8" letter-spacing="1.4" fill="#6E6350">FORME CONSERVÉE</text>
+              </g>
+              <!-- the top hat in its well, in front of everything -->
+              <ellipse cx="248" cy="292" rx="96" ry="16" fill="#2A231B" stroke="#6E6350" stroke-width=".8"/>
+              <path d="M188 292 Q188 244 248 244 Q308 244 308 292 Z" fill="#1F1914" stroke="#6E6350" stroke-width=".8"/>
+              <ellipse cx="248" cy="246" rx="60" ry="9" fill="#2A231B" stroke="#6E6350" stroke-width=".7"/>
+              <path d="M190 286 Q248 296 306 286" fill="none" stroke="#8C7A55" stroke-width="1" opacity=".6"/>
             </g>
           </g>
           <!-- lid (the dome) -->
@@ -1225,6 +1259,7 @@ section{position:relative}
             <clipPath id="osClip"><rect x="130" y="120" width="660" height="420" rx="54"/></clipPath>
             <clipPath id="osLid"><rect x="120" y="90" width="680" height="162"/></clipPath>
             <clipPath id="osBase"><rect x="120" y="252" width="680" height="340"/></clipPath>
+            <clipPath id="osPack"><rect x="160" y="176" width="600" height="78"/></clipPath>
           </defs>
           <g class="hatchg" style="--o:.45"><rect x="180" y="556" width="560" height="12" fill="url(#hMid)"/></g>
           <line class="ln2" x1="150" y1="556" x2="770" y2="556"/>
@@ -1262,37 +1297,41 @@ section{position:relative}
             <rect x="160" y="176" width="600" height="78" fill="#241E18"/>
             <g opacity=".12"><rect x="160" y="184" width="600" height="70" fill="url(#hLight)"/></g>
             <rect x="160" y="176" width="600" height="8" fill="#000" opacity=".35"/>
-            <!-- summer linens, the lace edge showing -->
-            <rect x="186" y="234" width="170" height="18" rx="4" fill="#EFE7D2" stroke="#6E6350" stroke-width=".7"/>
-            <path d="M192 246 q5 5 10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".55"/>
-            <rect x="193" y="216" width="156" height="20" rx="4" fill="#F4EFE4" stroke="#6E6350" stroke-width=".7"/>
-            <rect x="188" y="198" width="164" height="20" rx="4" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
-            <line x1="200" y1="208" x2="340" y2="208" stroke="#6E6350" stroke-width=".5" opacity=".55"/>
-            <!-- espadrilles, toes to the sea -->
-            <g transform="rotate(-8 415 232)">
-              <ellipse cx="415" cy="232" rx="36" ry="12" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
-              <ellipse cx="422" cy="232" rx="20" ry="7" fill="#2A231B" stroke="#6E6350" stroke-width=".5"/>
-              <path d="M390 224 Q379 232 390 240" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".7"/>
+            <g clip-path="url(#osPack)">
+              <!-- summer linens sinking below the rim, lace edge showing -->
+              <rect x="180" y="232" width="176" height="40" rx="4" fill="#EFE7D2" stroke="#6E6350" stroke-width=".7"/>
+              <path d="M186 244 q5 5 10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0 t10 0" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".55"/>
+              <rect x="188" y="214" width="158" height="20" rx="4" fill="#F4EFE4" stroke="#6E6350" stroke-width=".7"/>
+              <rect x="184" y="196" width="166" height="20" rx="4" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
+              <line x1="196" y1="206" x2="336" y2="206" stroke="#6E6350" stroke-width=".5" opacity=".55"/>
+              <!-- espadrilles leaning sole-out against the linens -->
+              <g transform="rotate(-14 396 234)">
+                <ellipse cx="396" cy="234" rx="17" ry="34" fill="#D9CFB4" stroke="#6E6350" stroke-width=".7"/>
+                <path d="M383 216 Q396 212 409 216 M381 228 Q396 223 411 228 M381 240 Q396 235 411 240 M384 252 Q396 248 408 252" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".6"/>
+              </g>
+              <g transform="rotate(-5 428 240)">
+                <ellipse cx="428" cy="240" rx="17" ry="34" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
+                <path d="M415 222 Q428 217 441 222 M413 234 Q428 229 443 234 M414 246 Q428 242 442 246" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".6"/>
+              </g>
+              <!-- tissue behind the card -->
+              <path d="M600 254 Q606 222 620 230 Q626 214 638 228 L642 254 Z" fill="#F4EFE4" stroke="#6E6350" stroke-width=".5" opacity=".85"/>
+              <!-- the boater, brim dipping behind the rim -->
+              <g transform="rotate(-5 552 238)">
+                <ellipse cx="552" cy="248" rx="54" ry="12" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
+                <rect x="524" y="220" width="56" height="28" rx="4" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
+                <rect x="524" y="234" width="56" height="9" fill="#2F5240"/>
+                <ellipse cx="552" cy="220" rx="28" ry="6.5" fill="#E4CFA0" stroke="#6E6350" stroke-width=".7"/>
+              </g>
+              <!-- the Deauville card, leaning on the boater's brim -->
+              <g transform="rotate(-2 700 228)">
+                <rect x="612" y="204" width="168" height="56" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
+                <text x="696" y="225" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="15" fill="#2B2620" lang="fr">Saison de Deauville</text>
+                <line x1="638" y1="233" x2="754" y2="233" stroke="#6E6350" stroke-width=".6"/>
+                <text x="696" y="248" text-anchor="middle" font-family="Archivo,sans-serif" font-size="9" letter-spacing="1.6" fill="#6E6350">LINGE D'ÉTÉ</text>
+              </g>
             </g>
-            <g transform="rotate(6 452 240)">
-              <ellipse cx="452" cy="240" rx="36" ry="12" fill="#E7DDC4" stroke="#6E6350" stroke-width=".7"/>
-              <ellipse cx="459" cy="240" rx="20" ry="7" fill="#2A231B" stroke="#6E6350" stroke-width=".5"/>
-              <path d="M427 232 Q416 240 427 248" fill="none" stroke="#6E6350" stroke-width=".5" opacity=".7"/>
-            </g>
-            <!-- the boater, ribboned for the season -->
-            <g transform="rotate(-5 560 230)">
-              <ellipse cx="560" cy="240" rx="52" ry="12" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
-              <rect x="532" y="212" width="56" height="28" rx="4" fill="#D8C08A" stroke="#6E6350" stroke-width=".8"/>
-              <rect x="532" y="226" width="56" height="9" fill="#2F5240"/>
-              <ellipse cx="560" cy="212" rx="28" ry="6.5" fill="#E4CFA0" stroke="#6E6350" stroke-width=".7"/>
-              <path d="M516 240 Q560 248 604 240" fill="none" stroke="#6E6350" stroke-width=".4" opacity=".5"/>
-            </g>
-            <g transform="rotate(-2 700 220)">
-              <rect x="612" y="196" width="168" height="54" rx="2" fill="#F7F2E6" stroke="#2B2620" stroke-width="1"/>
-              <text x="696" y="217" text-anchor="middle" font-family="Cormorant Garamond,serif" font-style="italic" font-size="15" fill="#2B2620" lang="fr">Saison de Deauville</text>
-              <line x1="638" y1="225" x2="754" y2="225" stroke="#6E6350" stroke-width=".6"/>
-              <text x="696" y="240" text-anchor="middle" font-family="Archivo,sans-serif" font-size="9" letter-spacing="1.6" fill="#6E6350">LINGE D'ÉTÉ</text>
-            </g>
+            <rect x="160" y="247" width="600" height="7" fill="#1A140F"/>
+            <line x1="160" y1="247" x2="760" y2="247" stroke="#8C7A55" stroke-width=".6" opacity=".3"/>
           </g>
           <!-- lid -->
           <g class="lidg">
@@ -1644,7 +1683,7 @@ section{position:relative}
         <line class="ln2" x1="40" y1="292" x2="480" y2="292"/>
         <g class="hatchg" style="--o:.4"><rect x="64" y="294" width="400" height="9" fill="url(#hLight)"/></g>
         <!-- leash: a slack lead drooping from the handle to the pup's collar -->
-        <path d="M139 178 Q250 284 382 245" fill="none" stroke="#2B2620" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M139 178 Q228 280 334 245" fill="none" stroke="#2B2620" stroke-width="2.8" stroke-linecap="round"/>
         <!-- trunk (stripes centred on the case) -->
         <rect x="64" y="188" width="150" height="104" rx="4" fill="#EFE7D2"/>
         <g class="hatchg" style="--o:.3"><rect x="73" y="197" width="132" height="86" fill="url(#hLight)"/></g>
@@ -1670,7 +1709,7 @@ section{position:relative}
         </defs>
   <!-- ===== the pup: CC0 'Dog sitting wearing collar' (Quincy Morgan) stencil,
        mirrored to face the trunk, engraved in the folio style ===== -->
-  <g id="pup" transform="translate(356,178) scale(7.6)">
+  <g id="pup" transform="translate(308,178) scale(7.6)">
     <g transform="translate(15,0) scale(-1,1)">
       <!-- collar leather, showing through the stencil's collar gap -->
       <line x1="7.2" y1="5.1" x2="11.35" y2="9.25" stroke="#4A382A" stroke-width="1.5"/>
@@ -1691,8 +1730,6 @@ section{position:relative}
         </g>
         <!-- hind-leg form line -->
         <path d="M4.6 14.9 Q4.1 12.6 5 10.7" fill="none" stroke="#2B2620" stroke-width=".13" opacity=".5"/>
-        <!-- solid-ink ear -->
-        <path d="M9.8 1.45 L10.45 0.95 Q11.05 0.95 11.05 1.6 L11.05 2.85 Q10.3 2.5 9.8 1.45 Z" fill="#2B2620"/>
         <!-- nose tip -->
         <path d="M14.45 4.75 Q15.1 5.1 15.05 5.6 Q15 6.1 14.6 6.45 Q14.3 5.55 14.45 4.75 Z" fill="#2B2620"/>
       </g>
