@@ -1584,7 +1584,7 @@ section{position:relative}
         <line class="ln2" x1="40" y1="292" x2="480" y2="292"/>
         <g class="hatchg" style="--o:.4"><rect x="64" y="294" width="400" height="9" fill="url(#hLight)"/></g>
         <!-- leash: a slack lead drooping from the handle to the pup's collar -->
-        <path d="M139 178 Q246 278 348 236" fill="none" stroke="#2B2620" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M139 178 Q250 284 382 245" fill="none" stroke="#2B2620" stroke-width="2.8" stroke-linecap="round"/>
         <!-- trunk (stripes centred on the case) -->
         <rect x="64" y="188" width="150" height="104" rx="4" fill="#EFE7D2"/>
         <g class="hatchg" style="--o:.3"><rect x="73" y="197" width="132" height="86" fill="url(#hLight)"/></g>
@@ -1601,8 +1601,50 @@ section{position:relative}
           <path d="M214 280 V288 Q214 292 210 292 H202 V288 H210 V280 Z"/>
         </g>
         <path d="M122 188 C122 173 156 173 156 188" fill="none" stroke="#2B2620" stroke-width="4" stroke-linecap="round"/>
-        <!-- the house puppy: a cocker spaniel drawn for the folio in the engraving style -->
-        <g stroke-linecap="round" stroke-linejoin="round"><path d="M456,289 C463,281 472,279 478,283 C481,286 479,290 473,291 C468,292 461,291 457,290 Z" fill="#EFE7D2" stroke="#2B2620" stroke-width="2.2"/><path d="M338,200 C340,193 347,190 355,189 C357,183 362,176 371,173 C384,169 396,172 402,181 C406,188 407,197 405,205 C414,212 424,220 430,232 C436,237 442,237 448,240 C460,245 469,255 470,266 C471,277 465,287 454,290 C441,293 424,292 410,291 L366,291 C356,292 346,292 342,289 C339,286 340,282 344,281 C346,272 348,258 352,246 C351,240 352,236 354,232 C356,228 357,225 356,221 C353,216 348,214 342,212 C338,209 336,204 338,200 Z" fill="#EFE7D2" stroke="#2B2620" stroke-width="2.4"/><path d="M373,250 C371,262 370,274 371,281 C367,283 365,287 367,289 C370,291 377,292 383,291 C386,290 386,287 384,284 C383,272 383,260 385,251" fill="#EFE7D2" stroke="#2B2620" stroke-width="2.2"/><path d="M399,290 C397,285 402,281 409,281 C417,281 423,284 424,288 C424,290 420,291.5 411,291.5 C404,291.5 400,291.5 399,290 Z" fill="#EFE7D2" stroke="#2B2620" stroke-width="2.2"/><g fill="none" stroke="#2B2620" stroke-width="1.1" opacity=".55"><path d="M366,288 C363,275 363,261 366,250"/><path d="M444,243 C428,241 415,253 414,269 C413,278 417,286 423,290"/><path d="M359,204 C363,209 369,211 375,210"/><path d="M343,209 C347,212 352,212 355,210"/></g><g fill="none" stroke="#2B2620" stroke-width=".7" opacity=".45"><path d="M353,249 q-2,8 -1,14"/><path d="M358,246 q-2,8 -1,15"/><path d="M363,244 q-2,8 -1,15"/><path d="M386,247 q5,3 10,3"/><path d="M385,252 q5,3 10,3"/><path d="M449,276 q4,5 4,11"/><path d="M456,270 q4,5 4,11"/><path d="M462,262 q4,6 3,12"/><path d="M466,254 q3,6 2,10"/></g><g fill="none" stroke="#2B2620" stroke-width=".9" opacity=".5"><path d="M351,291 v-4"/><path d="M357,291 v-4"/><path d="M373,291 v-4"/><path d="M378,291 v-4"/><path d="M407,291 v-4"/><path d="M413,291 v-4"/></g><path d="M350,227 C361,224 374,221 386,219 L388,226 C376,228 363,231 352,235 Z" fill="#4A382A" stroke="#26201A" stroke-width="1.2"/><path d="M387,180 C396,177 403,183 405,191 C407,204 406,220 401,233 C399,241 392,246 386,242 C381,238 379,230 380,220 C381,206 383,192 387,180 Z" fill="#2B2620" stroke="#2B2620" stroke-width="1.4"/><path d="M396,190 C399,202 398,216 394,228" stroke="#EFE7D2" stroke-width=".9" fill="none" opacity=".5"/><path d="M341,199 C336,198 332,201 333,205 C334,209 338,212 342,211 C345,210 345,204 344,202 C343,200 342,199 341,199 Z" fill="#2B2620"/><circle cx="366" cy="195" r="3.4" fill="#2B2620"/><circle cx="364.6" cy="193.6" r="1.1" fill="#EFE7D2"/><path d="M360,191.5 C363,188.5 369,188.5 372,191.5" fill="none" stroke="#2B2620" stroke-width="1.2" opacity=".85"/><circle cx="350.5" cy="237.5" r="3.4" fill="url(#brassG)" stroke="#6B5530" stroke-width="1.1"/></g>
+        <!-- the house puppy: after "Dog sitting wearing collar" by Quincy Morgan (Wikimedia Commons, CC0),
+             mirrored and engraved in the folio style -->
+        <defs>
+          <clipPath id="pupClip">
+      <path d="M6.97 6.03L11 10.06L11 12.79C11 12.93 11.05 13.05 11.15 13.15L11.85 13.85C11.95 13.95 12 14.07 12 14.21L12 14.5C12 14.78 11.78 15 11.5 15L10.21 15C10.07 15 9.95 14.95 9.85 14.85L9.15 14.15C9.05 14.05 9 13.93 9 13.79L9 11.5C9 11.22 8.78 11 8.5 11L8.31 11C8.12 11 7.95 11.11 7.86 11.28L7.11 12.79C7.05 12.89 7.02 13.01 7.01 13.12L7 13.25C7 13.4 7.09 13.54 7.22 13.61L7.72 13.86C7.89 13.95 8 14.12 8 14.31L8 14.5C8 14.78 7.78 15 7.5 15L3.04 15C2.37 15 1.74 14.74 1.27 14.27L0.88 13.88C0.32 13.32 0 12.55 0 11.76L0 11.5C0 10.56 0.47 9.69 1.25 9.17L1.5 9L1.5 10.88C1.5 11.57 1.89 12.19 2.5 12.5C2.53 11.19 2.86 10.03 3.5 9C4.03 8.15 5.08 7.23 6.65 6.23L6.97 6.03ZM10.5 1C10.78 1 11 1.22 11 1.5L11 2.69C11 2.88 11.11 3.05 11.28 3.14L14.55 4.78C14.83 4.91 15 5.19 15 5.5L15 5.59C15 5.85 14.89 6.11 14.71 6.29L14 7L12 7L11.35 8.29L8.02 4.96L9.86 1.28C9.95 1.11 10.12 1 10.31 1L10.5 1Z"/>
+    </clipPath>
+        </defs>
+  <!-- ===== the pup: CC0 'Dog sitting wearing collar' (Quincy Morgan) stencil,
+       mirrored to face the trunk, engraved in the folio style ===== -->
+  <g id="pup" transform="translate(356,178) scale(7.6)">
+    <g transform="translate(15,0) scale(-1,1)">
+      <!-- collar leather, showing through the stencil's collar gap -->
+      <line x1="7.2" y1="5.1" x2="11.35" y2="9.25" stroke="#4A382A" stroke-width="1.5"/>
+      <!-- silhouette: cream fill, ink outline -->
+      <path fill="#EFE7D2" stroke="#2B2620" stroke-width=".28" stroke-linejoin="round" d="M6.97 6.03L11 10.06L11 12.79C11 12.93 11.05 13.05 11.15 13.15L11.85 13.85C11.95 13.95 12 14.07 12 14.21L12 14.5C12 14.78 11.78 15 11.5 15L10.21 15C10.07 15 9.95 14.95 9.85 14.85L9.15 14.15C9.05 14.05 9 13.93 9 13.79L9 11.5C9 11.22 8.78 11 8.5 11L8.31 11C8.12 11 7.95 11.11 7.86 11.28L7.11 12.79C7.05 12.89 7.02 13.01 7.01 13.12L7 13.25C7 13.4 7.09 13.54 7.22 13.61L7.72 13.86C7.89 13.95 8 14.12 8 14.31L8 14.5C8 14.78 7.78 15 7.5 15L3.04 15C2.37 15 1.74 14.74 1.27 14.27L0.88 13.88C0.32 13.32 0 12.55 0 11.76L0 11.5C0 10.56 0.47 9.69 1.25 9.17L1.5 9L1.5 10.88C1.5 11.57 1.89 12.19 2.5 12.5C2.53 11.19 2.86 10.03 3.5 9C4.03 8.15 5.08 7.23 6.65 6.23L6.97 6.03ZM10.5 1C10.78 1 11 1.22 11 1.5L11 2.69C11 2.88 11.11 3.05 11.28 3.14L14.55 4.78C14.83 4.91 15 5.19 15 5.5L15 5.59C15 5.85 14.89 6.11 14.71 6.29L14 7L12 7L11.35 8.29L8.02 4.96L9.86 1.28C9.95 1.11 10.12 1 10.31 1L10.5 1Z"/>
+      <!-- interior engraving, clipped to the stencil -->
+      <g clip-path="url(#pupClip)">
+        <!-- haunch hatching -->
+        <g fill="none" stroke="#2B2620" stroke-width=".09" opacity=".45">
+          <path d="M1.1 10.2 Q0.6 11.6 0.9 13.2"/>
+          <path d="M1.8 9.7 Q1.2 11.4 1.5 13.6"/>
+          <path d="M2.5 9.3 Q1.9 11.3 2.2 13.8"/>
+          <path d="M3.2 9.1 Q2.7 11 2.9 13"/>
+          <path d="M9.6 10.6 Q9.9 11.4 9.85 12.3"/>
+          <path d="M10.3 10.9 Q10.55 11.6 10.5 12.5"/>
+          <path d="M12.6 5 Q12.9 5.6 12.85 6.2"/>
+          <path d="M13.3 5.3 Q13.55 5.85 13.5 6.4"/>
+        </g>
+        <!-- hind-leg form line -->
+        <path d="M4.6 14.9 Q4.1 12.6 5 10.7" fill="none" stroke="#2B2620" stroke-width=".13" opacity=".5"/>
+        <!-- solid-ink ear -->
+        <path d="M9.8 1.45 L10.45 0.95 Q11.05 0.95 11.05 1.6 L11.05 2.85 Q10.3 2.5 9.8 1.45 Z" fill="#2B2620"/>
+        <!-- nose tip -->
+        <path d="M14.45 4.75 Q15.1 5.1 15.05 5.6 Q15 6.1 14.6 6.45 Q14.3 5.55 14.45 4.75 Z" fill="#2B2620"/>
+      </g>
+      <!-- eye -->
+      <circle cx="12.5" cy="4.45" r=".42" fill="#2B2620"/>
+      <circle cx="12.37" cy="4.32" r=".14" fill="#EFE7D2"/>
+      <!-- collar stud in the gap -->
+      <circle cx="9.35" cy="7.55" r=".3" fill="url(#brassG)" stroke="#6B5530" stroke-width=".1"/>
+      <!-- chest ring where the leash clips -->
+      <circle cx="11.55" cy="8.85" r=".45" fill="none" stroke="#6B5530" stroke-width=".22"/>
+    </g>
+  </g>
       </svg>
       <figcaption class="caption" lang="fr" style="margin-top:16px">Fig. 5 — Le compagnon de voyage.</figcaption>
     </figure>
