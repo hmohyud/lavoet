@@ -484,14 +484,14 @@ $('edOpen').addEventListener('click',()=>{
    courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
    Richardson-Lucy deconvolved, contour-traced */
 const TRUNK_SHAPE=[[-0.059,-0.955,1],[0,-0.981,1],[0.096,-0.955,1],[0.434,-0.635,1],[0.628,-0.494,1],[0.649,-0.422,1],[0.619,-0.337,1],[0.458,-0.208,1],[0.301,-0.16,1],[0.188,-0.217,1],[-0.086,-0.819,1],[-0.093,-0.903,1]];
-$('edTrunk').addEventListener('click',()=>{
+function applyTrunkMotif(){
   SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())};
   EDSEL=0; setShapeMode(true);
   $('scale').value=52;
   const o=document.querySelector('output[for="scale"]'); if(o) o.value=52;
   $('cBg').value='#543424'; $('cFg').value='#a8823f'; $('cAc').value='#a8823f';
-  renderEd(); render();
-});
+}
+$('edTrunk').addEventListener('click',()=>{ applyTrunkMotif(); renderEd(); render(); });
 $('backAuto').addEventListener('click',()=>{
   SHAPE=null; setShapeMode(false);
   $('shapeEd').hidden=true; $('stage').classList.remove('editing');
@@ -622,7 +622,10 @@ function loadHash(){
 window.addEventListener('hashchange',()=>{
   restoring=true; loadHash(); restoring=false; render();
 });
-restoring=true; loadHash(); restoring=false;
+restoring=true;
+if(location.hash.length<2) applyTrunkMotif(); /* first visit: the real 1930s canvas */
+else loadHash();
+restoring=false;
 setSlots(val('mqSlots'));
 render();
 </script>
