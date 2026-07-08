@@ -64,6 +64,15 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #stage{flex:1;display:flex;flex-direction:column;min-width:0}
 #preview{flex:1;min-height:0}
 #preview svg{display:block;width:100%;height:100%}
+#shapeEd{flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
+.ed-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;flex-wrap:wrap;border-bottom:1px solid var(--hair)}
+.ed-hint{font-size:10.5px;color:var(--sepia)}
+.ed-btns{display:flex;gap:6px;flex-wrap:wrap}
+.ed-btns button{font:500 10.5px var(--sans);letter-spacing:.08em;padding:7px 10px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
+.ed-btns button:hover{border-color:var(--brass)}
+.ed-btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#edSvg{flex:1;min-height:0;display:block;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:default}
+#edSvg [data-ix]{cursor:grab}
 .stage-foot{display:flex;justify-content:space-between;gap:14px;padding:8px 18px;border-top:1px solid var(--hair);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sepia)}
 /* ---------- phone: preview stays pinned on top, controls get big touch targets ---------- */
 @media (max-width:760px){
@@ -82,6 +91,9 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .col input[type=color]{height:46px}
   .mast{padding:12px 16px}
   .mast .loc{display:none}
+  #stage.editing #preview{height:20vh}
+  #stage.editing #shapeEd{height:34vh;flex:none}
+  .ed-btns button{padding:11px 12px;font-size:12px}
 }
 </style>
 </head>
@@ -99,12 +111,19 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <div class="sec">
     <h2 lang="fr">Le motif</h2>
     <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
-    <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
-    <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
-    <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
-    <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
+    <div id="autoRows">
+      <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
+      <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
+      <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
+      <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
+    </div>
+    <p class="hint" id="customNote" hidden>Custom shape active — the four shape sliders are paused while you use your own points.</p>
     <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
     <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
+    <div class="btns" style="margin-top:12px">
+      <button type="button" id="edOpen">Fine-tune shape…</button>
+      <button type="button" id="backAuto" hidden>Back to sliders</button>
+    </div>
   </div>
 
   <div class="sec">
@@ -171,6 +190,20 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 </aside>
 
 <section id="stage">
+  <div id="shapeEd" hidden>
+    <div class="ed-bar">
+      <span class="ed-hint">Drag the points. Each point can be a smooth curve or a sharp corner.</span>
+      <div class="ed-btns">
+        <button type="button" id="edSmooth">Smooth</button>
+        <button type="button" id="edCorner">Corner</button>
+        <button type="button" id="edAdd">+ Point</button>
+        <button type="button" id="edDel">− Point</button>
+        <button type="button" id="edReset">Reset</button>
+        <button type="button" id="edDone">Done</button>
+      </div>
+    </div>
+    <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
+  </div>
   <div id="preview" role="img" aria-label="Pattern preview"></div>
   <div class="stage-foot"><span id="footL"></span><span id="footR"></span></div>
 </section>
@@ -186,7 +219,11 @@ const $=id=>document.getElementById(id);
 const num=id=>+$(id).value, chk=id=>$(id).checked, val=id=>$(id).value;
 
 /* ---------- motif builders (centered on 0,0; R = motif radius) ---------- */
-function motifPin(R,fg){
+/* SHAPE: null = parametric sliders; else {pts:[[x,y,smooth],…]} in units of R —
+   one master piece the user has fine-tuned by hand; the other three copies
+   are its 90° rotations */
+let SHAPE=null;
+function pieceGeom(){
   // four pieces form a diamond, each inset from the two cutting diagonals.
   // Centre gap truncates each piece's inner corner, opening a diamond hole
   // at the heart of the motif (the pieces become quadrilaterals — the
@@ -194,29 +231,65 @@ function motifPin(R,fg){
   // the centre by an angle that blends from Inner twist (at the centre) to
   // Outer twist (at the rim) — so the straight sides bend rather than just
   // the corners moving. The field only rotates points around the centre,
-  // so the gaps between pieces are preserved as swirled channels.
-  const D=R, i=num('pinGap')/200*D, cut=num('pinHole')/100*D*Math.SQRT2,
+  // so the gaps between pieces are preserved as swirled channels. All in
+  // unit scale (D=1); callers multiply by R.
+  const i=num('pinGap')/200, cut=num('pinHole')/100*Math.SQRT2,
         thI=num('pinTwist')*Math.PI/180, thO=num('pinTwistO')*Math.PI/180;
-  const poly=cut>i*2+0.5
-    ? [[i,i-cut],[i,-(D-i)],[D-i,-i],[cut-i,-i]]
-    : [[i,-i],[i,-(D-i)],[D-i,-i]];
+  const poly=cut>i*2+0.005
+    ? [[i,i-cut],[i,-(1-i)],[1-i,-i],[cut-i,-i]]
+    : [[i,-i],[i,-(1-i)],[1-i,-i]];
   const warp=(x,y)=>{
-    const r=Math.hypot(x,y), f=Math.min(r/D,1);
+    const r=Math.hypot(x,y), f=Math.min(r,1);
     // quadratic falloff keeps the two knobs independent: equal inner and outer
     // twist still bends (a linear blend would collapse into a rigid rotation)
     const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
-    return (x*c-y*s).toFixed(2)+' '+(x*s+y*c).toFixed(2);
+    return [x*c-y*s, x*s+y*c];
   };
-  const N=12, pts=[];
+  return {poly,warp};
+}
+function bakeShape(){
+  // freeze the current parametric piece into editable points:
+  // corners at the logical vertices, a smooth point mid-edge to carry the bend
+  const {poly,warp}=pieceGeom(), pts=[];
   for(let e=0;e<poly.length;e++){
     const [x0,y0]=poly[e], [x1,y1]=poly[(e+1)%poly.length];
-    for(let k=0;k<N;k++){
-      const t=k/N;
-      pts.push(warp(x0+(x1-x0)*t, y0+(y1-y0)*t));
-    }
+    pts.push([...warp(x0,y0),0]);
+    pts.push([...warp((x0+x1)/2,(y0+y1)/2),1]);
   }
-  const d='M '+pts.join(' L ')+' Z';
-  const soft=chk('pinRound')?D*0.08:0;
+  SHAPE={pts:pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3),p[2]])};
+}
+function shapePath(sc){
+  // closed path through SHAPE.pts: smooth points get Catmull-Rom handles,
+  // corner points get zero handles (segments between two corners run straight)
+  const P=SHAPE.pts, n=P.length, pt=i=>P[(i%n+n)%n];
+  const f=v=>(v*sc).toFixed(2);
+  let d=`M ${f(pt(0)[0])} ${f(pt(0)[1])}`;
+  for(let i=0;i<n;i++){
+    const a=pt(i), b=pt(i+1);
+    const ha=a[2]?[(b[0]-pt(i-1)[0])/6,(b[1]-pt(i-1)[1])/6]:[0,0];
+    const hb=b[2]?[(pt(i+2)[0]-a[0])/6,(pt(i+2)[1]-a[1])/6]:[0,0];
+    d+=(!a[2]&&!b[2])
+      ? ` L ${f(b[0])} ${f(b[1])}`
+      : ` C ${f(a[0]+ha[0])} ${f(a[1]+ha[1])} ${f(b[0]-hb[0])} ${f(b[1]-hb[1])} ${f(b[0])} ${f(b[1])}`;
+  }
+  return d+' Z';
+}
+function motifPin(R,fg){
+  let d;
+  if(SHAPE){ d=shapePath(R); }
+  else {
+    const {poly,warp}=pieceGeom();
+    const N=12, pts=[];
+    for(let e=0;e<poly.length;e++){
+      const [x0,y0]=poly[e], [x1,y1]=poly[(e+1)%poly.length];
+      for(let k=0;k<N;k++){
+        const t=k/N, w=warp(x0+(x1-x0)*t, y0+(y1-y0)*t);
+        pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2));
+      }
+    }
+    d='M '+pts.join(' L ')+' Z';
+  }
+  const soft=chk('pinRound')?R*0.08:0;
   let out='';
   for(let k=0;k<4;k++) out+=`<path d="${d}" transform="rotate(${k*90})"/>`;
   return `<g fill="${fg}"${soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:''}>${out}</g>`;
@@ -271,7 +344,8 @@ function marqueBox(W,H){
   const cx=W/2, cy=H/2;
   // emblem size: fill the freed slot(s) but never touch the surviving motifs
   const nd=slots==='1' ? (q?0.707:1)*S : (q?1.118:1.58)*S;
-  const reach=num('cell')*num('scale')/200*1.1;
+  const maxr=SHAPE?Math.max(0.6,...SHAPE.pts.map(p=>Math.hypot(p[0],p[1])))+0.12:1.1;
+  const reach=num('cell')*num('scale')/200*maxr;
   const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)));
   const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
   const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
@@ -339,6 +413,77 @@ function render(){
 }
 new ResizeObserver(render).observe(preview);
 
+/* ---------- shape editor ---------- */
+let EDSEL=0, EDDRAG=false;
+function setShapeMode(custom){
+  $('autoRows').hidden=custom;
+  $('customNote').hidden=!custom;
+  $('backAuto').hidden=!custom;
+  $('edOpen').textContent=custom?'Edit shape…':'Fine-tune shape…';
+}
+function renderEd(){
+  if(!SHAPE||$('shapeEd').hidden) return;
+  const d=shapePath(1), fg=val('cFg'), bg=val('cBg');
+  const soft=chk('pinRound')?` stroke="${fg}" stroke-width="0.08" stroke-linejoin="round"`:'';
+  let s=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${bg}"/>`;
+  s+=`<path d="M -1.45 0 H 1.45 M 0 -1.45 V 1.45" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
+  for(let k=1;k<4;k++) s+=`<path d="${d}" transform="rotate(${k*90})" fill="${fg}"${soft} opacity=".3"/>`;
+  s+=`<path d="${d}" fill="${fg}"${soft}/>`;
+  SHAPE.pts.forEach((p,ix)=>{
+    const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
+    s+=p[2]
+      ? `<circle data-ix="${ix}" cx="${p[0]}" cy="${p[1]}" r=".06" ${st}/>`
+      : `<rect data-ix="${ix}" x="${p[0]-0.054}" y="${p[1]-0.054}" width=".108" height=".108" ${st}/>`;
+  });
+  $('edSvg').innerHTML=s;
+  $('edSmooth').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===1);
+  $('edCorner').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===0);
+}
+function edPos(ev){
+  const r=$('edSvg').getBoundingClientRect(), vb=2.9, sc=Math.min(r.width,r.height)/vb;
+  const x0=r.left+(r.width-vb*sc)/2, y0=r.top+(r.height-vb*sc)/2;
+  const cl=v=>Math.max(-1.42,Math.min(1.42,v));
+  return [cl((ev.clientX-x0)/sc-vb/2), cl((ev.clientY-y0)/sc-vb/2)];
+}
+$('edSvg').addEventListener('pointerdown',ev=>{
+  const t=ev.target.closest('[data-ix]');
+  if(t){ EDSEL=+t.dataset.ix; EDDRAG=true; try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){} }
+  renderEd();
+});
+$('edSvg').addEventListener('pointermove',ev=>{
+  if(!EDDRAG||!SHAPE) return;
+  const [x,y]=edPos(ev);
+  SHAPE.pts[EDSEL][0]=+x.toFixed(3); SHAPE.pts[EDSEL][1]=+y.toFixed(3);
+  renderEd(); render();
+});
+$('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
+$('edSmooth').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=1; renderEd(); render(); } });
+$('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; renderEd(); render(); } });
+$('edAdd').addEventListener('click',()=>{
+  if(!SHAPE||SHAPE.pts.length>=24) return;
+  const a=SHAPE.pts[EDSEL], b=SHAPE.pts[(EDSEL+1)%SHAPE.pts.length];
+  SHAPE.pts.splice(EDSEL+1,0,[+((a[0]+b[0])/2).toFixed(3),+((a[1]+b[1])/2).toFixed(3),1]);
+  EDSEL++; renderEd(); render();
+});
+$('edDel').addEventListener('click',()=>{
+  if(!SHAPE||SHAPE.pts.length<=3) return;
+  SHAPE.pts.splice(EDSEL,1); EDSEL=Math.max(0,EDSEL-1); renderEd(); render();
+});
+$('edReset').addEventListener('click',()=>{ bakeShape(); EDSEL=0; renderEd(); render(); });
+$('edDone').addEventListener('click',()=>{
+  $('shapeEd').hidden=true; $('stage').classList.remove('editing'); render();
+});
+$('edOpen').addEventListener('click',()=>{
+  if(!SHAPE){ bakeShape(); EDSEL=0; setShapeMode(true); }
+  $('shapeEd').hidden=false; $('stage').classList.add('editing');
+  renderEd(); render();
+});
+$('backAuto').addEventListener('click',()=>{
+  SHAPE=null; setShapeMode(false);
+  $('shapeEd').hidden=true; $('stage').classList.remove('editing');
+  render();
+});
+
 /* ---------- interactions ---------- */
 function setSlots(v){
   $('mqSlots').value=v;
@@ -348,7 +493,7 @@ function setSlots(v){
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
-  render();
+  renderEd(); render();
 }));
 
 /* presets */
@@ -432,6 +577,7 @@ function saveHash(){
     const p=new URLSearchParams();
     for(const id of HASH_IDS) p.set(id,val(id));
     for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
+    if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
     const h='#'+p.toString();
     if(h===location.hash) return;
     try{ history.replaceState(null,'',h); }catch(e){}
@@ -451,6 +597,12 @@ function loadHash(){
     if(o) o.value=el.value; /* el.value is post-clamp, not the raw hash string */
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
+  if(p.has('shape')){
+    const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
+    if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&(q[2]===0||q[2]===1))){
+      SHAPE={pts}; setShapeMode(true);
+    }
+  } else if(SHAPE){ SHAPE=null; setShapeMode(false); }
   setSlots(val('mqSlots'));
 }
 window.addEventListener('hashchange',()=>{
