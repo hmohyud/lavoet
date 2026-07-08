@@ -121,6 +121,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
     <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
     <div class="btns" style="margin-top:12px">
+      <button type="button" id="edTrunk">Original trunk motif</button>
       <button type="button" id="edOpen">Fine-tune shape…</button>
       <button type="button" id="backAuto" hidden>Back to sliders</button>
     </div>
@@ -168,6 +169,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <option value="text">LAVOËT only</option>
         </select>
       </div>
+      <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
     </div>
     <p class="hint">The emblem sits on the pattern grid and replaces exactly one motif — or a block of four — so the pattern around it stays perfectly even. It appears on swatches only; the downloadable tile stays a clean repeat.</p>
   </div>
@@ -346,7 +348,7 @@ function marqueBox(W,H){
   const nd=slots==='1' ? (q?0.707:1)*S : (q?1.118:1.58)*S;
   const maxr=SHAPE?Math.max(0.6,...SHAPE.pts.map(p=>Math.hypot(p[0],p[1])))+0.12:1.1;
   const reach=num('cell')*num('scale')/200*maxr;
-  const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)));
+  const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)))*num('mqSize')/100;
   const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
   const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
   const textW=F1*6.2;
@@ -478,6 +480,18 @@ $('edOpen').addEventListener('click',()=>{
   $('shapeEd').hidden=false; $('stage').classList.add('editing');
   renderEd(); render();
 });
+/* motif extracted photogrammetrically from the Bagage Collection 1930s malle
+   courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
+   Richardson-Lucy deconvolved, contour-traced */
+const TRUNK_SHAPE=[[-0.059,-0.955,1],[0,-0.981,1],[0.096,-0.955,1],[0.434,-0.635,1],[0.628,-0.494,1],[0.649,-0.422,1],[0.619,-0.337,1],[0.458,-0.208,1],[0.301,-0.16,1],[0.188,-0.217,1],[-0.086,-0.819,1],[-0.093,-0.903,1]];
+$('edTrunk').addEventListener('click',()=>{
+  SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())};
+  EDSEL=0; setShapeMode(true);
+  $('scale').value=52;
+  const o=document.querySelector('output[for="scale"]'); if(o) o.value=52;
+  $('cBg').value='#543424'; $('cFg').value='#a8823f'; $('cAc').value='#a8823f';
+  renderEd(); render();
+});
 $('backAuto').addEventListener('click',()=>{
   SHAPE=null; setShapeMode(false);
   $('shapeEd').hidden=true; $('stage').classList.remove('editing');
@@ -567,7 +581,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','twist','pinGap','pinHole','pinTwist','pinTwistO','cell','accent','accentSize',
-  'cBg','cFg','cAc','mqMode','mqSlots','pngScale'];
+  'cBg','cFg','cAc','mqMode','mqSize','mqSlots','pngScale'];
 const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
 let restoring=true, hashT=0;
 function saveHash(){
