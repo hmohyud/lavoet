@@ -71,6 +71,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-btns button{font:500 10.5px var(--sans);letter-spacing:.08em;padding:7px 10px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
 .ed-btns button:hover{border-color:var(--brass)}
 .ed-btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ed-step{display:inline-flex;align-items:center;gap:6px;padding:0 4px 0 0;margin-right:2px;border-right:1px solid var(--hair)}
+.ed-step-lbl{font:500 10.5px var(--sans);letter-spacing:.08em;color:var(--sepia)}
+.ed-step b{font:600 11px var(--sans);min-width:12px;text-align:center;font-variant-numeric:tabular-nums}
+.ed-step button{font:500 13px var(--sans);line-height:1;padding:6px 9px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
+.ed-step button:hover{border-color:var(--brass)}
 #edSvg{flex:1;min-height:0;display:block;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:default}
 #edSvg [data-ix]{cursor:grab}
 .stage-foot{display:flex;justify-content:space-between;gap:14px;padding:8px 18px;border-top:1px solid var(--hair);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sepia)}
@@ -200,6 +205,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="ed-bar">
       <span class="ed-hint">Drag the points. Each point can be a smooth curve or a sharp corner.</span>
       <div class="ed-btns">
+        <span class="ed-step" role="group" aria-label="Pieces">
+          <span class="ed-step-lbl">Pieces</span>
+          <button type="button" id="edPieceDn" aria-label="Fewer pieces">−</button>
+          <b id="edPieceN" aria-live="polite">4</b>
+          <button type="button" id="edPieceUp" aria-label="More pieces">+</button>
+        </span>
         <button type="button" id="edSmooth">Smooth</button>
         <button type="button" id="edCorner">Corner</button>
         <button type="button" id="edAdd">+ Point</button>
@@ -435,9 +446,12 @@ function renderEd(){
   if(!SHAPE||$('shapeEd').hidden) return;
   const d=shapePath(1), fg=val('cFg'), bg=val('cBg');
   const soft=chk('pinRound')?` stroke="${fg}" stroke-width="0.08" stroke-linejoin="round"`:'';
-  let s=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${bg}"/>`;
-  s+=`<path d="M -1.45 0 H 1.45 M 0 -1.45 V 1.45" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
   const N=Math.max(1,num('pinN')||4);
+  let s=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${bg}"/>`;
+  // divider lines fan out to one ray per piece — the seams the copies rotate about
+  let div='';
+  for(let k=0;k<N;k++){ const a=k*2*Math.PI/N; div+=`M 0 0 L ${(1.45*Math.cos(a)).toFixed(3)} ${(1.45*Math.sin(a)).toFixed(3)} `; }
+  s+=`<path d="${div}" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
   for(let k=1;k<N;k++) s+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${fg}"${soft} opacity=".3"/>`;
   s+=`<path d="${d}" fill="${fg}"${soft}/>`;
   SHAPE.pts.forEach((p,ix)=>{
@@ -449,6 +463,13 @@ function renderEd(){
   $('edSvg').innerHTML=s;
   $('edSmooth').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===1);
   $('edCorner').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===0);
+  $('edPieceN').textContent=N;
+}
+function setPieces(n){
+  n=Math.max(2,Math.min(8,n));
+  $('pinN').value=n;
+  const o=document.querySelector('output[for="pinN"]'); if(o) o.value=n;
+  renderEd(); render();
 }
 function edPos(ev){
   const r=$('edSvg').getBoundingClientRect(), vb=2.9, sc=Math.min(r.width,r.height)/vb;
@@ -470,6 +491,8 @@ $('edSvg').addEventListener('pointermove',ev=>{
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
 $('edSmooth').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=1; renderEd(); render(); } });
 $('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; renderEd(); render(); } });
+$('edPieceDn').addEventListener('click',()=>setPieces((num('pinN')||4)-1));
+$('edPieceUp').addEventListener('click',()=>setPieces((num('pinN')||4)+1));
 $('edAdd').addEventListener('click',()=>{
   if(!SHAPE||SHAPE.pts.length>=24) return;
   const a=SHAPE.pts[EDSEL], b=SHAPE.pts[(EDSEL+1)%SHAPE.pts.length];
