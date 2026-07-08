@@ -228,8 +228,9 @@ function accentMarkup(ac){
 }
 
 /* ---------- lattice ---------- */
-function placeAll(W,H,excl){
+function placeAll(W,H,excl,ph){
   const S=num('cell'), q=chk('quinconce'), alt=chk('mirrorAlt'), tw=num('twist');
+  const ox=ph?ph.ox:0, oy=ph?ph.oy:0;
   const base=motifMarkup('MOTIF_FG'), acc=accentMarkup('ACCENT_FG');
   const skipM=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rM;
   const skipA=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rA;
@@ -240,33 +241,34 @@ function placeAll(W,H,excl){
     out+=`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tw})${mir?' scale(-1 1)':''}"/>`;
   };
   const put=(x,y,isAlt)=>{ if(!skipM(x,y)) stamp('pm',x,y,isAlt); };
-  const i0=-1, i1=Math.ceil(W/S)+1, j1=Math.ceil(H/S)+1;
+  const i0=-2, i1=Math.ceil(W/S)+1, j1=Math.ceil(H/S)+1;
   for(let i=i0;i<=i1;i++) for(let j=i0;j<=j1;j++){
-    put(i*S, j*S, q?false:((i+j)&1)===1&&alt);
-    if(q) put((i+0.5)*S,(j+0.5)*S, alt);
+    put(i*S+ox, j*S+oy, q?false:((i+j)&1)===1&&alt);
+    if(q) put((i+0.5)*S+ox,(j+0.5)*S+oy, alt);
     if(acc){
-      const pts=q?[[(i+0.5)*S,j*S],[i*S,(j+0.5)*S]]:[[(i+0.5)*S,(j+0.5)*S]];
+      const pts=q?[[(i+0.5)*S+ox,j*S+oy],[i*S+ox,(j+0.5)*S+oy]]:[[(i+0.5)*S+ox,(j+0.5)*S+oy]];
       for(const [ax,ay] of pts) if(!skipA(ax,ay)) stamp('pa',ax,ay,false);
     }
   }
   return out;
 }
+/* phase shift that puts a marque slot exactly at the swatch centre */
+function marquePhase(W,H){
+  const S=num('cell'), q=chk('quinconce'), mod=v=>((v%S)+S)%S;
+  if(val('mqSlots')==='1') return {ox:mod(W/2), oy:mod(H/2)};
+  return q ? {ox:mod(W/2-S/2), oy:mod(H/2)} : {ox:mod(W/2-S/2), oy:mod(H/2-S/2)};
+}
 
 /* ---------- la marque ---------- */
 function marqueBox(W,H){
   const S=num('cell'), q=chk('quinconce'), slots=val('mqSlots'), mode=val('mqMode');
-  // snap to the lattice so the marque replaces whole motif slots and the
-  // surrounding pattern stays uniform
-  const snap=(fx,fy)=>[(Math.round(W/2/S-fx)+fx)*S,(Math.round(H/2/S-fy)+fy)*S];
-  const cand=slots==='1' ? (q?[snap(0,0),snap(0.5,0.5)]:[snap(0,0)])
-                         : (q?[snap(0.5,0),snap(0,0.5)]:[snap(0.5,0.5)]);
-  let cx=W/2, cy=H/2, bd=Infinity;
-  for(const [x,y] of cand){ const d=Math.hypot(x-W/2,y-H/2); if(d<bd){bd=d;cx=x;cy=y;} }
+  // the lattice is phase-shifted so the slot sits exactly at the centre
+  const cx=W/2, cy=H/2;
   // emblem size: fill the freed slot(s) but never touch the surviving motifs
   const nd=slots==='1' ? (q?0.707:1)*S : (q?1.118:1.58)*S;
   const reach=num('cell')*num('scale')/200*1.1;
   const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)));
-  const figH=mode==='text'?0:(mode==='figure'?E:E*0.74), figW=figH*163.3/213;
+  const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
   const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
   const textW=F1*6.2;
   const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
@@ -276,7 +278,9 @@ function marqueBox(W,H){
 function marqueMarkup(b,fg){
   let y=b.cy-b.blockH/2, s='';
   if(b.figH){
-    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${(b.cx-b.figW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}" color="${fg}"/>`;
+    // the figure's ink mass sits ~4% right of its bounding box centre
+    // (trunk and hatbox), so nudge it left to centre it optically
+    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${(b.cx-b.figW/2-b.figW*0.03).toFixed(1)}" y="${y.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}" color="${fg}"/>`;
     y+=b.figH;
   }
   const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="${fg}">${txt}</text>`;
@@ -295,15 +299,16 @@ function fill(motifs,c){ return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('A
 
 function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
-  let excl=null, mq='';
+  let excl=null, mq='', ph=null;
   if(useMq){
+    ph=marquePhase(W,H);
     const b=marqueBox(W,H);
     excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:b.rA};
     mq=marqueMarkup(b,c.fg);
   }
-  const body=fill(placeAll(W,H,excl),c);
-  const T=tileSize();
-  const g=guide?`<rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="${c.bg}" stroke-width="3"/><rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="${c.fg}" stroke-width="1.2" stroke-dasharray="5 4"/>`:'';
+  const body=fill(placeAll(W,H,excl,ph),c);
+  const T=tileSize(), gx=ph?ph.ox:0, gy=ph?ph.oy:0;
+  const g=guide?`<rect x="${gx}" y="${gy}" width="${T}" height="${T}" fill="none" stroke="${c.bg}" stroke-width="3"/><rect x="${gx}" y="${gy}" width="${T}" height="${T}" fill="none" stroke="${c.fg}" stroke-width="1.2" stroke-dasharray="5 4"/>`:'';
   const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/>${body}${mq}${g}</svg>`;
 }
