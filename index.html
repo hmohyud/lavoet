@@ -1901,11 +1901,16 @@ section{position:relative}
   font-size:11px;letter-spacing:.04em;color:var(--ink);margin-bottom:8px}
 .st-rows input[type=color]{width:42px;height:22px;padding:0;border:1px solid rgba(43,38,32,.22);
   border-radius:3px;background:none;cursor:pointer}
-.st-toggle{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.04em;
-  color:var(--ink);margin:3px 0 11px;cursor:pointer}
-.st-toggle input{width:auto;height:auto;margin:0;accent-color:var(--brass);cursor:pointer}
+.st-seg-row{display:flex;align-items:center;justify-content:space-between;margin:2px 0 12px}
+.st-seg-label{font-size:11px;letter-spacing:.04em;color:var(--ink)}
+.st-seg{display:inline-flex;border:1px solid rgba(43,38,32,.28);border-radius:4px;overflow:hidden}
+.st-seg button{font-family:var(--sans);font-size:11px;width:56px;padding:5px 0;border:0;background:none;
+  color:var(--sepia);cursor:pointer;letter-spacing:.08em}
+.st-seg button + button{border-left:1px solid rgba(43,38,32,.22)}
+.st-seg button.on{background:var(--choc);color:var(--paper)}
 .st-c{transition:opacity .2s ease}
 #studio:not(.three-on) .st-c{opacity:.45}
+#studio:not(.three-on) .st-presets button i.cm{display:none}
 .st-reset{margin-top:5px;width:100%;font-family:var(--sans);font-size:10px;letter-spacing:.18em;
   text-transform:uppercase;color:var(--sepia);background:none;border:1px solid rgba(43,38,32,.22);
   border-radius:3px;padding:7px;cursor:pointer}
@@ -1924,7 +1929,13 @@ section{position:relative}
       <label><span>Right</span><input type="color" data-band="b" value="#5b3a22"></label>
       <label class="st-c"><span>Centre · 3rd</span><input type="color" data-band="c" value="#fcf8f1"></label>
     </div>
-    <label class="st-toggle"><input type="checkbox" id="stThird"> Add third stripe</label>
+    <div class="st-seg-row">
+      <span class="st-seg-label">Stripes</span>
+      <div class="st-seg" id="stSeg" role="group" aria-label="Number of stripes">
+        <button type="button" data-n="2">Two</button>
+        <button type="button" data-n="3">Three</button>
+      </div>
+    </div>
     <button type="button" class="st-reset" id="stReset">Reset to default</button>
   </div>
 </aside>
@@ -1935,7 +1946,8 @@ section{position:relative}
   var panel=document.getElementById('studioPanel');
   var studio=document.getElementById('studio');
   var inputs=[].slice.call(document.querySelectorAll('#studioPanel input[data-band]'));
-  var third=document.getElementById('stThird');
+  var seg=document.getElementById('stSeg');
+  var segBtns=[].slice.call(seg.querySelectorAll('button'));
   // a:left  b:right  c:centre accent (shown only when the third stripe is on)
   var DEFAULTS={a:'#C4622E',b:'#5B3A22',c:'#FCF8F1'};
   var PRESETS=[
@@ -1958,7 +1970,7 @@ section{position:relative}
   PRESETS.forEach(function(p){
     var b=document.createElement('button');
     b.type='button'; b.title=p.name;
-    ['a','c','b'].forEach(function(k){ var i=document.createElement('i'); i.style.background=p[k]; b.appendChild(i); }); // preview a|c|b
+    ['a','c','b'].forEach(function(k){ var i=document.createElement('i'); if(k==='c') i.className='cm'; i.style.background=p[k]; b.appendChild(i); }); // a | c(centre) | b — centre hidden unless 3-band
     b.addEventListener('click', function(){ apply(p); });
     wrap.appendChild(b);
   });
@@ -1968,16 +1980,16 @@ section{position:relative}
   function setThird(on){
     document.body.classList.toggle('livery-3', on);
     studio.classList.toggle('three-on', on);
-    third.checked=on;
+    segBtns.forEach(function(btn){ btn.classList.toggle('on', (btn.getAttribute('data-n')==='3')===on); });
   }
-  third.addEventListener('change', function(){ setThird(third.checked); });
+  segBtns.forEach(function(btn){ btn.addEventListener('click', function(){ setThird(btn.getAttribute('data-n')==='3'); }); });
   document.getElementById('stReset').addEventListener('click', function(){ apply(DEFAULTS); setThird(false); });
   function open(v){ panel.hidden=!v; toggle.setAttribute('aria-expanded', v?'true':'false'); }
   toggle.addEventListener('mouseenter', function(){ open(true); });
   toggle.addEventListener('click', function(){ open(panel.hidden); });
   document.addEventListener('click', function(e){ if(!studio.contains(e.target)) open(false); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') open(false); });
-  apply(DEFAULTS); // seed swatches + inputs from the live default
+  apply(DEFAULTS); setThird(false); // seed colours + default to two stripes
 })();
 </script>
 
