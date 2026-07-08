@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Lavoët — Atelier de la toile</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="%233E2F23"/><path d="M16 7l7 9-7 9-7-9z" fill="%23A98A4F"/></svg>'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4EFE4; --ink:#2B2620; --sepia:#6E6350; --brass:#A98A4F; --brassD:#7A6234; --choc:#3E2F23;
+  --red:#8C3B31; --green:#2F5240;
+  --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --sans:'Archivo',system-ui,sans-serif;
+  --hair:color-mix(in srgb,var(--ink) 18%,transparent);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13px;display:flex;flex-direction:column}
+.mast{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:14px 22px;border-bottom:1px solid var(--hair)}
+.mast .wm{font-family:var(--serif);font-weight:600;font-size:22px;letter-spacing:.22em;text-indent:.22em}
+.mast .sub{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--sepia)}
+.mast .loc{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--sepia)}
+main{flex:1;display:flex;min-height:0}
+/* ---------- panel ---------- */
+#panel{width:300px;flex:none;overflow-y:auto;border-right:1px solid var(--hair);padding:6px 20px 28px;scrollbar-width:thin}
+.sec{padding:16px 0 18px;border-bottom:1px solid var(--hair)}
+.sec:last-child{border-bottom:none}
+.sec h2{font-size:10.5px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--brassD);margin-bottom:12px}
+.seg{display:flex;border:1px solid var(--ink);width:100%}
+.seg button{flex:1;padding:7px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
+.seg button:last-child{border-right:none}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.row{display:grid;grid-template-columns:1fr 92px 34px;align-items:center;gap:10px;margin-top:10px}
+.row label{font-size:11.5px;color:var(--ink)}
+.row output{font-size:11px;color:var(--sepia);text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--brass);height:18px;background:transparent}
+.row-sel{display:grid;grid-template-columns:1fr 128px;align-items:center;gap:10px;margin-top:10px}
+select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--hair);padding:5px 6px;width:100%}
+.chk{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:11.5px;cursor:pointer}
+.chk input{accent-color:var(--brass);width:14px;height:14px}
+.cols{display:flex;gap:14px;margin-top:6px}
+.col{flex:1;text-align:center}
+.col label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-bottom:6px}
+.col input[type=color]{width:100%;height:34px;border:1px solid var(--hair);background:none;padding:2px;cursor:pointer}
+.presets{display:flex;gap:8px;margin-top:14px}
+.presets button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:1px solid var(--hair);padding:7px 2px 6px;cursor:pointer;color:var(--sepia);font:10px var(--sans);letter-spacing:.06em}
+.presets button:hover{border-color:var(--brass)}
+.presets .dots{display:flex}
+.presets .dots i{width:13px;height:13px;border:1px solid var(--hair);margin-left:-4px;border-radius:50%}
+.presets .dots i:first-child{margin-left:0}
+.btns{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.btns button{font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:9px 10px;background:none;border:1px solid var(--ink);color:var(--ink);cursor:pointer}
+.btns button:hover{border-color:var(--brass);color:var(--brass)}
+.png-row{display:grid;grid-template-columns:1fr 64px;gap:8px}
+.hint{font-size:10.5px;line-height:1.5;color:var(--sepia);margin-top:10px}
+.sig{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--sepia);margin-top:18px;text-align:center}
+[hidden]{display:none!important}
+/* ---------- stage ---------- */
+#stage{flex:1;display:flex;flex-direction:column;min-width:0}
+#preview{flex:1;min-height:0}
+#preview svg{display:block;width:100%;height:100%}
+.stage-foot{display:flex;justify-content:space-between;gap:14px;padding:8px 18px;border-top:1px solid var(--hair);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sepia)}
+@media (max-width:760px){
+  main{flex-direction:column;overflow:auto}
+  #panel{width:100%;border-right:none;border-bottom:1px solid var(--hair);overflow:visible}
+  #preview{height:64vh;flex:none}
+  .mast .loc{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wm">LAVOËT</div>
+  <div class="sub"><span lang="fr">Atelier de la toile</span> — pattern studio</div>
+  <div class="loc" lang="fr">Paris — VIII<sup>e</sup></div>
+</header>
+
+<main>
+<aside id="panel">
+
+  <div class="sec">
+    <h2 lang="fr">La toile</h2>
+    <div class="seg" role="group" aria-label="Motif family">
+      <button type="button" data-motif="pin" aria-pressed="true" lang="fr">Monogramme</button>
+      <button type="button" data-motif="tre" aria-pressed="false" lang="fr">Trèfle</button>
+      <button type="button" data-motif="los" aria-pressed="false" lang="fr">Losanges</button>
+    </div>
+
+    <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
+    <div class="row"><label for="twist">Twist</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
+
+    <div data-for="pin">
+      <div class="row"><label for="pinGap">Gap between triangles</label><input type="range" id="pinGap" min="0" max="40" value="18"><output for="pinGap">18</output></div>
+      <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-40" max="40" value="12"><output for="pinTwist">12</output></div>
+      <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-30" max="30" value="0"><output for="pinTwistO">0</output></div>
+      <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
+    </div>
+
+    <div data-for="tre" hidden>
+      <div class="row"><label for="treLobe">Lobe size</label><input type="range" id="treLobe" min="25" max="60" value="40"><output for="treLobe">40</output></div>
+      <div class="row"><label for="treSpread">Spread</label><input type="range" id="treSpread" min="30" max="70" value="48"><output for="treSpread">48</output></div>
+      <div class="row"><label for="treStem">Stem</label><input type="range" id="treStem" min="0" max="120" value="92"><output for="treStem">92</output></div>
+    </div>
+
+    <div data-for="los" hidden>
+      <div class="row"><label for="losSize">Diamond size</label><input type="range" id="losSize" min="25" max="60" value="42"><output for="losSize">42</output></div>
+      <div class="row"><label for="losGap">Cross gap</label><input type="range" id="losGap" min="0" max="60" value="18"><output for="losGap">18</output></div>
+      <div class="row"><label for="losCut">Inner cut</label><input type="range" id="losCut" min="0" max="70" value="0"><output for="losCut">0</output></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2 lang="fr">Disposition</h2>
+    <div class="row"><label for="cell">Cell size</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
+    <label class="chk"><input type="checkbox" id="quinconce" checked>Quinconce (diagonal repeat)</label>
+    <div class="row-sel"><label for="alternance">Alternate motifs</label>
+      <select id="alternance">
+        <option value="none">None</option>
+        <option value="mirror">Mirror</option>
+        <option value="quarter" selected>Quarter turn</option>
+      </select>
+    </div>
+    <div class="row-sel"><label for="accent">Accent between</label>
+      <select id="accent">
+        <option value="losange" selected>Losange</option>
+        <option value="point">Point</option>
+        <option value="croix">Croix</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+    <div class="row"><label for="accentSize">Accent size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
+  </div>
+
+  <div class="sec">
+    <h2 lang="fr">Couleurs</h2>
+    <div class="cols">
+      <div class="col"><label for="cBg">Fond</label><input type="color" id="cBg" value="#4E3A26"></div>
+      <div class="col"><label for="cFg">Motif</label><input type="color" id="cFg" value="#C69A45"></div>
+      <div class="col"><label for="cAc">Accent</label><input type="color" id="cAc" value="#C69A45"></div>
+    </div>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <div class="sec">
+    <h2 lang="fr">La marque</h2>
+    <label class="chk"><input type="checkbox" id="mq" checked><span lang="fr">Marque au centre</span></label>
+    <div id="mqOpts">
+      <div class="row-sel"><label for="mqMode">Emblem</label>
+        <select id="mqMode">
+          <option value="full" selected>Groom + LAVOËT</option>
+          <option value="figure">Groom seul</option>
+          <option value="text">LAVOËT seul</option>
+        </select>
+      </div>
+      <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="18" max="55" value="34"><output for="mqSize">34</output></div>
+    </div>
+    <p class="hint">The marque appears on the swatch only — the downloadable tile stays a clean repeat.</p>
+  </div>
+
+  <div class="sec">
+    <h2>Export</h2>
+    <div class="btns">
+      <button type="button" id="dlTile">Tile · SVG (seamless)</button>
+      <button type="button" id="dlSwatch">Swatch · SVG</button>
+      <div class="png-row">
+        <button type="button" id="dlPng">Swatch · PNG</button>
+        <select id="pngScale" aria-label="PNG scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
+      </div>
+    </div>
+    <label class="chk"><input type="checkbox" id="guide">Show repeat guide</label>
+    <p class="hint" id="tileInfo"></p>
+    <p class="sig" lang="fr">La maison continue — les motifs aussi.</p>
+  </div>
+
+</aside>
+
+<section id="stage">
+  <div id="preview" role="img" aria-label="Pattern preview"></div>
+  <div class="stage-foot"><span id="footL"></span><span id="footR"></span></div>
+</section>
+</main>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="bellboy" viewBox="77.2 45.3 163.3 213" overflow="visible"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M166.2 94.5q-1.2-.3-2.5 0c-1.4.3-2.5 1.2-4 .4l-1.6-1.3q-1-.5-1.7-1.2c-.2-.2-1-1.4-1.3-1.3a78 78 0 0 0-4.6 17.7l-2 13.8s-1.3 6.1-1 7.4-.7 13.3-.7 13.3l2 6.4 11.1-2.8-2-10s2.5-11.7 1.7-10c-.9 1.8 2.9-11 3-11.8 0-1.7.8-3 1.3-4.5.8-2.2.8-4.6 1.4-6.8l1.6-5.2c.1-.5-.3-1.5-.3-2z"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="1.7" d="m128.7 149.8-14.8.7a6 6 0 0 0-4 2.5l-30.1 52.2a6 6 0 0 0-.2 4.7l2.6 5.5c.6 1.3 2.1 3 3.3 3.9l45.8 31.3c1.2.9 2.8.5 3.5-.8l37.4-71.8c.7-1.3.2-3-1-3.7l-42.8-24.6"/><path fill="currentColor" d="m176.4 139.1-.2-.2-7.6-3 1.9 8.3v.1l-4.7 15.4v-.4l2.8 7.2 1.5 3.6 1.6 3.5 6 12.8v-.2c4.5 6.2 8 10.9 8.8 12.2h.1v.2l.2.4 2.7 6.7q1.3 3 2.8 7.6l3.8 10.6v-.1c1.8 3.7 4 8.3 6.2 12.5l6 10.5h-.2l6 4.2h-.2l6.8-8 1-1.1.6-.8q.3-.5 0 .3h-.1l2.9-6v-.2l.1-.1v-.2l-.1-.4q0-.3-.2-.3h.1l.1.3v.2l.1.1v.3-.2q-1.7-4.5-2.6-6.3l-.1-.5q-.1-.1-.1 0l-.1-.1-.2-.1-.3-.2.3.2h.2v.1l.2.1h-.1l-4.2-2.6 4.2 2.5.1.1q-.1-.1-.1 0v-.1h-.2l-.1-.2-.3-.2.3.2.3.2.1.1v.2l.2.2 2.7 6.4v.2-.3l-.1-.2v-.1l-.2-.3v-.2l.1.4.2.3v.4l-.1.3-2.8 6.1v.1l.3-.7v.2l-.2.3v.1l-.1.1-.1.1-.2.3-1 1.2-6.7 8.3-.7.1c1.4-.2.4 0 .7 0v-.1l.1-.1v.1l-.9.2v-.1l-.4-.2-.8-.5-5-3.3-.2-.2-5.8-9.4-1-1.5-1-1.7-1.8-3.4-3.6-6.6v-.1l-6.1-16.1-3.5-8-.4-.9.2.3-8.6-12.4h-.1v-.2l-5.7-13.2-1.4-3.5q-.8-1.8-1.4-3.6l-2.5-7.3-.1-.3v-.2l5.3-15.2v.3l-1.5-8.4v-.5l.4.2q7 3 7.5 3.2z"/><path fill="currentColor" d="m218.1 223.7-.2-.2-.5-.6-1.8-2.2A200 200 0 0 1 202 198l-1.4-3.3-1.5-4a50 50 0 0 1-1.9-13.8l-1.6-5.7 1.8 5.6v.1c.3 1.8 1 7.3 3 12.3q.7 2 1.6 3.6l4 7.2 6.4 13.2 5.1 9.6.4.6zM193.9 62c0 1.2.7 2 1 3q.1.9 0 1.6v1.6q.2.8-.3 1.6-.5.7-.6 1.3 0 .8.4 1.5.3.7.3 1.6v1.6a3 3 0 0 1-.6 1.6l-1.9 2.5-1.5 2.8q-.9 1.5-2.6 2.2h-.9l-.8-.2-1.6-.5-1.5-.7-1.3-1-2.3-2-1.2-1.1q-.6-.5-1.1-1.2l-.5-.8-.1-.8v-2.1q-.3 0-.8-.2-.8-.2-1.4-.8-.7-.7-.7-1.6a7 7 0 0 1 .2-2.4l.3-.8q.4-.4.9-.4h.8q1.6-.1 2.5-1.4 1-1.2 1.1-2.8t0-3.1V60q0-.5.6-.6a3 3 0 0 1 1.6.2q1.5.7 2.8 1.6l1.4.6 1.5.4 3.2.2q.7 0 1.6 0 .8 0 1.5-.4l-1.5.4q-.9.2-1.6 0l-3.2-.1q-.7 0-1.5-.4l-1.5-.6q-1.4-.8-2.8-1.5-.7-.2-1.4-.2-.7.3-.4 1.2.1 1.5 0 3.2-.1 1.6-1.1 3-1.1 1.5-2.8 1.6-1 0-1.3.3-.3.6-.4 1.4-.3 1.6.5 2.7.6.6 1.3.7l.8.3q.3 0 .4.4v.5c0 1-.2 2.2.4 2.8L179 79l1.1 1 2.4 2 1.2 1 1.4.6 1.5.4q.8.3 1.3.2 1.3-.5 2.2-1.8l1.6-2.7 2-2.5c.6-.7.5-1.9.6-2.9l-.3-1.5q-.2-.7-.3-1.6.1-.8.7-1.5.4-.6.4-1.4t0-1.6v-1.5c-.2-1-1-2-1-3M181.6 50q0 .8.6 1.2l1.2.9q1.2.8 2.7 1.2 2.7 1 5.6 1.5a17 17 0 0 0 4 .7h.5l.3.2h-.3q0-.2-.3-.5l-.9-1-2.3-1.6a27 27 0 0 0-8.3-3.1l-1.5-.1q-.7 0-1.3.6.5-.7 1.3-.8h1.5q1.5 0 3 .3a29 29 0 0 1 8.7 3.4l1.3 1 .6 1q.3.5 0 1.5-.4.9-1 1l-1 .3-1.8.1q-1.5 0-3.2-.4a29 29 0 0 1-8-4.8q-.7-.5-1-1.2-.6-.7-.4-1.4"/><path fill="currentColor" d="M181.4 60.5a16 16 0 0 1-4.6-1.4l-.8-.6-.7-.8-.3-1c-.3-1.6.3-3 .9-4.2q.9-1.8 2.1-3.3.7-.7 1.8-1.4t2.4-.5l2 .2.8.1 1 .2q2 .4 3.8 1.3 1.6.8 3.3 2l3 2.2 1.4 1.3.5 1v1.1q-.6 1-1.5 1.4-.3.1-.5.6l-.6.8-.8 1.6-.7 1.7.6-1.8q.2-.8.6-1.7l.5-.8q.1-.5.6-.8.9-.6 1.1-1.2t-.5-1.3q-.5-.6-1.3-1l-3.2-2q-3.2-1.8-6.6-2.4H184l-1.7-.2c-1 .1-1.3.5-2.1 1.5q-1.5 1.2-2.5 2.5-1.2 1.4-1.3 2.8.2 1.6 1.7 2.6t3.4 1.5M177 74.3l-.7 2.6-.3 1.3-.1.3v.2l-.1.1h-.2.2l.1.1.3.2q2 1.8 4.2 3.3c1 .8 2.6.9 4.1 1.3h-.1 2.1l-.1.7-2.6-1-1.2-.7-1-1-4-3.8-.4-.9-.3-3 .5 3 .4.8 4.1 3.6q1 .8 2.2 1.4l2.6.9 1.8.7h-2l-2 .2h-.1c-1.5-.3-3.2-.3-4.7-1.3l-4-3.8-.2-.2V79h-.2v-.3l.2-.7.5-1.2ZM206.1 101.2q0 0-.3.9-.5 1-2 1.4h-.2v-.1c-.4-2.6 2.9-5.2 2.2-7.3q-.6-1.6-1.4-2.8l-.9-1.6v-.4q-.4-.3-.3-1.7l1.1 1q-.8.1-3.2 0a12 12 0 0 1-5-1.2c-3.2-1.7-5.2-4.5-5.7-5a.1.1 0 0 0-.2.1l.4 1.1.4 1.1-.2-.4-.2-.7-.5-1a.2.2 0 0 1 .3-.3c.5.3 2.7 2.7 5.7 4q2.3 1 4.5.8t3.3-.5a1 1 0 0 1 1.2.9v.1q.2 1.1.3 1.3l.8 1.8q.4.7.7 1.5.5.9.5 2.2 0 1.2-.7 2.2l-1.2 1.7a6 6 0 0 0-1.5 3.1l-.3-.3q1.4-.2 2-1zM199.5 100.9l.5 1 .6 2.7.2 4.3q0 .2-.7 1.7-1 1.3-2 2.6-1 1.5-1 2.9-.2 1.3-.1 1.4-.1 0-.2-1.3a9 9 0 0 1 1-4.8l.6-1.3q.4-1.1.4-1.5l.7-4.2q.2-1.5.1-2.5zM166.2 101.4l-.2.3-.5 1q-.6 1.2-1.1 3.7l-1.2 5.6q-.4 3.1-1.3 6.8l-.6 1.8-.6 1.8-1.1 3.6a40 40 0 0 0-1.4 7.5q-.2 3.7.6 6.8.8 3.2 2.2 5.2l.8 1-1.3.4-6.6 2-1.2.2q-.2.1-1.1 0v-.1l.4-.8v.9h-.2l-1.2.5-.7.2-.5.2h-.9q-.2 0-.6-.5v-.3l-.1-.2-.1-.4-.3-1-.5-4.2q0-4.7.1-10.2v-2.7q-.1-1.5.2-3l.6-2.8.4-2.9q.6-2.8 1-5.6l2.6-15q.8-4.2 1.5-6.7l.7-1.8.2-.6-.2.6q-.2.5-.5 1.6-.8 2.3-1.3 6.2-.7 4-1.3 9-.5 5.2-1.5 10.6l-.3 2.7-.1 1.4-.2 1.4-.5 2.7v2.6c.3 3.6 0 7.1.2 10.2q0 4.6 1.2 7.6v.1q0 0-.2-.3l-.6-.3h-.1l.3-.1.7-.3 1.3-.5h.3l.1-.1h.4q0 0 .1 0h.4-.2l.8-.3 7-1.8-.6 1.5q-1.7-2.6-2.4-6.2t-.1-7.4a42 42 0 0 1 1.7-7.7l1.3-3.6 1.3-3.4q1-3.5 1.6-6.7a89 89 0 0 1 2.7-9l.5-.9z"/><path fill="currentColor" d="m214.4 248.3-1.7 2.6-7.4-7.7-9.2-14-6.9-14-4.9-12.7-6-10.7-4.8-9.4-5.1-9c-.9-1.5-1-3.7-1.5-5.5l-2.2-10.2c-.4-2.2.3-4.3.8-6.5 0 0 1.3-6 1.7-6.9 2.5-5.4 1.7-6.6-3-7.9.2-1.5 1-3 1.6-4.3q2-5.4.5-10.7c-.2-.7-3.9-8-3.6-8.3l.8-3.5s6.5 10.4 7.6 18.6.6 12.2-.8 16c-1.9 5.1-4 10.6-2.9 16.2.6 2.7 1.9 5.3 2.9 7.9q1.7 4.4 3.7 8.6 1.5 2.9 3.4 5.5l6.5 10c4.3 6.6 6 14.7 9.4 21.8l7.2 15.4.4 1 5 9c1.5 2.6 3.2 6.2 5.3 8.3l1-1.7c.7-1-4-6.6-4.7-7.6-1.7-2.4-3.8-5-4.7-8q-1.7-5.3-4-10.2c-3-7.8-5.6-16-9.4-23.4q-2.6-5-5.4-10-4-9-8.3-17.9l-.7-5.1-.5-1.6s-.2-1.6-.4-1.2-1.5-1.6-1.5-1.9q.7-.8 1-1.9.5-.7.4-1.5-.1-1-1-1.4-.5 0-.5-.3v-.3l1.7-3 .2-1.5.1-1.8s2.1 1.5 1.8 3.2l-.3 1.8s2 1.2.6 3.1q-.9 1.2-1.5 2.6c1.3.7 1.6 2.8 1.7 4.2.8 6.2 3.8 11.2 6.5 16.4l5.3 10.1 9.4 20.3c2 5.6 3.8 11.6 6.7 16.8q3.2 5.9 6.6 11.6l3.3 5.1c.4-.3 6.6-5.4 6.8-4q.2 2.1-1.5 3.3a43 43 0 0 0-5.5 6.2M223.3 115.7l.2-.5.6-1.4q.3-.8.4-2 0-1.1-.7-2-1.7-1.8-3.8-2.6-1.9-1-2.6-1.2l2-.8q-.1.1-.1.5t.6 1.7l.5 1.5v1.8a6 6 0 0 1-1.5 3.2q-.8.6-1 1-.2.2 0 .2l.6.2 2.7.5 2.6.5-2.5-.1H218q-.1 0-.5-.2-.4-.1-.6-.5-.3-.5-.1-.8l.2-.6.6-.7a4 4 0 0 0 1-2.3q0-1.2-.5-2.2l-1.1-2q-.6-1.2-.4-1.9l.1-.6.4-1.6 1.5.8q1 .5 3 1.8a10 10 0 0 1 3.5 4q.5 1.5.2 2.8-.4 1.2-.9 2l-.8 1.1zM226.8 249.4q-1.4.8-3.2.8-1.5.2-1.7-1.3-.2-1.7 1-3 3.7-4.4 7.8-8.1s1.7-1 2.2.3c.8 2.2-.5 5-1.5 6.7q-.6 1.3-1.4 2.4-1.3 1.6-3.2 2.2"/><path fill="currentColor" d="m218.6 241 .7.8a3 3 0 0 0 1.9.6c1.4 0 2.5-1.1 2.6-1.1l1.1-.6q1-.6 2.1-1.6l2.1-1.6 1-.5-.7.7-1.5 2q-.7 1.1-1.6 2L225 243l-1.6.6q-1.2.3-2.6-.1-1.4-.7-1.8-1.6zM223.4 252.2c-.8 1.4-3.1 3-3.6 3.3l-.7.5-.6.2-1.5.1c-.5 0-.9-.7-1.3-1.2l-2-1.7c-.2-.2.3-2 .4-2.2l1.2-1.8c1.4-1.2 3-.8 4 .6l-1 1q-.4.3-.6.7-.3.5-.2 1c-.2-.7 2.3-2.1 2.7-2.2l2-.1q.5 0 1 .2 1 .7.2 1.6M152.7 226q2.6 1.3 5.6 2 2.3.9 4.3 2.3-.7.7-1 1.6-.5 1 .1 2l.9 1.2q2.1 2.6 4.6 4.7.5.3.7 1-.1.8-1 1.2c-1.3.5-3.1-.1-4.3-.4l-4.1-1c-1.7-.5-5.6-1-5.3-3.4q0-1 .5-1.7c.6-1 .6-1.5.4-2.7q-.2-1.7-.6-3.4-.1-1.9-.4-3.8"/><path fill="currentColor" d="M151.2 225.8q-.3 0-.5.3l-1.7 3.6-.6 1-.7.6q-.3.4-.2 1l.3.2 1.6 1.7.7.5q1 .6 2 .6.7 0 1-.2c.5-.4.4-1.2.5-1.8q-.4 0-1 .3-.4.2-.9 0l-.1-.4-.2-1.5q0-.8.7-1.2l.9-.2q.5 0 .7-.6 0-.4-.2-.7l-1.9-3.9M165.9 136q0 .2 1 .3t2.1-.4l1.3-.3h1.4q1.2 0 1.4.3l1.1 1 1 .7 1.2 1q1.1 1.3 1.5 2.4l.2.9v.3l-.5-.9q-.6-.8-1.8-1.5l-1.2-.5-2.7-1-1-.5-.8-.3-1.2-.2q-1.2 0-2.2-.6zM191.3 68.6q-.7.2-1 1-.2.3-.3.5l.2.6.7 3-.1.8q-.3.4-.7.4-.8.2-1.2.8.4-.7 1.1-1 .4 0 .5-.4v-.6l-1.1-2.8v-1l.5-.6q.6-.7 1.4-.7M191.1 76.8q-1.7.5-3.5.5H186q-1.2-.1-2-.5l-.7-.5q-.5-.3-.7-1.2l1.2-.2q.3 1.5 1 2.8.3.7.7 1.1.5.4 1.3.5l1.4-.1q.7-.3.8-1v-.4l.1-.2.2-.1q.3-.3.7-.3l1.5-.4-2 .8q-.2.2-.2.3v.3q0 1-1 1.4-.7.3-1.6.3-.8.1-1.6-.5l-1.1-1.3q-.8-1.3-1.4-2.9l1.2-.2.3.2.7.4q.6.5 1.3.7l1.7.3q1.7.3 3.4.2"/><path fill="currentColor" d="M184.7 74q-.5.6-1.2 1-.8 0-1 .8-.4.7-.4 1.5 0-.7 0-1.6a2 2 0 0 1 1.1-1.3c.6-.2 1.1-.1 1.5-.5M182.6 60q-1.4 1.3-1.4 3.2-.2 2.1-1 4.1c-.3 1-.3 2-1.5 2-1 0-2-.6-3-.8-1.3-.2-1.4.8-1.4 1.8 0 .2 0 .8-.3.7a9 9 0 0 1-1.5-2.5c.2-.6-1-1.6-1-2.2-.7-4 .2-11.1 5.4-12.3.3 0-.5 0-.2.1.4.3.6 1.6.8 2 .8 2.4 2.5 2.8 4.1 3.7"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6" d="m209.7 100.5-1 .1c-1 .2-3 .8-3.6 1.6M211.3 103q-1.5-.5-2.9.3c-.8.6-4.1 2-2.8 1.4M211.5 105.4q-1.2 0-2.3.3a3 3 0 0 0-1.5.4c-.3.2-1.1.5-1.5.5"/><path fill="currentColor" d="M217.7 116.5c-1.2-1.7-4.4-7.6-6.3-8.2h-.8c-.2.2-1 0-.3.8s2.7 5.4 2.6 6.4l3.6.2M158.7 147.2q.4.8.4 1.5t.4 1.3q.9 1.9 1.3 3.8a12 12 0 0 0 1.5 3.4q.4.6.5 1.3 0 .6-.3.7-.4 0-.7-.3-1-.9-1.6-2c-.3-.4-.8-1.3-1.4-1.4-.7-.1-1 .8-1 1.3q-.1 1.3.7 2.4c1.2 1.8 3.2 2.8 3.6 5l.4-.4c-1.6 0-3.7-.4-4.5-1.8-.7-1.2-2.3-2.2-2-3.7h-.8q.5 2 1.8 3.4c.8 1 1.8 2 2.2 3.3l.2-.4c-2.7 1.6-5.1-4.1-5.5-6-.1-.5-.8-.4-.7 0 .1 1.3.9 2.5 1.3 3.6l.4 1v.2q.1-.1-.2 0-.8-.7-1.4-1.6c-1-1.5-1.2-3-1.7-4.7-.8-2.6-1.6-5.2-.9-7.9.1-.4-.5-.6-.7-.2-.7 3.1.2 6 1 9q.4 1.4 1 2.9.5 1.1 1.3 2.1.6 1 1.7 1 .7-.1.6-.8c-.3-1.6-1.5-3-1.7-4.6l-.7.1c.5 2.5 3.2 8.4 6.5 6.5q.2 0 .2-.4c-.7-2.6-3.5-4-4-6.7 0-.3-.6-.3-.7 0q-.2 1.2.5 2.2l.9 1 .9 1.2c1 1.6 3.3 2 5 2q.3 0 .3-.4c-.4-2-1.7-3-3-4.4q-1.2-1.1-1.4-2.8 0-.3.3-.7l.5.5.8 1.2q.6 1 1.5 1.7c.4.2 1.3.5 1.8 0s.3-1.4 0-2q-.3-.6-.7-1.1l-1-2.1q-.4-2.1-1.2-4.1-.5-1-.6-2 0-.7-.5-1.5c-.2-.4-.8 0-.6.4M193.9 62h-1.3c-1.2.5-2.5.2-3.8.1q-2.5-.2-4.9-1.4v-.1q-.6-.1-.8-.5h-.2l-.8-.1 2.4 1.7c2.1 1 4 1 6.3 1q1.5.1 2.4-.2l.7-.4.2-.2zM187.5 66.5q-.3-.9-.9-1a7 7 0 0 0-3.4 0q-.4 0-.6.3 0 .3-.3.5-.4.4.2.7l.7-.1q1-.2 2.1 0c.3.1 2 .6 2.2.2v-.6M194.6 66.8a3 3 0 0 0-2.6-.5q-.7.1-1 .7v.8l.2.2h.4a3 3 0 0 1 3 .5l.2-.7.1-.6q0-.4-.4-.4M186.7 68.5c.5 1 .4 1-.2 1.6-.4-.5-1-.2-1.7-.4l-1.5-.3q-.3 0-.6-.2-.6-.2-1-.6c.3.2 1.2-.1 1.5-.2 1-.5 2.4.2 3.5-.2M191.6 69q-.7.5-.3 1.5h1.4q1 0 1.5-.8h-.6l-.6-.5-.7-.3zv.1"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width=".8" d="m158.2 142-4 2-6.6.6M158.4 139.5l-4 2-6.5.6"/><path fill="currentColor" d="m172.1 84.2 1 .6 4.4 2.5 1.2.4 1.4.5q1.2.5 2.8 0a2 2 0 0 0 1-1q.4-.8.4-1.3v-1.4q.1 0 .1 1.3V87q-.3.8-1 1.4-1.7.9-3.2.6-1.4-.1-1.8-.4-.5 0-1.6-.7l-2-1.6-1.9-1.5zM186.7 88.5v2.8q0 2.7.7 6.2a42 42 0 0 1 .6 6.5l-.1 3.4-2.4 22.2 1.3-22.2.3-4q.2-3-.4-6.3a33 33 0 0 1-.2-6q.1-2.5.2-2.6"/><path fill="currentColor" d="M183.1 88.3v2.8l1 6.2q.5 3.6.3 6.6l-.1 3.4-2.4 22.3 1.3-22.3.3-4q.3-3 0-6.4l-.6-6 .1-1.9zM222.3 238.9l1.4-2.2 1.5-2.3.5-.6v-.1l.1-.1h.1l-.1.1q-.7-.6-1.2-1.3c-1.2-1.8-2-4-3-5q-.3 0-.4-.3l.7-.7v.1l.6.4v.3l-.5.8-.4.8-.1.2-.3.2a1 1 0 0 1-1 .1l.3-.8.3.4.1.2-.2.4a7 7 0 0 1-2 2q-1.2 1-2.9 1.8l-3.3 1.8c-1 .6-2.2 1.4-3.4 1.6-.6.2-1.2 0-1.6.3q-.7.4-1 1-.5 1.5-1 2.1t-.5.6l.4-.6q.4-.6.7-2 .2-.5.8-1.3l.8-.5.9-.2q1.4-.4 2.8-1.5l3-2.1 2.6-2q1.2-.9 1.6-1.6l.4-.8q.1-.6 1-1h.8-.2l-.8.3q0 0 0-.1l.5-.7q0-.2.3-.5l.2-.2v-.2l.2-.1.1-.1h.1l.2-.2q.8-.2 1.1.1l.1.1.9 1.2c1 1.7 1.5 3.8 2.4 5.5l.4.5q0 .2.2.3l.3.5q0 .3-.2.5l-.3.4-.2.3-.5.5-1.7 1.9zM149.5 135.8q-1 .1-1 1 .2.9 1.2.9.9-.3.9-1-.2-1-1.1-.9M149.7 138.5q-1 .1-1 1 .2 1 1.2.8t.9-1q-.2-.9-1.1-.8M148.5 133.6q0 .9.8 1 1 0 1-.9t-.8-1q-.9 0-1 .9M148.3 130.4q0 .9.9 1t1-1q0-.9-.9-1t-1 1M219.7 115.4q0 1 .8 1 1 0 1-.9t-.8-1q-.9 0-1 1M224 115.3q-.4-.7-1.3-.3-.6.4-.2 1.3.6.8 1.3.4.6-.6.3-1.4M184.3 95q0 .9.9 1t1-1q0-.9-.9-1t-1 1M184.9 100q0 1 .8 1.1.9 0 1-.9t-.8-1q-.9 0-1 .9M184.5 105.2q0 .9 1 1 .8 0 .9-1t-.9-1q-.9 0-1 1M184.1 111.6q0 1 .9 1t1-.9q0-.9-.9-1t-1 .9M184 116.6q0 .9.8 1t1-1q0-.9-.9-1t-1 1M183.3 122.2q0 .9.9 1t1-1q0-.9-.9-1t-1 1M183.2 126.7q0 1 .8 1.1.9 0 1-1t-.8-1q-1 0-1 1M183.7 90.6q0 .9 1 1 .7 0 .9-.9 0-.9-.9-1t-1 .9M180.4 86q0 .9.8 1 1 0 1-1t-.8-1q-.9 0-1 1"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M154.4 88.2c2.7 2.6 17.8-3 17.8-4.2-.1-3 .3 1.5 3.1 2.8-.2-.2-5.2 5-6.1 5.5q-2.6 1.4-5.3 2.1l-2.7.9c-1.2.2-1.7-.3-2.6-.9-2.2-1.4-3.3-4-4.2-6.2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M167.3 87.1a8 8 0 0 0 2.4 4.7M197.6 89.7c3.7 1.4 6.1-.3 6.2-.4 0 0 .5 2 .4 2.3-.4 1.3-3.1 2.7-4.2 3-3.8 1.3-6.5-3.4-8-6.2q-1.2-2-2-4.3"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="M195 89c-.7.5-.9.9-1.5 1.4M197.4 90.3q-.7 1.8-2.6 2.2"/><path fill="currentColor" d="M173.2 94.6c3 2.7 6.8.4 10.4.9-3 1.6-9 3.5-10.4-1M173.7 100c2.9 2.9 6.7.7 10.3 1.3-3 1.5-9.1 3.2-10.3-1.4M173.2 105.5c3 2.8 6.8.6 10.3 1.1-3 1.6-9 3.4-10.3-1.1M173.2 110.6c3 2.8 6.8.6 10.3 1.2-3 1.5-9 3.3-10.3-1.2M174 115.3c1.7 2 4 1.5 6.3 1.1q4.4-.4.2 1c-2.3 1-6 1-6.5-2.1M173.9 120.2c2.3 2.8 5.7.8 8.7 1.2-2.6 1.5-8 3.1-8.7-1.2M174.7 125c2 2.7 5 .8 7.5 1.1-2.2 1.5-6.9 3-7.5-1M175 128.5c1.8 2.6 4.6.7 7.2 1q-1.8 1.2-4 1.5c-1.4.3-3.2-1-3.2-2.5"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width=".8" d="M172.3 83c.4-1.7 3.2-4.2 3.2-4.2"/><path fill="currentColor" d="M186.8 94.6c3 2.9 6.8.7 10.3 1.4-3 1.4-9 3.1-10.3-1.4M187.4 100.3c2.9 2.9 6.7.7 10.3 1.4-3.1 1.4-9.1 3.1-10.3-1.4M187 106c3 2.8 6.9.6 10.4 1.2-3 1.5-9 3.3-10.3-1.2M186.5 110.5c3 2.9 6.8.6 10.4 1.2-3 1.5-9 3.3-10.4-1.2M186.8 116c1.7 2 4 1.5 6.3 1.1q4.4-.5.2 1c-2.3 1-6 1-6.5-2.2M186.4 121.2l3.4 1.4c-1.1 1.3-3.6.3-3.4-1.4"/><path fill="none" d="M164.3 88.3q0 2.6 3 4.8"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M164.3 88.3q0 2.6 3 4.8"/><path fill="currentColor" d="m214 109.5.6.2h.5q0 .2.5.2.5-.1.6-.3 0 0-.3.7l-.6.4h-.4q-.3 0-.7-.6zM178.6 139.7a37 37 0 0 1 6.3-15q2.9-3 6.3-5.4a30 30 0 0 1 7.5-3.4l2-.5 2-.4 2-.1h2q4.2.4 8 1.7-4-1-8-1l-1.9.1-2 .3-1.8.5-1.9.6a28 28 0 0 0-12.2 9.3 35 35 0 0 0-8.3 13.3M195.3 171.5l-1.4.1a33 33 0 0 0-11.3-2.9h-.5l-.4-.6-.3-.4a39 39 0 0 1-2.9-27.5 38 38 0 0 0 5.2 26.2l.2.4-1-.6q6.2 1.7 11 5.2ZM219.6 172l-8.1 1.1-16.2-1.6 16.2-1Z"/><path fill="currentColor" d="M194.8 171.5a33 33 0 0 1-6.9-12.8 39 39 0 0 1 3-29q1.7-3.2 4.2-6.1 1.3-1.4 2.7-2.7l1.5-1.2q.8-.7 1.6-1a21.8 21.8 0 0 1 21-1.2q4.9 2.2 8.4 6.4 3.6 4.1 5.5 9a40 40 0 0 1 2.2 20.8c-1 7-4 13.6-8.8 18.7l-.2.1h-.1zl34 .3h-.2c4.5-5 7.3-11.6 8.2-18.3s0-13.7-2.6-19.9a27 27 0 0 0-13.2-14.2 20 20 0 0 0-18.7 1.5l-1.5.9-1.4 1q-1.4 1.1-2.6 2.4-2.4 2.5-4.2 5.5a37 37 0 0 0-4 27.8q1.5 7.2 6.2 13M205 105.4v-.4c-.3-.2-1-.7-1-1q-.1-.5.2-.8l.5-.4.2-.3-1 .7q-1.4.9-2.3 2.4-.5 1.2-.9 2.5l-.8 2.4-.5 3q-.2 1.4.1 2.7l3-.6.6-4.8.1-1c0 .4-2 0-2.1 0-.5 0-1.4 0-.8.7s2 .2 2.6 0q.4-.4.4-1l.5-1.4z"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width=".9" d="M194.8 171.5c-5-5.9-8-14.4-7.8-23.7.4-17.6 12.2-31.6 26.2-31.3 14 .2 25 14.7 24.6 32.2a36 36 0 0 1-9 23.4z"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="1.8" d="m85.8 219.6 43-69.6"/><path fill="currentColor" d="M133.8 153a1 1 0 0 1-.8-.7q0-.7.6-.9c3.9-1.2 11.5-2.8 16-.6.5.2 1 .9.9 1.3q-.4.7-1.4.2c-3.7-1.6-10.3-.9-15 .7z"/><path fill="none" d="M158.5 157q2.1 3 3.8 6.5c1 1.9 2.6 6.4 4.3 7.8"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M158.5 157q2.1 3 3.8 6.5c1 1.9 2.6 6.4 4.3 7.8"/><path fill="currentColor" d="m152.3 230.8.5 1.6-.1.7-.8-.2.7-1 .2-.3.1.1q.6.6.4 1.1 0-.6-.6-.7l.3-.2q0 .7-.4 1.5l-.5 1-.3-1.2-.2-.8z"/><path fill="currentColor" d="M150.7 230.2q.4 1 1.2 2l.1.5v.3l-.1-.1v-.2l.3-.6q.3-1.3 1.1-2a4 4 0 0 0-.6 2.1v1q0 .3-.5.5h-.7l-.3-.4-.4-.6q-.3-1.3 0-2.5"/><path fill="currentColor" d="M152.3 230.7q.6 1.3 1.6 2 .3 0 .5.4l-.6.7-1-2.1q-.6-1-.8-2.3 1 2.1 2.6 3.8l1.1 1.5-1.7-.8-.8-.4a4 4 0 0 1-.9-2.8"/><path fill="currentColor" d="M153.6 230.4q-1 0-1.7.9l-.1-.2 1.9-1.1.7-.5-.4.8-1.2 1.6-.4.2h-.5l-.2-.3-.2-.4v-.3l-.3-2v-2.6l1 2.4.3.6.8 2.5.4 1.2.2.7.1.2q0 .2 0 .2h-.1q0-.2 0-.2v-.1l.2-1.8c0-.3 0-1-.1-.8l-1.2.2-.4.1v-.4q.1-1.1 1-1.9l.2.4a1 1 0 0 0-.7.6l-.1-.2.1-.1.3.2-1.7 1.3v-.2a5 5 0 0 0 2.3-1.1q-.4 0-.9.2.4-.3 1-.2-1 .9-2.4 1.3h-.4l.3-.2 1.6-1.4.7-.6-.5.8q0 .3-.4.3h-.3l.1-.2q.2-.7.8-1l.8-.3-.6.7q-.6.7-.6 1.7l-.4-.3 1.4-.3q.3 0 .5.2t.2.5a5 5 0 0 1 0 2.8l-.3.4q-.1.3-.7.2l-.5-.4-.1-.4-.3-.6-.4-1.2-1-2.4-.1-.6 1-.1v2.2h-.1.1l1.3-1.3.3.3-2 .9-.6.3.5-.5q.7-.7 1.8-.7"/><path fill="currentColor" d="m152.7 231 .4.5h-.1q-1-1.8-1.4-4l.2-1.7v-.5l.6.1q1.2.5 1.8 1.4l.4.6h-.6l-.8-.3-.4-.6q-.1-.6-.5-.9l.3-.2.6 2.5h-.2q.4-.3.2-1 .3.6 0 1.1l-.1.1v-.1l-1-2.5v-.5l.4.2q.7.4.8 1 .4.5.6.5l-.3.5q-.6-.6-1.4-.8l.6-.5v1.5q-.2 2.1.3 4.1l.1.5-.2-.4Z"/><path fill="currentColor" d="M153 232a6 6 0 0 0 1.8-1.6l.1-.2v-.1h-.3l-1 .5v-.5q.5.3.3 1l-.4-.5 1-.5 1.3-.9-.8 1.5-1.2 2.2-1.1 2.1.1-2.4V231l-.1-1.5 1 1q1 1 1.1 2.3l.3 1.8-1.1-1.4a8 8 0 0 1-1.5-6.1l.2-1 .3.9.5 1.3-.5.2-.4-1 .4-.2q.8 2 1 4.3v.7l-.1-.7q-.3-.7-.3-1.4h.1v1-1q0 .8.3 1.4h-.1q-.4-2.1-1.3-4.1l.4-.2.5 1-.5.2-.5-1.3h.6a7 7 0 0 0 1.6 5.4l-.8.4q-.2-1-1-1.6l1-.5v1.7l-1-.4 1.4-2 .6.5q-.6.3-1.3.4l-.3-.5v-.1l-.4-.4.4-.1 1.2-.4q.3-.1.8.2l-.1.4-.2.3q-.8.8-2 1.3M228.5 240.3c-2.8 3-7 4.6-9.3 8l-.6-.6 4.6-3h.3l.3.2q.3.2.3.6v.5l-.5.7-5.2 5-2.5 2.4 1.8-3q1.6-2.7 3.7-5l1-1.2-.3 1.5a6 6 0 0 1-2.8 3.7l-1 .5.6-1 3.1-5.3.4.2q-1.5 2.4-3.6 4.4l-.3.3.1-.4a10 10 0 0 1 4.8-6.2 10 10 0 0 0-4.5 6.3l-.2-.2a18 18 0 0 0 3.3-4.4l.4.2-3 5.5-.4-.5q1.8-1.2 2.3-3.3l.7.4a30 30 0 0 0-3.5 5l-.7-.6 5-5.1.2-.3.7.2q-2.4 1-4.6 2.5l-2.1 1.4 1.6-2c2.7-3.3 6.9-4.5 9.9-7.4"/><path fill="currentColor" d="M225.9 243.4a24 24 0 0 0-7.1 5q-.5.5-.5.9l-.8-.3 1.7-2.8.2-.1.8.7-2.7 2.5-1.2 1.1.4-1.6q.5-1.7 1.4-3.1l.8.4-.8 1.5-.6-.5q.7-.5 1.3-1.3.6-.7 1.6-1.2l.4-.1v.4q-.1 2-1.2 3.5l-.4-.2a9 9 0 0 1 2-2.6l.7-.6-.5.8-2 3-.2-.1 2-2.3q0 .3-.2.5l.2-.5-1.8 2.4-.2-.1q1.2-1.5 2-3l.2.2q-1 1.1-1.8 2.5l-.4-.2a7 7 0 0 0 1-3.3l.4.3c-1 .4-1.5 1.6-2.6 2.5l-1.2 1 .6-1.5.7-1.5.7.5q-.9 1.3-1.1 2.8l-.9-.4 2.7-2.6.8.7-.1.2-2 2.6-1.2 1.5.4-1.9q.3-.9.9-1.2a27 27 0 0 1 7.6-4.5"/><path fill="currentColor" d="M214.5 250.3a20 20 0 0 0 4.8-6q.4-.7 1-1.3l.8-.5.8-.2q.8 0 1.4-.4 1-.3 1.8-1l1-.6q.6-.4 1.4-.2.5.1.7.5.3.5.2.8 0 .8-.4 1.2-.7 1-1.5 1.9-1.6 1.4-3 3.2c-.9 1.1-1.7 2.5-3 3.2l-.4.2.1-.3q1-3.6 3.2-6.4a17 17 0 0 0-2.9 6.4l-.2-.1q1.7-1.3 2.8-3.4 1.4-1.8 2.9-3.4.8-.7 1.2-1.7l.3-.8q0-.4-.3-.4-.6 0-1.4.8-1 .8-2.1 1.2-.8.3-1.7.3-.7 0-1.2.3l-.9 1.1a21 21 0 0 1-5.4 5.6"/><path fill="currentColor" d="M223 245.2q-1.3 1.6-3.3 2.8h-.1q.5-2 1.5-3.7l.2.2-1 1-.4.5-.2.3-.3.1q-.1 0-.3-.2v-.1a11 11 0 0 1 3-1.7v.3c-.3-.5-1.1-.5-1.4 0l-.3-.4q2-.9 4-1.5l.6-.2-.3.6q-.7 1.3-1.8 2.3l-.4-.5q1.2-1 2.6-1.8l2.6-1.3-2.2 2-2.8 2.6-.6-.7 1.6-1.2 3.1-2.5-2.5 3.1q-1.1 1.4-2.4 2.6l-3.3 3 2.5-3.6q1-1.5 2.4-2.6l1.4-1.1-.6 1.8a5 5 0 0 1-2 2.4l-.9.5.1-1q0-.8.6-1.3l.8.7-1 1.4-.9-.6.6-1 .7-1.5.3 1.6q.3 1.4-.5 2.7l-1 1.8v-2q0-.8.4-1.5l.4-.8.5.7q.3.5.2 1l-.2.7-1.2 2-.2.3-.2.3-.3.2h-.6l-.3-.5v-.2q0-2.4.6-4.8l.9.2q-.3 2-1 3.8l-.8 2.6v-2.7q0-1.5 1.2-2.8l.5-.4.2.5q.4 1.2.2 2.4l-.8-.2a6 6 0 0 1 1.6-2.3l.3-.4.3.5q.6 1.5-.2 2.8l-.6.8v-1l-.3-1.5h.7l-1 2-.2.5-.3-.5q-.5-1.1-.1-2.2l.2-.7.3.7q.3.7.1 1.3l-.4 1-.2-1v-1.3l.1-.6.4.5q.3.4.3.9h-.6q.3-2.6 1.2-5l.3-.6.2.7q.2.7-.1 1.2l-.6 1-.3.2-.1-.4q-.3-.5-.3-1.1l.4.1-1 .8-.1.2-.2-.3-.3-1.5.4.1-.7 1.6-.3.6-.1-.7q0-1.4.5-2.6l.6-1.1q.2-.3.6-.5l.7-.1q.7.1 1.2.5l.6.3.6.4v.5l-.2.3-.3.5-.8 1-.2-.1 1.7-1.9.2.2-1.2 1.5-.3.3v-.4a3 3 0 0 1 1.3-1.8l.5-.4-.4.5-1.8 2.2h-.1l1.3-1.5h.1q.2.4 0 .7h-.1l1-1.8-1.6 1.5q-.1-.7.3-1a3 3 0 0 1-1 1.6q.8-.7 1-1.6-.5.5-.3 1l1.6-1.5h.1l-1 1.8v-.6l-1.3 1.4h-.1l1.7-2.3.2.1q-1 .6-1.1 1.8l-.2-.1 1.2-1.6.2.2-1.7 1.8-.2-.1.7-1 .4-.6q.2-.3.1-.4l-.5-.3-.5-.3-1.2-.5c-.8-.2-1 .9-1.4 1.6a4 4 0 0 0-.5 2.4l-.4-.1.7-1.6.4-1v1.1q0 .8.3 1.3h-.3l.9-.9.3-.3v.5q0 .6.3 1h-.4q.8-.8.6-1.6h.5q-1 2.2-1 4.7h-.7l-.1-.5.5-.1v.9h-.6v-.8h.6q-.3.8 0 1.6h-.5l.8-1.9.5-1.3.2 1.4.2 1.6-.6-.2q.6-1 .1-2h.6q-.9 1-1.3 2l-.8-.1q.1-1-.2-2l.7.2a3 3 0 0 0-1 2.2l-.8-.1q.6-1.8.9-3.7l.9.2a17 17 0 0 0-.5 4.4v.1l-.1-.2h-.4l.3-.4 1-2 .2-.6h.9q-.3.4-.3 1l-1-.3q.6-1 .3-2l1 .1-.5 1-1-.5 1-1.3.9.7q-.2.2-.3.5l-.8-.5.6-.4q.6-.6.9-1.4l.9.6q-1.3 1-2.3 2.3l-.7-.7 2.4-2.4.6.6-1.6 1.2-.5-.7 3-2.5.4.6q-1.5.7-2.6 1.6l-.4-.5a8 8 0 0 0 1.7-2l.3.3-3.9 1.4-.8.4.5-.7c.6-.7 1.6-.6 2 0l.2.3h-.2q-1.5.7-3 1.6l.1-.2 1.7-1.8.2.2a10 10 0 0 0-1.6 3.5v-.1q1.8-1 3.4-2.7"/><path fill="currentColor" d="M228.6 239.6q-1 1.3-1.7 2.7-.8 1.6-2.3 2.5l-1 .6.5-1q.9-2 2.4-3.4l3.8-3.5-3 4.3-.1.3-2.5 3.1-2.1 2.6 1.2-3q.7-1.6 1.5-2.8l.6.4-2.7 2.4-1 .7.5-1 .3-1 .3.4q-.9.2-1.8.8v-.3q.3 0 .7-.3l.6-.7-.3.9q-.3.6-1 .5a1 1 0 0 1-.5-1v-.1h.1q2.4.5 5 .6l-5-.3.1-.1q0 .4.4.6.4 0 .5-.4l.3.2q-.3.5-1 .5h-.5l.4-.4q.8-.8 2-1l.4-.1-.1.5-.4.8-.4-.3 2.6-2.4 1.8-1.8-1.2 2.3q-.8 1.2-1.3 2.7l-.8-.5 2.4-3.3.2-.2.8.8q-1.5 1.1-2.6 2.8l-.4-.5a6 6 0 0 0 2.3-2q.8-1.5 2-2.6"/><path fill="currentColor" d="M228.3 239.6q-.3 1.8-1.1 3.6a14 14 0 0 1-2.8 2.6q-1.6 1-2.7 2.4 1-1.6 2.3-2.9a13 13 0 0 0 2.2-2.8q1.3-1.2 2.1-3M211.5 109a1 1 0 0 1-1-.2l-.6-.6c0-.3.8-.3 1-.3h.3q.3 0 .5.4t.1.6-.4 0q-.7.1-1.3 0l-.1-.3-.2-.4h.4l.2.6"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6" d="m212 108.3 2.2 1.4.3.3.3.5.6 1 .5 1.6q.3.8 1 1.3h.4c.5-.5 1.3-.6 1.6-1.3l.1-.5.5-.7q.2-.6.3-1.3v-1.5c0-3-.1-2.6-2.3-4.6l-1.6-2-1.2-1.5-1-1.2-1.1-1q-.9-.7-1.9-1-2.4-.6-4.1 1.2-1.2 1.2-1.3 2.8 0 .2-.2.4l-.3.2q-.6.4-.8 1-.2.8.4 1.3.5.4 1.2 0l-.6.9q-.3.6.2 1t1.3 0q-.2.7.4 1.3.5.2 1 .3h2.2z"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="1.2" d="m151.2 214.7 11.5 7.6 9 3.1 7.9-26.8.6-3.6-8.1-16.3-20.8 36.3"/><path fill="none" d="m106.3 167.3 1.4-2.1"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" d="m106.3 167.3 1.4-2.1"/><path fill="currentColor" d="m101.4 168.2 3.4-4.8 13.3 4.1 45.9 25.8-2.6 4.7-44.1-25-15-4.1a.6.6 0 0 1-.2-1l5.3-3.2M87.5 193l2-5.6 13.8 4.2 48.8 27.6-2.7 4.9-45.5-26.1-17.1-5.6c-.6-1.7 1-.2.2-.3l5.5-3.3M153.7 235l-.5-.6s.7 1.2.1 1.2-2.5-.6-2.5-.6l-3-2.5c-.2-.2-.2-.8-.2-.8s2.1-3.5 2-3.7l1-2.4 1.2-.9 1.8-.6 4.6 2 4.4 2.8.5.1.3.5-2 2.2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" d="m171.2 225.4 3 1-2.8 4.8-5.6-1-5.1-3-8.6-4-2.3-2.5-.6-1.2 2-4"/><path fill="none" d="M116.5 151.7 80 212"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" d="M116.5 151.7 80 212"/><path fill="currentColor" d="M121 150.4s0 1.8 1.6 2.8 3.3 1.4 3.3 1.4l3-.2 2.6-.8h1.7l-4.4-3.3ZM90.9 219.3l-4.5-1.2q-.3 0-.6-.2-.3 0-.4-.4-.7-1-.7-2.2 1-.5 2.3-.2 2.8.7 4.2 3.2c1.1 2 .5 3.8 1 5.8-2.5-1.1-4.8-3-7.1-4.4l-2.7-5.5 4.9 1.5s4.1 3.7 4.3 4.2l.5 3.6M113.8 151s-.9 3.1-1.6 3c-.7 0-3.4.7-3.4.7l2.5-3.1ZM166 172.5l.2.9c.3 1.7.6 3.1 2.3 4q1.7 1 3.6 1.3l-1-5.5M128 246.4c2.1-.6 2.9-.4 4.3 0 .5 0 3.7 1 3.5 1.4-.3.7-.4 1.9-.9 2.4l-1.3 1.7-2.4-.7c-1.2-1.2-3.4-2.5-4.5-3.8q.6-.7 1.3-1"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" d="M187.6 85s0 1.5 1.1 2.8a9 9 0 0 0 3.7 1.9"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width=".8" d="m184.5 84.4-.3 1.4-.8 2.4"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" d="M188.5 87.5s-1.7 1.4-3 1.3c-1.1-.2-1.4-.5-2-1.2"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width=".4" d="m194.2 76.9.3-2v-.1l-.3-2.6-.3-1.3c.2-.8.8-1.7 1-2.5V67q.2-1.1 0-2.2-.1-.4-.4-1l-.8-1.7"/><path fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width=".8" d="M176.3 69.7q-.5 0-.6.5t.6.5h.2q.3.1.2.5 0 .3-.3.5-.2.7.2 1.1.7.5 1.2 0"/><path fill="currentColor" d="M189.2 86.2q0 .9.8 1 1 0 1-1t-.8-1q-.9 0-1 1M182.7 55.5l-1.1 1.2q-.4.3 0 .6h-.1l-1-.9q.3.1.6-.1l1.3-1.4-2.1.7h-.1l.5-2-1.2 1.2q-.3.3 0 .6l-.7-.5v-.1q.4.3.6-.1l1.2-1.2q.2-.3 0-.6l.8.6-.5 1.7 1.7-.6.8.8h-.1q-.3-.2-.6.1M183.7 58l.3-1.1-1 .5Zm-.5.7v-.1q.4.2.5-.3v-.2l-.8-.6-.2.2q-.4.3 0 .5v.1l-.9-.6h.1q.4.1.7-.1l2-1.3h.1l-.5 2.4q-.1.4.1.7ZM187.6 60l-.4.7-2.3-1q.5 0 .6-.4l.7-1.5q0-.3-.2-.5v-.1l1.3.5v.1q-.4 0-.5.3L186 60l.6.3q.4 0 .9-.4ZM190.6 60.5l-.2.8-2.4-.4q.4 0 .4-.4l.3-1.7q0-.3-.3-.5l1.4.1v.1q-.4 0-.5.4l-.3 2 .7.2q.5 0 .7-.6zM193.6 60.6v.8H191v-.1q.4 0 .4-.5v-1.6q.1-.4-.4-.5h2.3v.8q-.3-.6-.7-.7h-.5V60q.5.1.6-.5h.1v1.1h-.1q0-.6-.6-.5v1.2h.6q.4 0 .7-.7"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width=".8" d="m176.5 54.6 2.5 3.6 2.2 1.8 2 .7"/></symbol>
+</defs></svg>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const num=id=>+$(id).value, chk=id=>$(id).checked, val=id=>$(id).value;
+let MOTIF='pin';
+
+/* ---------- motif builders (centered on 0,0; R = motif radius) ---------- */
+function motifPin(R,fg){
+  // four triangles form a diamond; each is inset from the two cutting diagonals
+  // (gap), its inner corner slides tangentially (inner twist) and its outer
+  // corners sweep around the centre (outer twist)
+  const D=R, i=num('pinGap')/200*D, t=num('pinTwist')/100*D, th=num('pinTwistO')*Math.PI/180;
+  const rot=(x,y,a)=>[x*Math.cos(a)-y*Math.sin(a), x*Math.sin(a)+y*Math.cos(a)];
+  const pts=[[i+t,-i+t], rot(i,-(D-i),th), rot(D-i,-i,th)]
+    .map(v=>v.map(n=>+n.toFixed(2)).join(' '));
+  const soft=chk('pinRound')?D*0.08:0;
+  let d='';
+  for(let k=0;k<4;k++) d+=`<path d="M ${pts[0]} L ${pts[1]} L ${pts[2]} Z" transform="rotate(${k*90})"/>`;
+  return `<g fill="${fg}"${soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:''}>${d}</g>`;
+}
+function motifTre(R,fg){
+  const r=num('treLobe')/100*R*1.15, d=num('treSpread')/100*R, st=num('treStem')/100*R;
+  let s='';
+  for(const a of [-90,30,150]){
+    const t=a*Math.PI/180;
+    s+=`<circle cx="${(d*Math.cos(t)).toFixed(2)}" cy="${(d*Math.sin(t)).toFixed(2)}" r="${r.toFixed(2)}"/>`;
+  }
+  if(st>2) s+=`<path d="M ${-0.09*R} ${0.1*R} Q ${-0.12*R} ${0.75*st} ${-0.26*R} ${st} L ${0.1*R} ${st} Q ${0.02*R} ${0.6*st} ${0.09*R} ${0.1*R} Z"/>`;
+  return `<g fill="${fg}">${s}</g>`;
+}
+function motifLos(R,fg){
+  const s=num('losSize')/100*R, gp=num('losGap')/100*R, c=s+gp/2, cut=num('losCut')/100;
+  const dia=(cx,cy)=>{
+    let p=`M ${cx} ${cy-s} L ${cx+s} ${cy} L ${cx} ${cy+s} L ${cx-s} ${cy} Z`;
+    if(cut>0.02){const i=s*cut; p+=` M ${cx} ${cy-i} L ${cx+i} ${cy} L ${cx} ${cy+i} L ${cx-i} ${cy} Z`;}
+    return p;
+  };
+  let d='';
+  for(const [x,y] of [[-c,0],[c,0],[0,-c],[0,c]]) d+=dia(x,y)+' ';
+  return `<path fill="${fg}" fill-rule="evenodd" d="${d}"/>`;
+}
+function motifMarkup(fg){
+  const R=num('cell')*num('scale')/100/2;
+  return MOTIF==='pin'?motifPin(R,fg):MOTIF==='tre'?motifTre(R,fg):motifLos(R,fg);
+}
+function accentMarkup(ac){
+  const r=num('cell')*num('accentSize')/100/2, t=val('accent');
+  if(t==='none'||r<0.5) return '';
+  if(t==='point')   return `<circle r="${r.toFixed(2)}" fill="${ac}"/>`;
+  if(t==='croix')   return `<path d="M ${-r} ${-r/3.2} H ${r} V ${r/3.2} H ${-r} Z M ${-r/3.2} ${-r} V ${r} H ${r/3.2} V ${-r} Z" fill="${ac}"/>`;
+  return `<path d="M 0 ${-r} L ${r} 0 L 0 ${r} L ${-r} 0 Z" fill="${ac}"/>`;
+}
+
+/* ---------- lattice ---------- */
+function placeAll(W,H,excl){
+  const S=num('cell'), q=chk('quinconce'), alt=val('alternance'), tw=num('twist');
+  const base=motifMarkup('MOTIF_FG'), acc=accentMarkup('ACCENT_FG');
+  const skip=(x,y)=>excl&&(((x-excl.cx)/excl.rx)**2+((y-excl.cy)/excl.ry)**2)<1;
+  // motif and accent are defined once and stamped with <use> — a swatch can
+  // hold thousands of placements, so per-placement inline markup is too heavy
+  let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
+  const stamp=(id,x,y,rot,mir)=>{
+    out+=`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot})${mir?' scale(-1 1)':''}"/>`;
+  };
+  const put=(x,y,isAlt)=>{
+    if(skip(x,y)) return;
+    stamp('pm',x,y,isAlt&&alt==='quarter'?tw+90:tw, isAlt&&alt==='mirror');
+  };
+  const i0=-1, i1=Math.ceil(W/S)+1, j1=Math.ceil(H/S)+1;
+  for(let i=i0;i<=i1;i++) for(let j=i0;j<=j1;j++){
+    put(i*S, j*S, q?false:((i+j)&1)===1&&alt!=='none');
+    if(q) put((i+0.5)*S,(j+0.5)*S, alt!=='none');
+    if(acc){
+      const pts=q?[[(i+0.5)*S,j*S],[i*S,(j+0.5)*S]]:[[(i+0.5)*S,(j+0.5)*S]];
+      for(const [ax,ay] of pts) if(!skip(ax,ay)) stamp('pa',ax,ay,tw,false);
+    }
+  }
+  return out;
+}
+function motifReach(){
+  // max radius of motif ink, used to pad the marque exclusion zone
+  const R=num('cell')*num('scale')/200;
+  if(MOTIF==='pin') return R*1.1;
+  if(MOTIF==='tre') return R*Math.max(num('treSpread')/100+num('treLobe')/100*1.15, num('treStem')/100)+R*0.1;
+  return R*(num('losSize')/100*2+num('losGap')/200)+2;
+}
+
+/* ---------- la marque ---------- */
+function marqueBox(W,H){
+  const E=Math.min(W,H)*num('mqSize')/100, mode=val('mqMode');
+  const figH=mode==='text'?0:(mode==='figure'?E:E*0.74), figW=figH*163.3/213;
+  const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
+  const textW=F1*6.2;
+  const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
+  return {E,mode,figH,figW,F1,F2,textW,blockH,cx:W/2,cy:H/2};
+}
+function marqueMarkup(b,fg){
+  let y=b.cy-b.blockH/2, s='';
+  if(b.figH){
+    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${(b.cx-b.figW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}" color="${fg}"/>`;
+    y+=b.figH;
+  }
+  const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="${fg}">${txt}</text>`;
+  if(b.F1){ s+=T('LAVOËT',b.F1,b.F1*1.18,0.22); y+=b.F1*1.55; }
+  if(b.F2){ s+=T('1869',b.F2,b.F2*1.15,0.3); }
+  return `<g>${s}</g>`;
+}
+
+/* ---------- documents ---------- */
+function tileSize(){
+  const S=num('cell');
+  return (!chk('quinconce')&&val('alternance')!=='none')?2*S:S;
+}
+function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
+function fill(motifs,c){ return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('ACCENT_FG',c.ac); }
+
+function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
+  const c=colors(), useMq=marque&&chk('mq');
+  let excl=null, mq='';
+  if(useMq){
+    const b=marqueBox(W,H), pad=motifReach();
+    excl={cx:b.cx,cy:b.cy,rx:Math.max(b.figW,b.textW)*0.62+b.E*0.1+pad,ry:b.blockH*0.62+b.E*0.08+pad};
+    mq=marqueMarkup(b,c.fg);
+  }
+  const body=fill(placeAll(W,H,excl),c);
+  const T=tileSize();
+  const g=guide?`<rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="${c.bg}" stroke-width="3"/><rect x="0" y="0" width="${T}" height="${T}" fill="none" stroke="${c.fg}" stroke-width="1.2" stroke-dasharray="5 4"/>`:'';
+  const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/>${body}${mq}${g}</svg>`;
+}
+function buildTile(){
+  const c=colors(), T=tileSize();
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${T} ${T}" width="${T}" height="${T}"><rect width="${T}" height="${T}" fill="${c.bg}"/>${fill(placeAll(T,T,null),c)}</svg>`;
+}
+
+/* ---------- preview ---------- */
+const preview=$('preview');
+let raf=0;
+function render(){
+  clearTimeout(raf);
+  raf=setTimeout(()=>{
+    const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
+    preview.innerHTML=buildSwatch(W,H,{guide:chk('guide')});
+    const T=tileSize();
+    $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
+    $('footR').textContent=`Swatch ${W} × ${H} px`;
+    $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the marque.`;
+    saveHash();
+  },30);
+}
+new ResizeObserver(render).observe(preview);
+
+/* ---------- interactions ---------- */
+for(const b of document.querySelectorAll('[data-motif]')) b.addEventListener('click',()=>{
+  MOTIF=b.dataset.motif;
+  for(const x of document.querySelectorAll('[data-motif]')) x.setAttribute('aria-pressed',x===b);
+  for(const d of document.querySelectorAll('[data-for]')) d.hidden=d.dataset.for!==MOTIF;
+  render();
+});
+document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
+  if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
+  if(el.id==='mq') $('mqOpts').style.opacity=el.checked?1:.35;
+  render();
+}));
+
+/* presets */
+const PRESETS=[
+  {n:'Toile',   bg:'#4E3A26', fg:'#C69A45', ac:'#C69A45'},
+  {n:'Réclame', bg:'#F4EFE4', fg:'#2B2620', ac:'#2B2620'},
+  {n:'Nuit',    bg:'#2B2620', fg:'#F4EFE4', ac:'#A98A4F'},
+  {n:'Écurie',  bg:'#F4EFE4', fg:'#2F5240', ac:'#8C3B31'},
+];
+$('presets').innerHTML=PRESETS.map((p,i)=>
+  `<button type="button" data-preset="${i}"><span class="dots"><i style="background:${p.bg}"></i><i style="background:${p.fg}"></i><i style="background:${p.ac}"></i></span>${p.n}</button>`).join('');
+$('presets').addEventListener('click',e=>{
+  const b=e.target.closest('[data-preset]'); if(!b) return;
+  const p=PRESETS[+b.dataset.preset];
+  $('cBg').value=p.bg; $('cFg').value=p.fg; $('cAc').value=p.ac; render();
+});
+
+/* ---------- downloads ---------- */
+function download(name,blob){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+let fontCSS=null;
+async function embedFont(){
+  if(fontCSS!==null) return fontCSS;
+  try{
+    const t=AbortSignal.timeout(8000);
+    const css=await (await fetch('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&text='+encodeURIComponent('LAVOËT 1869'),{signal:t})).text();
+    const m=css.match(/url\((https:[^)]+)\)/);
+    if(!m) throw new Error('no font url');
+    const buf=new Uint8Array(await (await fetch(m[1],{signal:t})).arrayBuffer());
+    let bin=''; for(let i=0;i<buf.length;i+=8192) bin+=String.fromCharCode(...buf.subarray(i,i+8192));
+    fontCSS=`<style>@font-face{font-family:'Cormorant Garamond';font-weight:600;src:url(data:font/woff2;base64,${btoa(bin)}) format('woff2')}</style>`;
+    return fontCSS;
+  }catch(e){ return ''; } /* leave fontCSS null so the next export retries */
+}
+function swatchDims(){
+  return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
+}
+$('dlTile').addEventListener('click',()=>{
+  download(`lavoet-tuile-${tileSize()}px.svg`,new Blob([buildTile()],{type:'image/svg+xml'}));
+});
+$('dlSwatch').addEventListener('click',async()=>{
+  const [W,H]=swatchDims();
+  const style=chk('mq')&&val('mqMode')!=='figure'?await embedFont():'';
+  download(`lavoet-toile-${W}x${H}.svg`,new Blob([buildSwatch(W,H,{style})],{type:'image/svg+xml'}));
+});
+$('dlPng').addEventListener('click',async()=>{
+  const [W,H]=swatchDims(), k=+val('pngScale');
+  const style=chk('mq')&&val('mqMode')!=='figure'?await embedFont():'';
+  const svg=buildSwatch(W,H,{style});
+  const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+  const img=new Image();
+  img.onerror=()=>{ URL.revokeObjectURL(url); alert('PNG export failed — the swatch could not be rendered.'); };
+  img.onload=()=>{
+    try{
+      const cv=document.createElement('canvas'); cv.width=W*k; cv.height=H*k;
+      cv.getContext('2d').drawImage(img,0,0,W*k,H*k);
+      cv.toBlob(b=>{
+        if(!b){ alert('PNG export failed — try a smaller scale.'); return; }
+        download(`lavoet-toile-${W*k}x${H*k}.png`,b);
+      },'image/png');
+    }catch(e){ alert('PNG export failed — try a smaller scale.'); }
+    finally{ URL.revokeObjectURL(url); }
+  };
+  img.src=url;
+});
+
+/* ---------- state in hash ---------- */
+const HASH_IDS=['scale','twist','pinGap','pinTwist','pinTwistO','treLobe','treSpread','treStem',
+  'losSize','losGap','losCut','cell','alternance','accent','accentSize','cBg','cFg','cAc','mqMode','mqSize','pngScale'];
+const HASH_CHK=['pinRound','quinconce','mq','guide'];
+let restoring=true, hashT=0;
+function saveHash(){
+  if(restoring) return;
+  clearTimeout(hashT);
+  hashT=setTimeout(()=>{ /* throttled: Safari/Firefox rate-limit replaceState */
+    const p=new URLSearchParams();
+    p.set('m',MOTIF);
+    for(const id of HASH_IDS) p.set(id,val(id));
+    for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
+    const h='#'+p.toString();
+    if(h===location.hash) return;
+    try{ history.replaceState(null,'',h); }catch(e){}
+  },350);
+}
+function loadHash(){
+  if(location.hash.length<2) return;
+  let p; try{ p=new URLSearchParams(location.hash.slice(1)); }catch(e){ return; }
+  const m=p.get('m');
+  if(['pin','tre','los'].includes(m)) document.querySelector(`[data-motif="${m}"]`).click();
+  for(const id of HASH_IDS){
+    if(!p.has(id)) continue;
+    const el=$(id), v=p.get(id);
+    if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===v)) continue;
+    if(el.type==='color'&&!/^#[0-9a-fA-F]{6}$/.test(v)) continue;
+    el.value=v;
+    const o=document.querySelector(`output[for="${id}"]`);
+    if(o) o.value=el.value; /* el.value is post-clamp, not the raw hash string */
+  }
+  for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
+  $('mqOpts').style.opacity=chk('mq')?1:.35;
+}
+window.addEventListener('hashchange',()=>{
+  restoring=true; loadHash(); restoring=false; render();
+});
+restoring=true; loadHash(); restoring=false;
+$('mqOpts').style.opacity=chk('mq')?1:.35;
+render();
+</script>
+</body>
+</html>

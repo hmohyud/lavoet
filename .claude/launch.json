@@ -4,8 +4,8 @@
     {
       "name": "lavoet-site",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "serve", "-l", "4173", "."],
-      "port": 4173
+      "runtimeArgs": ["--yes", "serve", "."],
+      "autoPort": true
     }
   ]
 }
