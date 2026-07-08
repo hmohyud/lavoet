@@ -31,43 +31,56 @@ main{flex:1;display:flex;min-height:0}
 .sec:last-child{border-bottom:none}
 .sec h2{font-size:10.5px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--brassD);margin-bottom:12px}
 .seg{display:flex;border:1px solid var(--ink);width:100%}
-.seg button{flex:1;padding:7px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
+.seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
 .seg button:last-child{border-right:none}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-.row{display:grid;grid-template-columns:1fr 92px 34px;align-items:center;gap:10px;margin-top:10px}
+.row{display:grid;grid-template-columns:1fr 92px 34px;align-items:center;gap:10px;margin-top:10px;min-height:30px}
 .row label{font-size:11.5px;color:var(--ink)}
 .row output{font-size:11px;color:var(--sepia);text-align:right;font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:var(--brass);height:18px;background:transparent}
+input[type=range]{width:100%;accent-color:var(--brass);height:22px;background:transparent}
 .row-sel{display:grid;grid-template-columns:1fr 128px;align-items:center;gap:10px;margin-top:10px}
-select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--hair);padding:5px 6px;width:100%}
-.chk{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:11.5px;cursor:pointer}
-.chk input{accent-color:var(--brass);width:14px;height:14px}
+select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--hair);padding:6px 6px;width:100%}
+.chk{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:11.5px;cursor:pointer;min-height:24px}
+.chk input{accent-color:var(--brass);width:15px;height:15px}
 .cols{display:flex;gap:14px;margin-top:6px}
 .col{flex:1;text-align:center}
 .col label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-bottom:6px}
-.col input[type=color]{width:100%;height:34px;border:1px solid var(--hair);background:none;padding:2px;cursor:pointer}
+.col input[type=color]{width:100%;height:36px;border:1px solid var(--hair);background:none;padding:2px;cursor:pointer}
 .presets{display:flex;gap:8px;margin-top:14px}
-.presets button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:1px solid var(--hair);padding:7px 2px 6px;cursor:pointer;color:var(--sepia);font:10px var(--sans);letter-spacing:.06em}
+.presets button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:1px solid var(--hair);padding:8px 2px 7px;cursor:pointer;color:var(--sepia);font:10px var(--sans);letter-spacing:.06em}
 .presets button:hover{border-color:var(--brass)}
 .presets .dots{display:flex}
 .presets .dots i{width:13px;height:13px;border:1px solid var(--hair);margin-left:-4px;border-radius:50%}
 .presets .dots i:first-child{margin-left:0}
 .btns{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.btns button{font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:9px 10px;background:none;border:1px solid var(--ink);color:var(--ink);cursor:pointer}
+.btns button{font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:11px 10px;background:none;border:1px solid var(--ink);color:var(--ink);cursor:pointer}
 .btns button:hover{border-color:var(--brass);color:var(--brass)}
 .png-row{display:grid;grid-template-columns:1fr 64px;gap:8px}
 .hint{font-size:10.5px;line-height:1.5;color:var(--sepia);margin-top:10px}
 .sig{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--sepia);margin-top:18px;text-align:center}
+#mqOpts{transition:opacity .2s}
 [hidden]{display:none!important}
 /* ---------- stage ---------- */
 #stage{flex:1;display:flex;flex-direction:column;min-width:0}
 #preview{flex:1;min-height:0}
 #preview svg{display:block;width:100%;height:100%}
 .stage-foot{display:flex;justify-content:space-between;gap:14px;padding:8px 18px;border-top:1px solid var(--hair);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sepia)}
+/* ---------- phone: preview stays pinned on top, controls get big touch targets ---------- */
 @media (max-width:760px){
-  main{flex-direction:column;overflow:auto}
-  #panel{width:100%;border-right:none;border-bottom:1px solid var(--hair);overflow:visible}
-  #preview{height:64vh;flex:none}
+  main{flex-direction:column;overflow-y:auto;overflow-x:hidden}
+  #stage{order:-1;position:sticky;top:0;z-index:5;background:var(--paper);flex:none;box-shadow:0 1px 0 var(--hair)}
+  #preview{height:42vh;flex:none}
+  .stage-foot{padding:6px 14px;font-size:9px}
+  #panel{width:100%;border-right:none;overflow:visible;padding:0 16px 44px}
+  .row{grid-template-columns:1fr 96px 36px;min-height:44px}
+  input[type=range]{height:34px}
+  .chk{min-height:40px;font-size:12.5px}
+  .chk input{width:18px;height:18px}
+  .seg button{padding:13px 2px;font-size:12px}
+  select{padding:11px 8px;font-size:13px}
+  .btns button{padding:14px 10px}
+  .col input[type=color]{height:46px}
+  .mast{padding:12px 16px}
   .mast .loc{display:none}
 }
 </style>
@@ -84,82 +97,59 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 <aside id="panel">
 
   <div class="sec">
-    <h2 lang="fr">La toile</h2>
-    <div class="seg" role="group" aria-label="Motif family">
-      <button type="button" data-motif="pin" aria-pressed="true" lang="fr">Monogramme</button>
-      <button type="button" data-motif="tre" aria-pressed="false" lang="fr">Trèfle</button>
-      <button type="button" data-motif="los" aria-pressed="false" lang="fr">Losanges</button>
-    </div>
-
+    <h2 lang="fr">Le motif</h2>
     <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
-    <div class="row"><label for="twist">Twist</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
-
-    <div data-for="pin">
-      <div class="row"><label for="pinGap">Gap between triangles</label><input type="range" id="pinGap" min="0" max="40" value="18"><output for="pinGap">18</output></div>
-      <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-40" max="40" value="12"><output for="pinTwist">12</output></div>
-      <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-30" max="30" value="0"><output for="pinTwistO">0</output></div>
-      <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
-    </div>
-
-    <div data-for="tre" hidden>
-      <div class="row"><label for="treLobe">Lobe size</label><input type="range" id="treLobe" min="25" max="60" value="40"><output for="treLobe">40</output></div>
-      <div class="row"><label for="treSpread">Spread</label><input type="range" id="treSpread" min="30" max="70" value="48"><output for="treSpread">48</output></div>
-      <div class="row"><label for="treStem">Stem</label><input type="range" id="treStem" min="0" max="120" value="92"><output for="treStem">92</output></div>
-    </div>
-
-    <div data-for="los" hidden>
-      <div class="row"><label for="losSize">Diamond size</label><input type="range" id="losSize" min="25" max="60" value="42"><output for="losSize">42</output></div>
-      <div class="row"><label for="losGap">Cross gap</label><input type="range" id="losGap" min="0" max="60" value="18"><output for="losGap">18</output></div>
-      <div class="row"><label for="losCut">Inner cut</label><input type="range" id="losCut" min="0" max="70" value="0"><output for="losCut">0</output></div>
-    </div>
+    <div class="row"><label for="pinGap">Gap between triangles</label><input type="range" id="pinGap" min="0" max="40" value="18"><output for="pinGap">18</output></div>
+    <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="26"><output for="pinTwist">26</output></div>
+    <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
+    <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
+    <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
   </div>
 
   <div class="sec">
     <h2 lang="fr">Disposition</h2>
-    <div class="row"><label for="cell">Cell size</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
-    <label class="chk"><input type="checkbox" id="quinconce" checked>Quinconce (diagonal repeat)</label>
-    <div class="row-sel"><label for="alternance">Alternate motifs</label>
-      <select id="alternance">
-        <option value="none">None</option>
-        <option value="mirror">Mirror</option>
-        <option value="quarter" selected>Quarter turn</option>
-      </select>
-    </div>
-    <div class="row-sel"><label for="accent">Accent between</label>
+    <div class="row"><label for="cell">Spacing</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
+    <label class="chk"><input type="checkbox" id="quinconce" checked>Diagonal layout</label>
+    <label class="chk"><input type="checkbox" id="mirrorAlt">Mirror every other motif</label>
+    <div class="row-sel"><label for="accent">Dots between motifs</label>
       <select id="accent">
-        <option value="losange" selected>Losange</option>
-        <option value="point">Point</option>
-        <option value="croix">Croix</option>
+        <option value="losange" selected>Diamond</option>
+        <option value="point">Dot</option>
+        <option value="croix">Cross</option>
         <option value="none">None</option>
       </select>
     </div>
-    <div class="row"><label for="accentSize">Accent size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
+    <div class="row"><label for="accentSize">Dot size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
   </div>
 
   <div class="sec">
     <h2 lang="fr">Couleurs</h2>
     <div class="cols">
-      <div class="col"><label for="cBg">Fond</label><input type="color" id="cBg" value="#4E3A26"></div>
+      <div class="col"><label for="cBg">Background</label><input type="color" id="cBg" value="#4E3A26"></div>
       <div class="col"><label for="cFg">Motif</label><input type="color" id="cFg" value="#C69A45"></div>
-      <div class="col"><label for="cAc">Accent</label><input type="color" id="cAc" value="#C69A45"></div>
+      <div class="col"><label for="cAc">Dots</label><input type="color" id="cAc" value="#C69A45"></div>
     </div>
     <div class="presets" id="presets"></div>
   </div>
 
   <div class="sec">
     <h2 lang="fr">La marque</h2>
-    <label class="chk"><input type="checkbox" id="mq" checked><span lang="fr">Marque au centre</span></label>
+    <div class="seg" role="group" aria-label="Centre emblem">
+      <button type="button" data-slots="0" aria-pressed="false">Off</button>
+      <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
+      <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
+    </div>
+    <input type="hidden" id="mqSlots" value="4">
     <div id="mqOpts">
       <div class="row-sel"><label for="mqMode">Emblem</label>
         <select id="mqMode">
-          <option value="full" selected>Groom + LAVOËT</option>
-          <option value="figure">Groom seul</option>
-          <option value="text">LAVOËT seul</option>
+          <option value="full" selected>Bellboy + LAVOËT</option>
+          <option value="figure">Bellboy only</option>
+          <option value="text">LAVOËT only</option>
         </select>
       </div>
-      <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="18" max="55" value="34"><output for="mqSize">34</output></div>
     </div>
-    <p class="hint">The marque appears on the swatch only — the downloadable tile stays a clean repeat.</p>
+    <p class="hint">The emblem sits on the pattern grid and replaces exactly one motif — or a block of four — so the pattern around it stays perfectly even. It appears on swatches only; the downloadable tile stays a clean repeat.</p>
   </div>
 
   <div class="sec">
@@ -193,46 +183,41 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 'use strict';
 const $=id=>document.getElementById(id);
 const num=id=>+$(id).value, chk=id=>$(id).checked, val=id=>$(id).value;
-let MOTIF='pin';
 
 /* ---------- motif builders (centered on 0,0; R = motif radius) ---------- */
 function motifPin(R,fg){
-  // four triangles form a diamond; each is inset from the two cutting diagonals
-  // (gap), its inner corner slides tangentially (inner twist) and its outer
-  // corners sweep around the centre (outer twist)
-  const D=R, i=num('pinGap')/200*D, t=num('pinTwist')/100*D, th=num('pinTwistO')*Math.PI/180;
-  const rot=(x,y,a)=>[x*Math.cos(a)-y*Math.sin(a), x*Math.sin(a)+y*Math.cos(a)];
-  const pts=[[i+t,-i+t], rot(i,-(D-i),th), rot(D-i,-i,th)]
-    .map(v=>v.map(n=>+n.toFixed(2)).join(' '));
-  const soft=chk('pinRound')?D*0.08:0;
-  let d='';
-  for(let k=0;k<4;k++) d+=`<path d="M ${pts[0]} L ${pts[1]} L ${pts[2]} Z" transform="rotate(${k*90})"/>`;
-  return `<g fill="${fg}"${soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:''}>${d}</g>`;
-}
-function motifTre(R,fg){
-  const r=num('treLobe')/100*R*1.15, d=num('treSpread')/100*R, st=num('treStem')/100*R;
-  let s='';
-  for(const a of [-90,30,150]){
-    const t=a*Math.PI/180;
-    s+=`<circle cx="${(d*Math.cos(t)).toFixed(2)}" cy="${(d*Math.sin(t)).toFixed(2)}" r="${r.toFixed(2)}"/>`;
-  }
-  if(st>2) s+=`<path d="M ${-0.09*R} ${0.1*R} Q ${-0.12*R} ${0.75*st} ${-0.26*R} ${st} L ${0.1*R} ${st} Q ${0.02*R} ${0.6*st} ${0.09*R} ${0.1*R} Z"/>`;
-  return `<g fill="${fg}">${s}</g>`;
-}
-function motifLos(R,fg){
-  const s=num('losSize')/100*R, gp=num('losGap')/100*R, c=s+gp/2, cut=num('losCut')/100;
-  const dia=(cx,cy)=>{
-    let p=`M ${cx} ${cy-s} L ${cx+s} ${cy} L ${cx} ${cy+s} L ${cx-s} ${cy} Z`;
-    if(cut>0.02){const i=s*cut; p+=` M ${cx} ${cy-i} L ${cx+i} ${cy} L ${cx} ${cy+i} L ${cx-i} ${cy} Z`;}
-    return p;
+  // four triangles form a diamond, each inset from the two cutting diagonals.
+  // Twist is a radial swirl field — points rotate around the centre by an angle
+  // that blends from Inner twist (at the centre) to Outer twist (at the rim) —
+  // so the straight sides bend rather than just the corners moving. The field
+  // only rotates points around the centre, so the gaps between triangles are
+  // preserved as swirled channels.
+  const D=R, i=num('pinGap')/200*D,
+        thI=num('pinTwist')*Math.PI/180, thO=num('pinTwistO')*Math.PI/180;
+  const V=[[i,-i],[i,-(D-i)],[D-i,-i]];
+  const warp=(x,y)=>{
+    const r=Math.hypot(x,y), f=Math.min(r/D,1);
+    // quadratic falloff keeps the two knobs independent: equal inner and outer
+    // twist still bends (a linear blend would collapse into a rigid rotation)
+    const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
+    return (x*c-y*s).toFixed(2)+' '+(x*s+y*c).toFixed(2);
   };
-  let d='';
-  for(const [x,y] of [[-c,0],[c,0],[0,-c],[0,c]]) d+=dia(x,y)+' ';
-  return `<path fill="${fg}" fill-rule="evenodd" d="${d}"/>`;
+  const N=12, pts=[];
+  for(let e=0;e<3;e++){
+    const [x0,y0]=V[e], [x1,y1]=V[(e+1)%3];
+    for(let k=0;k<N;k++){
+      const t=k/N;
+      pts.push(warp(x0+(x1-x0)*t, y0+(y1-y0)*t));
+    }
+  }
+  const d='M '+pts.join(' L ')+' Z';
+  const soft=chk('pinRound')?D*0.08:0;
+  let out='';
+  for(let k=0;k<4;k++) out+=`<path d="${d}" transform="rotate(${k*90})"/>`;
+  return `<g fill="${fg}"${soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:''}>${out}</g>`;
 }
 function motifMarkup(fg){
-  const R=num('cell')*num('scale')/100/2;
-  return MOTIF==='pin'?motifPin(R,fg):MOTIF==='tre'?motifTre(R,fg):motifLos(R,fg);
+  return motifPin(num('cell')*num('scale')/200,fg);
 }
 function accentMarkup(ac){
   const r=num('cell')*num('accentSize')/100/2, t=val('accent');
@@ -244,46 +229,49 @@ function accentMarkup(ac){
 
 /* ---------- lattice ---------- */
 function placeAll(W,H,excl){
-  const S=num('cell'), q=chk('quinconce'), alt=val('alternance'), tw=num('twist');
+  const S=num('cell'), q=chk('quinconce'), alt=chk('mirrorAlt'), tw=num('twist');
   const base=motifMarkup('MOTIF_FG'), acc=accentMarkup('ACCENT_FG');
-  const skip=(x,y)=>excl&&(((x-excl.cx)/excl.rx)**2+((y-excl.cy)/excl.ry)**2)<1;
+  const skipM=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rM;
+  const skipA=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rA;
   // motif and accent are defined once and stamped with <use> — a swatch can
   // hold thousands of placements, so per-placement inline markup is too heavy
   let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
-  const stamp=(id,x,y,rot,mir)=>{
-    out+=`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot})${mir?' scale(-1 1)':''}"/>`;
+  const stamp=(id,x,y,mir)=>{
+    out+=`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tw})${mir?' scale(-1 1)':''}"/>`;
   };
-  const put=(x,y,isAlt)=>{
-    if(skip(x,y)) return;
-    stamp('pm',x,y,isAlt&&alt==='quarter'?tw+90:tw, isAlt&&alt==='mirror');
-  };
+  const put=(x,y,isAlt)=>{ if(!skipM(x,y)) stamp('pm',x,y,isAlt); };
   const i0=-1, i1=Math.ceil(W/S)+1, j1=Math.ceil(H/S)+1;
   for(let i=i0;i<=i1;i++) for(let j=i0;j<=j1;j++){
-    put(i*S, j*S, q?false:((i+j)&1)===1&&alt!=='none');
-    if(q) put((i+0.5)*S,(j+0.5)*S, alt!=='none');
+    put(i*S, j*S, q?false:((i+j)&1)===1&&alt);
+    if(q) put((i+0.5)*S,(j+0.5)*S, alt);
     if(acc){
       const pts=q?[[(i+0.5)*S,j*S],[i*S,(j+0.5)*S]]:[[(i+0.5)*S,(j+0.5)*S]];
-      for(const [ax,ay] of pts) if(!skip(ax,ay)) stamp('pa',ax,ay,tw,false);
+      for(const [ax,ay] of pts) if(!skipA(ax,ay)) stamp('pa',ax,ay,false);
     }
   }
   return out;
 }
-function motifReach(){
-  // max radius of motif ink, used to pad the marque exclusion zone
-  const R=num('cell')*num('scale')/200;
-  if(MOTIF==='pin') return R*1.1;
-  if(MOTIF==='tre') return R*Math.max(num('treSpread')/100+num('treLobe')/100*1.15, num('treStem')/100)+R*0.1;
-  return R*(num('losSize')/100*2+num('losGap')/200)+2;
-}
 
 /* ---------- la marque ---------- */
 function marqueBox(W,H){
-  const E=Math.min(W,H)*num('mqSize')/100, mode=val('mqMode');
+  const S=num('cell'), q=chk('quinconce'), slots=val('mqSlots'), mode=val('mqMode');
+  // snap to the lattice so the marque replaces whole motif slots and the
+  // surrounding pattern stays uniform
+  const snap=(fx,fy)=>[(Math.round(W/2/S-fx)+fx)*S,(Math.round(H/2/S-fy)+fy)*S];
+  const cand=slots==='1' ? (q?[snap(0,0),snap(0.5,0.5)]:[snap(0,0)])
+                         : (q?[snap(0.5,0),snap(0,0.5)]:[snap(0.5,0.5)]);
+  let cx=W/2, cy=H/2, bd=Infinity;
+  for(const [x,y] of cand){ const d=Math.hypot(x-W/2,y-H/2); if(d<bd){bd=d;cx=x;cy=y;} }
+  // emblem size: fill the freed slot(s) but never touch the surviving motifs
+  const nd=slots==='1' ? (q?0.707:1)*S : (q?1.118:1.58)*S;
+  const reach=num('cell')*num('scale')/200*1.1;
+  const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)));
   const figH=mode==='text'?0:(mode==='figure'?E:E*0.74), figW=figH*163.3/213;
   const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
   const textW=F1*6.2;
   const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
-  return {E,mode,figH,figW,F1,F2,textW,blockH,cx:W/2,cy:H/2};
+  const rM=slots==='1'?0.3*S:(q?0.8:1.1)*S, rA=0.3*S;
+  return {E,mode,figH,figW,F1,F2,textW,blockH,cx,cy,rM,rA};
 }
 function marqueMarkup(b,fg){
   let y=b.cy-b.blockH/2, s='';
@@ -300,17 +288,17 @@ function marqueMarkup(b,fg){
 /* ---------- documents ---------- */
 function tileSize(){
   const S=num('cell');
-  return (!chk('quinconce')&&val('alternance')!=='none')?2*S:S;
+  return (!chk('quinconce')&&chk('mirrorAlt'))?2*S:S;
 }
 function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
 function fill(motifs,c){ return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('ACCENT_FG',c.ac); }
 
 function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
-  const c=colors(), useMq=marque&&chk('mq');
+  const c=colors(), useMq=marque&&val('mqSlots')!=='0';
   let excl=null, mq='';
   if(useMq){
-    const b=marqueBox(W,H), pad=motifReach();
-    excl={cx:b.cx,cy:b.cy,rx:Math.max(b.figW,b.textW)*0.62+b.E*0.1+pad,ry:b.blockH*0.62+b.E*0.08+pad};
+    const b=marqueBox(W,H);
+    excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:b.rA};
     mq=marqueMarkup(b,c.fg);
   }
   const body=fill(placeAll(W,H,excl),c);
@@ -335,22 +323,21 @@ function render(){
     const T=tileSize();
     $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
-    $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the marque.`;
+    $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the emblem.`;
     saveHash();
   },30);
 }
 new ResizeObserver(render).observe(preview);
 
 /* ---------- interactions ---------- */
-for(const b of document.querySelectorAll('[data-motif]')) b.addEventListener('click',()=>{
-  MOTIF=b.dataset.motif;
-  for(const x of document.querySelectorAll('[data-motif]')) x.setAttribute('aria-pressed',x===b);
-  for(const d of document.querySelectorAll('[data-for]')) d.hidden=d.dataset.for!==MOTIF;
-  render();
-});
+function setSlots(v){
+  $('mqSlots').value=v;
+  for(const b of document.querySelectorAll('[data-slots]')) b.setAttribute('aria-pressed',b.dataset.slots===v);
+  $('mqOpts').style.opacity=v==='0'?.35:1;
+}
+for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
-  if(el.id==='mq') $('mqOpts').style.opacity=el.checked?1:.35;
   render();
 }));
 
@@ -393,17 +380,18 @@ async function embedFont(){
 function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
+function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
 $('dlTile').addEventListener('click',()=>{
   download(`lavoet-tuile-${tileSize()}px.svg`,new Blob([buildTile()],{type:'image/svg+xml'}));
 });
 $('dlSwatch').addEventListener('click',async()=>{
   const [W,H]=swatchDims();
-  const style=chk('mq')&&val('mqMode')!=='figure'?await embedFont():'';
+  const style=marqueTextOn()?await embedFont():'';
   download(`lavoet-toile-${W}x${H}.svg`,new Blob([buildSwatch(W,H,{style})],{type:'image/svg+xml'}));
 });
 $('dlPng').addEventListener('click',async()=>{
   const [W,H]=swatchDims(), k=+val('pngScale');
-  const style=chk('mq')&&val('mqMode')!=='figure'?await embedFont():'';
+  const style=marqueTextOn()?await embedFont():'';
   const svg=buildSwatch(W,H,{style});
   const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
   const img=new Image();
@@ -423,16 +411,15 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','twist','pinGap','pinTwist','pinTwistO','treLobe','treSpread','treStem',
-  'losSize','losGap','losCut','cell','alternance','accent','accentSize','cBg','cFg','cAc','mqMode','mqSize','pngScale'];
-const HASH_CHK=['pinRound','quinconce','mq','guide'];
+const HASH_IDS=['scale','twist','pinGap','pinTwist','pinTwistO','cell','accent','accentSize',
+  'cBg','cFg','cAc','mqMode','mqSlots','pngScale'];
+const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
 let restoring=true, hashT=0;
 function saveHash(){
   if(restoring) return;
   clearTimeout(hashT);
   hashT=setTimeout(()=>{ /* throttled: Safari/Firefox rate-limit replaceState */
     const p=new URLSearchParams();
-    p.set('m',MOTIF);
     for(const id of HASH_IDS) p.set(id,val(id));
     for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
     const h='#'+p.toString();
@@ -443,25 +430,24 @@ function saveHash(){
 function loadHash(){
   if(location.hash.length<2) return;
   let p; try{ p=new URLSearchParams(location.hash.slice(1)); }catch(e){ return; }
-  const m=p.get('m');
-  if(['pin','tre','los'].includes(m)) document.querySelector(`[data-motif="${m}"]`).click();
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
     if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===v)) continue;
     if(el.type==='color'&&!/^#[0-9a-fA-F]{6}$/.test(v)) continue;
+    if(id==='mqSlots'&&!['0','1','4'].includes(v)) continue;
     el.value=v;
     const o=document.querySelector(`output[for="${id}"]`);
     if(o) o.value=el.value; /* el.value is post-clamp, not the raw hash string */
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
-  $('mqOpts').style.opacity=chk('mq')?1:.35;
+  setSlots(val('mqSlots'));
 }
 window.addEventListener('hashchange',()=>{
   restoring=true; loadHash(); restoring=false; render();
 });
 restoring=true; loadHash(); restoring=false;
-$('mqOpts').style.opacity=chk('mq')?1:.35;
+setSlots(val('mqSlots'));
 render();
 </script>
 </body>
