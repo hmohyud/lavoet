@@ -111,6 +111,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <div class="sec">
     <h2 lang="fr">Le motif</h2>
     <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
+    <div class="row"><label for="pinN">Pieces</label><input type="range" id="pinN" min="2" max="8" value="4"><output for="pinN">4</output></div>
     <div id="autoRows">
       <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
       <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
@@ -183,8 +184,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <button type="button" id="dlPng">Swatch · PNG</button>
         <select id="pngScale" aria-label="PNG scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
       </div>
+      <button type="button" id="cfgLoad">Load config…</button>
+      <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
     </div>
     <label class="chk"><input type="checkbox" id="guide">Show repeat guide</label>
+    <p class="hint">Every download carries your full settings inside it — Load config… reads them back from any saved swatch or tile.</p>
     <p class="hint" id="tileInfo"></p>
     <p class="sig" lang="fr">La maison continue — les motifs aussi.</p>
   </div>
@@ -292,8 +296,9 @@ function motifPin(R,fg){
     d='M '+pts.join(' L ')+' Z';
   }
   const soft=chk('pinRound')?R*0.08:0;
+  const N=Math.max(1,num('pinN')||4);
   let out='';
-  for(let k=0;k<4;k++) out+=`<path d="${d}" transform="rotate(${k*90})"/>`;
+  for(let k=0;k<N;k++) out+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
   return `<g fill="${fg}"${soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:''}>${out}</g>`;
 }
 function motifMarkup(fg){
@@ -359,9 +364,12 @@ function marqueBox(W,H){
 function marqueMarkup(b,fg){
   let y=b.cy-b.blockH/2, s='';
   if(b.figH){
-    // align the bellboy's HEAD (65% across the artwork — he leans) with the
-    // centre line, so he hangs from the same vertical as the accent dots
-    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${(b.cx-b.figW*0.651).toFixed(1)}" y="${y.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}" color="${fg}"/>`;
+    // centre the bellboy by his ink centroid — the artwork's mass sits 54.3%
+    // across and 57.1% down its box (he leans); in figure-only mode centre
+    // the mass on both axes
+    const fx=b.cx-b.figW*0.543;
+    const fy=b.mode==='figure'?b.cy-b.figH*0.571:y;
+    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}" color="${fg}"/>`;
     y+=b.figH;
   }
   const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="${fg}">${txt}</text>`;
@@ -429,7 +437,8 @@ function renderEd(){
   const soft=chk('pinRound')?` stroke="${fg}" stroke-width="0.08" stroke-linejoin="round"`:'';
   let s=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${bg}"/>`;
   s+=`<path d="M -1.45 0 H 1.45 M 0 -1.45 V 1.45" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
-  for(let k=1;k<4;k++) s+=`<path d="${d}" transform="rotate(${k*90})" fill="${fg}"${soft} opacity=".3"/>`;
+  const N=Math.max(1,num('pinN')||4);
+  for(let k=1;k<N;k++) s+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${fg}"${soft} opacity=".3"/>`;
   s+=`<path d="${d}" fill="${fg}"${soft}/>`;
   SHAPE.pts.forEach((p,ix)=>{
     const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
@@ -471,12 +480,20 @@ $('edDel').addEventListener('click',()=>{
   if(!SHAPE||SHAPE.pts.length<=3) return;
   SHAPE.pts.splice(EDSEL,1); EDSEL=Math.max(0,EDSEL-1); renderEd(); render();
 });
-$('edReset').addEventListener('click',()=>{ bakeShape(); EDSEL=0; renderEd(); render(); });
+let EDSNAP=null;
+$('edReset').addEventListener('click',()=>{
+  /* back to what the editor opened with, and to four pieces */
+  if(EDSNAP) SHAPE={pts:EDSNAP.map(p=>p.slice())}; else bakeShape();
+  $('pinN').value=4;
+  const o=document.querySelector('output[for="pinN"]'); if(o) o.value=4;
+  EDSEL=0; renderEd(); render();
+});
 $('edDone').addEventListener('click',()=>{
   $('shapeEd').hidden=true; $('stage').classList.remove('editing'); render();
 });
 $('edOpen').addEventListener('click',()=>{
   if(!SHAPE){ bakeShape(); EDSEL=0; setShapeMode(true); }
+  EDSNAP=SHAPE.pts.map(p=>p.slice());
   $('shapeEd').hidden=false; $('stage').classList.add('editing');
   renderEd(); render();
 });
@@ -550,13 +567,83 @@ function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
 function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
+
+/* ---------- settings ride inside every download ---------- */
+const CRC_T=(()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c; }
+  return t; })();
+function crc32(bytes){
+  let c=0xFFFFFFFF;
+  for(const b of bytes) c=CRC_T[(c^b)&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+function svgWithConfig(svg){
+  return svg.replace('</svg>',`<!--lavoet-config:${paramsString()}--></svg>`);
+}
+async function pngWithConfig(blob){
+  /* tuck the full settings string into a PNG tEXt chunk after IHDR */
+  try{
+    const buf=new Uint8Array(await blob.arrayBuffer());
+    const key='lavoet-config', cfg=paramsString(), data=[];
+    for(const ch of key) data.push(ch.charCodeAt(0));
+    data.push(0);
+    for(const ch of cfg) data.push(ch.charCodeAt(0)&0xFF);
+    const chunk=new Uint8Array(12+data.length);
+    const dv=new DataView(chunk.buffer);
+    dv.setUint32(0,data.length);
+    chunk.set([0x74,0x45,0x58,0x74],4);
+    chunk.set(data,8);
+    dv.setUint32(8+data.length,crc32(chunk.subarray(4,8+data.length)));
+    const out=new Uint8Array(buf.length+chunk.length);
+    out.set(buf.subarray(0,33),0);          /* signature + IHDR */
+    out.set(chunk,33);
+    out.set(buf.subarray(33),33+chunk.length);
+    return new Blob([out],{type:'image/png'});
+  }catch(e){ return blob; }
+}
+function pngReadConfig(buf){
+  if(buf.length<8||buf[0]!==0x89||buf[1]!==0x50) return null;
+  const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+  let p=8;
+  while(p+12<=buf.length){
+    const len=dv.getUint32(p);
+    const type=String.fromCharCode(buf[p+4],buf[p+5],buf[p+6],buf[p+7]);
+    if(type==='tEXt'){
+      const d=buf.subarray(p+8,p+8+len), z=d.indexOf(0);
+      if(z>0&&String.fromCharCode(...d.subarray(0,z))==='lavoet-config')
+        return String.fromCharCode(...d.subarray(z+1));
+    }
+    if(type==='IEND') break;
+    p+=12+len;
+  }
+  return null;
+}
+$('cfgLoad').addEventListener('click',()=>$('cfgFile').click());
+$('cfgFile').addEventListener('change',async()=>{
+  const f=$('cfgFile').files[0];
+  $('cfgFile').value='';
+  if(!f) return;
+  let cfg=null;
+  if(/\.svg$/i.test(f.name)||f.type==='image/svg+xml'){
+    const m=(await f.text()).match(/<!--lavoet-config:([^>]*?)-->/);
+    if(m) cfg=m[1];
+  } else {
+    cfg=pngReadConfig(new Uint8Array(await f.arrayBuffer()));
+  }
+  if(!cfg){ alert('No Lavoët settings found in that file — use a swatch or tile downloaded from this studio.'); return; }
+  restoring=true;
+  applyParams(new URLSearchParams(cfg));
+  restoring=false;
+  renderEd(); render();
+});
+
 $('dlTile').addEventListener('click',()=>{
-  download(`lavoet-tuile-${tileSize()}px.svg`,new Blob([buildTile()],{type:'image/svg+xml'}));
+  download(`lavoet-tuile-${tileSize()}px.svg`,new Blob([svgWithConfig(buildTile())],{type:'image/svg+xml'}));
 });
 $('dlSwatch').addEventListener('click',async()=>{
   const [W,H]=swatchDims();
   const style=marqueTextOn()?await embedFont():'';
-  download(`lavoet-toile-${W}x${H}.svg`,new Blob([buildSwatch(W,H,{style})],{type:'image/svg+xml'}));
+  download(`lavoet-toile-${W}x${H}.svg`,new Blob([svgWithConfig(buildSwatch(W,H,{style}))],{type:'image/svg+xml'}));
 });
 $('dlPng').addEventListener('click',async()=>{
   const [W,H]=swatchDims(), k=+val('pngScale');
@@ -569,9 +656,9 @@ $('dlPng').addEventListener('click',async()=>{
     try{
       const cv=document.createElement('canvas'); cv.width=W*k; cv.height=H*k;
       cv.getContext('2d').drawImage(img,0,0,W*k,H*k);
-      cv.toBlob(b=>{
+      cv.toBlob(async b=>{
         if(!b){ alert('PNG export failed — try a smaller scale.'); return; }
-        download(`lavoet-toile-${W*k}x${H*k}.png`,b);
+        download(`lavoet-toile-${W*k}x${H*k}.png`,await pngWithConfig(b));
       },'image/png');
     }catch(e){ alert('PNG export failed — try a smaller scale.'); }
     finally{ URL.revokeObjectURL(url); }
@@ -580,26 +667,27 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','twist','pinGap','pinHole','pinTwist','pinTwistO','cell','accent','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','cell','accent','accentSize',
   'cBg','cFg','cAc','mqMode','mqSize','mqSlots','pngScale'];
 const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
 let restoring=true, hashT=0;
+function paramsString(){
+  const p=new URLSearchParams();
+  for(const id of HASH_IDS) p.set(id,val(id));
+  for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
+  if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
+  return p.toString();
+}
 function saveHash(){
   if(restoring) return;
   clearTimeout(hashT);
   hashT=setTimeout(()=>{ /* throttled: Safari/Firefox rate-limit replaceState */
-    const p=new URLSearchParams();
-    for(const id of HASH_IDS) p.set(id,val(id));
-    for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
-    if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
-    const h='#'+p.toString();
+    const h='#'+paramsString();
     if(h===location.hash) return;
     try{ history.replaceState(null,'',h); }catch(e){}
   },350);
 }
-function loadHash(){
-  if(location.hash.length<2) return;
-  let p; try{ p=new URLSearchParams(location.hash.slice(1)); }catch(e){ return; }
+function applyParams(p){
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
@@ -608,7 +696,7 @@ function loadHash(){
     if(id==='mqSlots'&&!['0','1','4'].includes(v)) continue;
     el.value=v;
     const o=document.querySelector(`output[for="${id}"]`);
-    if(o) o.value=el.value; /* el.value is post-clamp, not the raw hash string */
+    if(o) o.value=el.value; /* el.value is post-clamp, not the raw string */
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
   if(p.has('shape')){
@@ -618,6 +706,11 @@ function loadHash(){
     }
   } else if(SHAPE){ SHAPE=null; setShapeMode(false); }
   setSlots(val('mqSlots'));
+}
+function loadHash(){
+  if(location.hash.length<2) return;
+  let p; try{ p=new URLSearchParams(location.hash.slice(1)); }catch(e){ return; }
+  applyParams(p);
 }
 window.addEventListener('hashchange',()=>{
   restoring=true; loadHash(); restoring=false; render();
