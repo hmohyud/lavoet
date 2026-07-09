@@ -135,10 +135,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
   <div class="sec">
     <h2 lang="fr">Relief — 3D</h2>
+    <div class="row-sel"><label for="style3d">Relief style</label>
+      <select id="style3d">
+        <option value="prism" selected>Isometric block</option>
+        <option value="elongate">Elongated</option>
+      </select>
+    </div>
     <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
     <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="125"><output for="angle3d">125</output></div>
-    <div class="row"><label for="shade3d">Side shade</label><input type="range" id="shade3d" min="10" max="70" value="42"><output for="shade3d">42</output></div>
-    <p class="hint">Extrudes each piece into a raised block lit from one side. Set depth to 0 for a flat pattern.</p>
+    <div class="row" data-3d="prism"><label for="light3d">Light angle</label><input type="range" id="light3d" min="0" max="360" value="135"><output for="light3d">135</output></div>
+    <div class="row" data-3d="prism"><label for="reliefC">Contrast</label><input type="range" id="reliefC" min="0" max="40" value="24"><output for="reliefC">24</output></div>
+    <div class="row"><label for="shade3d">Shade</label><input type="range" id="shade3d" min="10" max="70" value="42"><output for="shade3d">42</output></div>
+    <p class="hint">Raises each piece into a lit 3D block so the whole repeat reads as one relief surface. Set depth to 0 for a flat pattern. "Elongated" is the older long-shadow look.</p>
   </div>
 
   <div class="sec">
@@ -299,6 +307,30 @@ function shapePath(sc){
   }
   return d+' Z';
 }
+// one piece's outline as a numeric polygon (local frame, ×R) — for prism walls
+function piecePolygon(R){
+  const out=[];
+  if(SHAPE){
+    const P=SHAPE.pts, n=P.length, pt=i=>P[((i%n)+n)%n], CS=8;
+    for(let i=0;i<n;i++){
+      const a=pt(i), b=pt(i+1);
+      const ha=a[2]?[(b[0]-pt(i-1)[0])/6,(b[1]-pt(i-1)[1])/6]:[0,0];
+      const hb=b[2]?[(pt(i+2)[0]-a[0])/6,(pt(i+2)[1]-a[1])/6]:[0,0];
+      const c1=[a[0]+ha[0],a[1]+ha[1]], c2=[b[0]-hb[0],b[1]-hb[1]], st=!a[2]&&!b[2], SS=st?1:CS;
+      for(let s=0;s<SS;s++){ const t=s/SS,u=1-t;
+        const x=st?a[0]:u*u*u*a[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*b[0];
+        const y=st?a[1]:u*u*u*a[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*b[1];
+        out.push([x*R,y*R]); }
+    }
+  } else {
+    const {poly,warp}=pieceGeom(), PER=12;
+    for(let e=0;e<poly.length;e++){
+      const [x0,y0]=poly[e], [x1,y1]=poly[(e+1)%poly.length];
+      for(let k=0;k<PER;k++){ const t=k/PER, w=warp(x0+(x1-x0)*t, y0+(y1-y0)*t); out.push([w[0]*R,w[1]*R]); }
+    }
+  }
+  return out;
+}
 function motifPin(R,fg){
   let d;
   if(SHAPE){ d=shapePath(R); }
@@ -321,9 +353,11 @@ function motifPin(R,fg){
   const faceStroke=soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
   const depth=num('depth3d')||0;
   if(depth<=0) return `<g fill="${fg}"${faceStroke}>${pieces}</g>`;
-  // 3D relief: extrude every piece along one screen direction into a solid block —
-  // a lit top face (MOTIF_FG) over a stack of darker side-wall copies (MOTIF_SIDE),
-  // lit uniformly so the whole field reads like raised isometric tiles
+  const style=val('style3d')||'prism';
+
+  if(style==='prism') return prismMotif(d,R,N,soft);
+
+  // Elongated (original): extrude along one direction as a stack of darker copies
   const a=(num('angle3d')||125)*Math.PI/180, dep=depth/100*R;
   const ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
   const STEPS=Math.max(4,Math.min(60,Math.round(dep/0.9)));
@@ -334,6 +368,43 @@ function motifPin(R,fg){
     body+=`<g transform="translate(${(ex*t).toFixed(2)} ${(ey*t).toFixed(2)})" fill="MOTIF_SIDE"${sideStroke}>${pieces}</g>`;
   }
   return body+`<g fill="${fg}"${faceStroke}>${pieces}</g>`;
+}
+// Isometric block: sweep each piece edge into a wall, cull hidden walls, Lambert-shade,
+// lay the lit top face on top, painter-sort the N blocks so the field reads as one lit relief
+function prismMotif(d,R,N,soft){
+  const S=num('cell'), depth=num('depth3d')||0;
+  const base=piecePolygon(R);
+  let cx=0,cy=0; for(const p of base){ cx+=p[0]; cy+=p[1]; } cx/=base.length; cy/=base.length;
+  let Rmax=0; for(const p of base){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
+  // keep the block inside its cell so the per-motif painter sort suffices (no cross-motif overlap)
+  let dep=depth/100*R;
+  dep=Math.min(dep, Math.max(2, S*0.5-Rmax));
+  const a=(num('angle3d')||125)*Math.PI/180, e=[Math.cos(a)*dep,Math.sin(a)*dep], eh=[Math.cos(a),Math.sin(a)];
+  const la=(num('light3d')||135)*Math.PI/180, L=[Math.cos(la),-Math.sin(la)];
+  const base3=num('shade3d')||42, contrast=num('reliefC')||24;
+  const topStroke=soft?` stroke="MShade:0.05" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
+  const parts=[];
+  for(let k=0;k<N;k++){
+    const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
+    const ek=[e[0]*ct+e[1]*st, -e[0]*st+e[1]*ct];   // lift in local frame
+    const Lk=[L[0]*ct+L[1]*st, -L[0]*st+L[1]*ct];   // light in local frame
+    let w='';
+    for(let i=0;i<base.length;i++){
+      const A=base[i], B=base[(i+1)%base.length];
+      let nx=B[1]-A[1], ny=-(B[0]-A[0]);
+      if(nx*((A[0]+B[0])/2-cx)+ny*((A[1]+B[1])/2-cy)<0){ nx=-nx; ny=-ny; } // outward normal
+      const nl=Math.hypot(nx,ny)||1; nx/=nl; ny/=nl;
+      if(nx*ek[0]+ny*ek[1]<=0) continue;             // cull hidden walls
+      const lam=nx*Lk[0]+ny*Lk[1];
+      let amt=-base3/100+lam*contrast/100; amt=Math.max(-0.85,Math.min(0.08,amt));
+      w+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${(B[0]+ek[0]).toFixed(2)} ${(B[1]+ek[1]).toFixed(2)} L ${(A[0]+ek[0]).toFixed(2)} ${(A[1]+ek[1]).toFixed(2)} Z" fill="MShade:${amt.toFixed(3)}"/>`;
+    }
+    const top=`<path d="${d}" fill="MShade:0.05"${topStroke}/>`;
+    const gcx=cx*ct-cy*st, gcy=cx*st+cy*ct;          // centroid in global frame
+    parts.push({g:`<g transform="rotate(${+(k*360/N).toFixed(1)})">${w}${top}</g>`, key:gcx*eh[0]+gcy*eh[1]});
+  }
+  parts.sort((p,q)=>q.key-p.key);                     // furthest back drawn first
+  return parts.map(p=>p.g).join('');
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -427,7 +498,9 @@ function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white *
 function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
 function fill(motifs,c){
   const side=shade(c.fg,-(num('shade3d')||38)/100);
-  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac);
+  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac)
+    // isometric prism: every wall carries its own Lambert tone as MShade:<amt>
+    .replace(/MShade:(-?\d+(?:\.\d+)?)/g,(_,a)=>shade(c.fg,parseFloat(a)));
 }
 
 function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
@@ -578,8 +651,13 @@ function setSlots(v){
   $('mqOpts').style.opacity=v==='0'?.35:1;
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
+function sync3dRows(){
+  const st=val('style3d'), on=(num('depth3d')||0)>0;
+  for(const el of document.querySelectorAll('[data-3d]')) el.hidden=!(on&&el.dataset['3d']===st);
+}
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
+  if(el.id==='style3d'||el.id==='depth3d') sync3dRows();
   renderEd(); render();
 }));
 
@@ -723,7 +801,7 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','cell','accent','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','style3d','depth3d','angle3d','light3d','reliefC','shade3d','cell','accent','accentSize',
   'cBg','cFg','cAc','mqMode','mqSize','mqSlots','pngScale'];
 const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
 let restoring=true, hashT=0;
@@ -744,6 +822,9 @@ function saveHash(){
   },350);
 }
 function applyParams(p){
+  // a config saved before the relief-style selector existed expects the old
+  // long-shadow extrusion — restore it so those depth>0 configs render identically
+  if(!p.has('style3d')&&(+p.get('depth3d')>0)) $('style3d').value='elongate';
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
@@ -755,6 +836,7 @@ function applyParams(p){
     if(o) o.value=el.value; /* el.value is post-clamp, not the raw string */
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
+  sync3dRows();
   if(p.has('shape')){
     const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
     if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&(q[2]===0||q[2]===1))){
@@ -776,6 +858,7 @@ if(location.hash.length<2) applyTrunkMotif(); /* first visit: the real 1930s can
 else loadHash();
 restoring=false;
 setSlots(val('mqSlots'));
+sync3dRows();
 render();
 </script>
 </body>
