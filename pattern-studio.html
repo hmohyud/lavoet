@@ -417,7 +417,10 @@ function shapeUnmodify(x,y){ const p=twistUnwarp(x,y); return shapeRadialInv(p[0
 function shapeWarpedPts(){ return SHAPE.pts.map(p=>{ const w=shapeModify(p[0],p[1]); return [w[0],w[1],p[2]]; }); }
 function shapePath(sc,pts){
   // closed path through the points: each point's [2] is a ROUNDNESS amount that scales its
-  // Catmull-Rom handle (0 = sharp corner, 1 = normal smooth, up to 1.5 = extra round)
+  // Catmull-Rom handle (0 = sharp corner, 1 = normal smooth, up to 2 = extra round). A segment
+  // runs STRAIGHT whenever EITHER endpoint is a corner (round 0), so a corner gets true straight
+  // edges = a genuine polygon-sharp point (a lone corner otherwise stays blunt, its edges bent
+  // by the smooth neighbour's control point).
   const P=pts||SHAPE.pts, n=P.length, pt=i=>P[(i%n+n)%n];
   const f=v=>(v*sc).toFixed(2);
   let d=`M ${f(pt(0)[0])} ${f(pt(0)[1])}`;
@@ -425,7 +428,7 @@ function shapePath(sc,pts){
     const a=pt(i), b=pt(i+1), sa=+a[2]||0, sb=+b[2]||0;
     const ha=[(b[0]-pt(i-1)[0])/6*sa,(b[1]-pt(i-1)[1])/6*sa];
     const hb=[(pt(i+2)[0]-a[0])/6*sb,(pt(i+2)[1]-a[1])/6*sb];
-    d+=(!sa&&!sb)
+    d+=(!sa||!sb)
       ? ` L ${f(b[0])} ${f(b[1])}`
       : ` C ${f(a[0]+ha[0])} ${f(a[1]+ha[1])} ${f(b[0]-hb[0])} ${f(b[1]-hb[1])} ${f(b[0])} ${f(b[1])}`;
   }
@@ -440,7 +443,7 @@ function piecePolygon(R){
       const a=pt(i), b=pt(i+1), sa=+a[2]||0, sb=+b[2]||0;
       const ha=[(b[0]-pt(i-1)[0])/6*sa,(b[1]-pt(i-1)[1])/6*sa];
       const hb=[(pt(i+2)[0]-a[0])/6*sb,(pt(i+2)[1]-a[1])/6*sb];
-      const c1=[a[0]+ha[0],a[1]+ha[1]], c2=[b[0]-hb[0],b[1]-hb[1]], st=!sa&&!sb, SS=st?1:CS;
+      const c1=[a[0]+ha[0],a[1]+ha[1]], c2=[b[0]-hb[0],b[1]-hb[1]], st=!sa||!sb, SS=st?1:CS;
       for(let s=0;s<SS;s++){ const t=s/SS,u=1-t;
         const x=st?a[0]:u*u*u*a[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*b[0];
         const y=st?a[1]:u*u*u*a[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*b[1];
