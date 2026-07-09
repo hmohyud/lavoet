@@ -93,8 +93,13 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:9px 14px;background:none;border:none;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);cursor:pointer}
 .ed-toggle:hover{color:var(--brass)}
 .ed-toggle-chev{transition:transform .15s;font-size:12px}
+/* draggable divider between the editor and the pattern — resize the split to taste */
+#split{flex:none;height:9px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;background:color-mix(in srgb,var(--ink) 3%,transparent)}
+#split span{width:44px;height:3px;border-radius:2px;background:var(--hair);pointer-events:none}
+#split:hover span,#split.dragging span{background:var(--brass)}
 /* minimized: collapse the editor to just its title bar, give the preview the room */
-#stage:not(.editing) #shapeEd{flex:none;border-bottom:1px solid var(--hair)}
+#stage:not(.editing) #shapeEd{flex:none;border-bottom:1px solid var(--hair);height:auto!important}
+#stage:not(.editing) #split{display:none}
 #stage:not(.editing) .ed-body{display:none}
 #stage:not(.editing) .ed-toggle{border-bottom:none}
 #stage:not(.editing) .ed-toggle-chev{transform:rotate(-90deg)}
@@ -150,9 +155,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .view-seg button:last-child{border-right:none}
   .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
   .ed-toggle{display:none}                            /* the switcher replaces the title-bar toggle */
-  #stage.editing #shapeEd{height:44vh;flex:none}      /* Fine-tune focused: big canvas… */
+  #split{display:none}                                /* the phone split is fixed; drag-resize is desktop-only */
+  #stage.editing #shapeEd{height:44vh!important;flex:none}  /* Fine-tune focused: big canvas… */
   #stage.editing #preview{height:16vh}                /* …with the pattern still live below */
-  #stage.editing.pat-focus #shapeEd{height:16vh}      /* Pattern focused: editor shrinks to a strip… */
+  #stage.editing.pat-focus #shapeEd{height:16vh!important}  /* Pattern focused: editor shrinks to a strip… */
   #stage.editing.pat-focus #preview{height:48vh}      /* …and the pattern gets the room */
   #stage.pat-focus .ed-bar{display:none}              /* the strip is all canvas; tools return on focus */
   /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room */
@@ -358,6 +364,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
     </div>
   </div>
+  <div id="split" title="Drag to resize the editor / pattern split" aria-hidden="true"><span></span></div>
   <div id="preview" role="img" aria-label="Pattern preview"></div>
   <div class="stage-foot"><span id="footL"></span><span id="footR"></span></div>
 </section>
@@ -802,9 +809,28 @@ function renderEd(){
   const outOn=chk('outlineOn'), ol=val('cOl'), Rp=num('cell')*num('scale')/200||1, ew=(num('outlineW')||2)/Rp;
   const edgeMode=outOn&&val('outlineMode')==='edge', shapeMode=outOn&&!edgeMode;
   const pieceStroke=edgeMode?` stroke="${ol}" stroke-width="${ew.toFixed(4)}" stroke-linejoin="miter" stroke-miterlimit="9"`:(outOn?'':soft);
+  // 3D relief shows here too: extruded dark backs (+ lit bevel rim) behind lit top faces
+  const depth3=(num('depth3d')||0)>0 && !chk('shadeLine');
+  let faceFill=fg;
+  if(depth3){
+    const dep=(num('depth3d')||0)/100, a3=(num('angle3d')||55)*Math.PI/180;
+    const ex=Math.cos(a3)*dep, ey=Math.sin(a3)*dep, bev=(num('bevel')||0)/100;
+    const side=shade(fg,-(num('shade3d')||34)/100), bv=shade(fg,0.22+(num('highlight')||0)/200);
+    faceFill=shade(fg,(num('highlight')||0)/100);
+    const poly=piecePolygon(1), F=v=>v.toFixed(3), Q=(...p)=>`<path d="M ${p.map(q=>F(q[0])+' '+F(q[1])).join(' L ')} Z"/>`;
+    for(let k=0;k<N;k++){
+      const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th), op=k?gop:1;
+      const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]), back=g.map(([x,y])=>[x+ex,y+ey]);
+      let body=`<path d="M ${back.map(p=>F(p[0])+' '+F(p[1])).join(' L ')} Z"/>`, rim='';
+      for(let i=0;i<g.length;i++){ const A=g[i],B=g[(i+1)%g.length],TA=back[i],TB=back[(i+1)%g.length];
+        if(bev>0.01){ const MA=[A[0]+ex*bev,A[1]+ey*bev], MB=[B[0]+ex*bev,B[1]+ey*bev]; rim+=Q(A,B,MB,MA); body+=Q(MA,MB,TB,TA); }
+        else body+=Q(A,B,TB,TA); }
+      s+=`<g fill="${side}" opacity="${op}">${body}</g>`+(rim?`<g fill="${bv}" opacity="${op}">${rim}</g>`:'');
+    }
+  }
   const edPiece=(rot,op)=>{ const t=`transform="rotate(${rot})"`, o=op<1?` opacity="${op}"`:'';
     return (shapeMode?`<path d="${d}" ${t} fill="${ol}" stroke="${ol}" stroke-width="${(2*ew).toFixed(4)}" stroke-linejoin="miter" stroke-miterlimit="9"${o}/>`:'')
-         + `<path d="${d}" ${t} fill="${fg}"${pieceStroke}${o}/>`; };
+         + `<path d="${d}" ${t} fill="${faceFill}"${pieceStroke}${o}/>`; };
   for(let k=1;k<N;k++) s+=edPiece(+(k*360/N).toFixed(1),gop);
   s+=edPiece(0,1);
   if(chk('shadeLine')){
@@ -929,6 +955,23 @@ function setEditor(open){
   render();
 }
 $('edToggle').addEventListener('click',()=>setEditor(!$('stage').classList.contains('editing')));
+// desktop: drag the divider to re-apportion editor vs pattern (persisted; double-click resets)
+(function initSplit(){
+  const sp=$('split'), st=$('stage'), ed=$('shapeEd');
+  const apply=p=>{ ed.style.flex='none'; ed.style.height=p.toFixed(1)+'%'; };
+  try{ const s=+localStorage.getItem('lavoet-split'); if(s>=15&&s<=80) apply(s); }catch(e){}
+  let dragging=false;
+  sp.addEventListener('pointerdown',ev=>{ dragging=true; sp.classList.add('dragging'); try{ sp.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
+  sp.addEventListener('pointermove',ev=>{
+    if(!dragging) return;
+    const r=st.getBoundingClientRect();
+    const p=Math.max(15,Math.min(80,(ev.clientY-r.top)/r.height*100));
+    apply(p);
+  });
+  sp.addEventListener('pointerup',()=>{ dragging=false; sp.classList.remove('dragging');
+    try{ localStorage.setItem('lavoet-split',parseFloat(ed.style.height)||''); }catch(e){} });
+  sp.addEventListener('dblclick',()=>{ ed.style.flex=''; ed.style.height=''; try{ localStorage.removeItem('lavoet-split'); }catch(e){} });
+})();
 // phone focus: both views stay visible, the switcher decides which one is BIG (pat-focus class)
 function setFocus(pat){
   if(!$('stage').classList.contains('editing')) setEditor(true);   // both views live on the phone
