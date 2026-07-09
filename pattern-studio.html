@@ -53,6 +53,7 @@ main{flex:1;display:flex;min-height:0}
 .acc-info{position:absolute;top:calc(100% - 7px);right:4px;z-index:40;width:max-content;max-width:calc(100% - 8px);margin:0;padding:10px 13px;background:var(--ink);color:var(--paper);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:400 11px/1.55 var(--sans);letter-spacing:normal;text-transform:none;cursor:default}
 .acc-info::after{content:"";position:absolute;top:-6px;right:22px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
 .acc-info b{color:var(--brass)}
+.view-seg{display:none}                              /* phone-only: focus the editor or the pattern */
 .seg{display:flex;border:1px solid var(--ink);width:100%}
 .seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
 .seg button:last-child{border-right:none}
@@ -129,7 +130,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 @media (max-width:760px){
   main{flex-direction:column;overflow-y:auto;overflow-x:hidden}
   #stage{order:-1;position:sticky;top:0;z-index:5;background:var(--paper);flex:none;box-shadow:0 1px 0 var(--hair)}
-  #preview{height:42vh;flex:none}
+  #preview{flex:none}
   .stage-foot{padding:6px 14px;font-size:9px}
   #panel{width:100%;border-right:none;overflow:visible;padding:0 16px 44px}
   .row{grid-template-columns:1fr 96px 36px;min-height:44px}
@@ -142,8 +143,16 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .col input[type=color]{height:46px}
   .mast{padding:12px 16px}
   .mast .loc{display:none}
-  #stage.editing #preview{height:16vh}
-  #stage.editing #shapeEd{height:42vh;flex:none}
+  /* one view at a time on a phone: the segmented switcher focuses the editor OR the pattern,
+     and whichever is focused gets the lion's share of the screen */
+  .view-seg{display:flex;border:none;border-bottom:1px solid var(--hair)}
+  .view-seg button{flex:1;padding:13px 2px;font:500 12px var(--sans);letter-spacing:.1em;background:none;border:none;border-right:1px solid var(--hair);color:var(--ink);cursor:pointer}
+  .view-seg button:last-child{border-right:none}
+  .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .ed-toggle{display:none}                       /* the switcher replaces the title-bar toggle */
+  #preview{height:56vh}                           /* pattern focused: big */
+  #stage.editing #preview{display:none}           /* editor focused: pattern steps aside… */
+  #stage.editing #shapeEd{height:56vh;flex:none}  /* …and the editor gets the room */
   /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room */
   .ed-hint{display:none}
   .ed-bar{padding:6px 10px}
@@ -151,7 +160,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .ed-btns>*{flex:none}
   .ed-btns button{padding:11px 12px;font-size:12px;white-space:nowrap}
   .ed-round input[type=range]{width:110px}
-  .ed-toggle{padding:13px 14px}
   /* bigger thumb for the header on/off switches without changing their look */
   .acc-sw{padding:10px 6px;margin:-10px -6px;box-sizing:content-box}
 }
@@ -308,6 +316,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 </aside>
 
 <section id="stage">
+  <div class="view-seg" role="group" aria-label="View">
+    <button type="button" id="vwEd" aria-pressed="true">✎ Fine-tune</button>
+    <button type="button" id="vwPat" aria-pressed="false">▦ Pattern</button>
+  </div>
   <div id="shapeEd">
     <button type="button" id="edToggle" class="ed-toggle" aria-expanded="true" aria-controls="edBody">
       <span>Fine-tune shape</span><span class="ed-toggle-chev" aria-hidden="true">▾</span>
@@ -906,6 +918,8 @@ $('edReset').addEventListener('click',()=>{
 function setEditor(open){
   $('stage').classList.toggle('editing',open);
   $('edToggle').setAttribute('aria-expanded',open?'true':'false');
+  $('vwEd').setAttribute('aria-pressed',open?'true':'false');     // phone view switcher mirrors the state
+  $('vwPat').setAttribute('aria-pressed',open?'false':'true');
   try{ localStorage.setItem('lavoet-ed-open',open?'1':'0'); }catch(e){}
   if(open){
     if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; }
@@ -915,6 +929,8 @@ function setEditor(open){
   render();
 }
 $('edToggle').addEventListener('click',()=>setEditor(!$('stage').classList.contains('editing')));
+$('vwEd').addEventListener('click',()=>setEditor(true));
+$('vwPat').addEventListener('click',()=>setEditor(false));
 /* motif extracted photogrammetrically from the Bagage Collection 1930s malle
    courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
    Richardson-Lucy deconvolved, contour-traced */
