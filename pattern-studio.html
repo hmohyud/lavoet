@@ -468,6 +468,11 @@ function motifSystem(){
   const R=num('cell')*num('scale')/200;
   const acc=accentMarkup('ACCENT_FG');
   const depth3=(num('depth3d')||0)>0 && !chk('shadeLine');
+  // how far the motif's ink reaches from its centre (incl. 3D block + outline) — used to
+  // clear a disk large enough that no partial motif is left poking out beside the logo
+  const poly=piecePolygon(R); let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
+  let dep=0; if(depth3){ dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); }
+  const reach=Rmax+dep+(chk('outlineOn')?(num('outlineW')||2)/2:R*0.08)+2;
   let defs='';
   if(depth3){ const {body,face}=motif3DLayers(R); defs=`<g id="mB">${body}</g><g id="mF">${face}</g>`; }
   else defs=`<g id="m0">${motifMarkup('MOTIF_FG')}</g>`;
@@ -489,7 +494,7 @@ function motifSystem(){
     }
     return {back,accL,face};
   }
-  return {defs,S,T,depth3,stampRange};
+  return {defs,S,T,depth3,reach,stampRange};
 }
 /* one tile's worth of motifs (with a wrap margin, clipped by the pattern/viewBox) —
    backs first, then accents, then faces, so occlusion is right and it repeats seamlessly */
@@ -561,11 +566,13 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
   if(useMq){
     ph=marquePhase(W,H);
     const b=marqueBox(W,H), excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:b.rA};
-    // clear the logo's disk, then re-stamp only the ring of motifs that poke back into it
-    const RR=b.rM+1.6*sys.S, span=Math.ceil(RR/sys.S)+1;
+    // the pattern paints a motif in every slot, so wipe a disk big enough to erase the
+    // logo's motif(s) WHOLE (clearR covers a removed motif's full reach — no partial arcs
+    // left over), then re-stamp only the surrounding motifs that overhang into it
+    const clearR=b.rM+sys.reach, RR=b.rM+2*sys.reach+sys.S, span=Math.ceil(RR/sys.S)+1;
     const ci=Math.round((b.cx-ph.ox)/sys.S), cj=Math.round((b.cy-ph.oy)/sys.S);
     const r=sys.stampRange(ci-span,ci+span,cj-span,cj+span,ph.ox,ph.oy,excl,RR);
-    marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.rM.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marqueMarkup(b,'MOTIF_FG')}`;
+    marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${clearR.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marqueMarkup(b,'MOTIF_FG')}`;
   }
   const patt=`<pattern id="fld" width="${sys.T}" height="${sys.T}" patternUnits="userSpaceOnUse" patternTransform="translate(${ph.ox.toFixed(1)} ${ph.oy.toFixed(1)})">${tileBody(sys)}</pattern>`;
   const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
@@ -751,15 +758,27 @@ document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   renderEd(); render();
 }));
-/* accordion open/close + per-section “?” info */
-for(const acc of document.querySelectorAll('.acc')){
-  acc.querySelector('.acc-head').addEventListener('click',e=>{
-    if(e.target.closest('.acc-q')) return;
-    acc.classList.toggle('closed');
-  });
-  const q=acc.querySelector('.acc-q'), info=acc.querySelector('.acc-info');
-  if(q&&info) q.addEventListener('click',e=>{ e.stopPropagation(); info.hidden=!info.hidden; });
+/* accordion open/close + per-section “?” info; remembered across visits, closed by default */
+const ACC_KEY='lavoet-acc-open';
+function saveAccState(){
+  const st={};
+  for(const a of document.querySelectorAll('.acc')) st[a.querySelector('.acc-title').textContent]=!a.classList.contains('closed');
+  try{ localStorage.setItem(ACC_KEY,JSON.stringify(st)); }catch(e){}
 }
+(function initAcc(){
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem(ACC_KEY)||'null'); }catch(e){}
+  for(const acc of document.querySelectorAll('.acc')){
+    const key=acc.querySelector('.acc-title').textContent;
+    const open=saved?!!saved[key]:false;          // default: all closed
+    acc.classList.toggle('closed',!open);
+    acc.querySelector('.acc-head').addEventListener('click',e=>{
+      if(e.target.closest('.acc-q')) return;
+      acc.classList.toggle('closed'); saveAccState();
+    });
+    const q=acc.querySelector('.acc-q'), info=acc.querySelector('.acc-info');
+    if(q&&info) q.addEventListener('click',e=>{ e.stopPropagation(); info.hidden=!info.hidden; });
+  }
+})();
 
 /* presets */
 const PRESETS=[
