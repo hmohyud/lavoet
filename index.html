@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LAVOËT</title>
 <meta name="description" content="Lavoët, malletier à Paris depuis 1869 — 175, Boulevard Haussmann. The folio of the maison — its trunks, its canvas, its plaques, from 1869 to today.">
-<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="11" height="32" fill="%23983E43"/><rect x="11" width="10" height="32" fill="%23FFFFFF"/><rect x="21" width="11" height="32" fill="%23FD8E3F"/></svg>'>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="11" height="32" fill="%23983E43"/><rect x="11" width="10" height="32" fill="%23FFFFFF"/><rect x="21" width="11" height="32" fill="%23FE7A4D"/></svg>'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
   --choc:#3E2F23;
   /* livery bands — a:left  b:right  c:centre accent (the optional 3rd stripe, off by default). Tune live via the studio picker, bottom-right. */
   --stripe-a:#983E43;
-  --stripe-b:#FD8E3F;
+  --stripe-b:#FE7A4D;
   --stripe-c:#FFFFFF;
   --brass:#A98A4F;
   --brassL:#D9C08A;
@@ -1926,7 +1926,7 @@ section{position:relative}
     <div class="st-presets" id="stPresets"></div>
     <div class="st-rows">
       <label><span>Left</span><input type="color" data-band="a" value="#983e43"></label>
-      <label><span>Right</span><input type="color" data-band="b" value="#fd8e3f"></label>
+      <label><span>Right</span><input type="color" data-band="b" value="#fe7a4d"></label>
       <label class="st-c"><span>Centre · 3rd</span><input type="color" data-band="c" value="#ffffff"></label>
     </div>
     <div class="st-seg-row">
@@ -1949,7 +1949,7 @@ section{position:relative}
   var seg=document.getElementById('stSeg');
   var segBtns=[].slice.call(seg.querySelectorAll('button'));
   // a:left  b:right  c:centre accent (shown only when the third stripe is on)
-  var DEFAULTS={a:'#983E43',b:'#FD8E3F',c:'#FFFFFF'};
+  var DEFAULTS={a:'#983E43',b:'#FE7A4D',c:'#FFFFFF'};
   var PRESETS=[
     {name:'Terracotta',      a:'#C4622E', b:'#5B3A22', c:'#FCF8F1'},
     {name:'Ochre & Ink',     a:'#C7963C', b:'#2C2A24', c:'#F4EEDF'},
