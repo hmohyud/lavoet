@@ -78,6 +78,15 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #preview{flex:1;min-height:0}
 #preview svg{display:block;width:100%;height:100%}
 #shapeEd{flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
+.ed-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.ed-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:9px 14px;background:none;border:none;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);cursor:pointer}
+.ed-toggle:hover{color:var(--brass)}
+.ed-toggle-chev{transition:transform .15s;font-size:12px}
+/* minimized: collapse the editor to just its title bar, give the preview the room */
+#stage:not(.editing) #shapeEd{flex:none;border-bottom:1px solid var(--hair)}
+#stage:not(.editing) .ed-body{display:none}
+#stage:not(.editing) .ed-toggle{border-bottom:none}
+#stage:not(.editing) .ed-toggle-chev{transform:rotate(-90deg)}
 .ed-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;flex-wrap:wrap;border-bottom:1px solid var(--hair)}
 .ed-hint{font-size:10.5px;color:var(--sepia)}
 .ed-btns{display:flex;gap:6px;flex-wrap:wrap}
@@ -141,7 +150,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
       <div class="btns" style="margin-top:12px">
         <button type="button" id="edTrunk">Original trunk motif</button>
-        <button type="button" id="edOpen">Fine-tune shape…</button>
       </div>
     </div>
   </section>
@@ -264,30 +272,34 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 </aside>
 
 <section id="stage">
-  <div id="shapeEd" hidden>
-    <div class="ed-bar">
-      <span class="ed-hint">Drag the points. Each point can be a smooth curve or a sharp corner.</span>
-      <div class="ed-btns">
-        <span class="ed-step" role="group" aria-label="Pieces">
-          <span class="ed-step-lbl">Pieces</span>
-          <button type="button" id="edPieceDn" aria-label="Fewer pieces">−</button>
-          <b id="edPieceN" aria-live="polite">4</b>
-          <button type="button" id="edPieceUp" aria-label="More pieces">+</button>
-        </span>
-        <button type="button" id="edSmooth">Smooth</button>
-        <button type="button" id="edCorner">Corner</button>
-        <button type="button" id="edAdd">+ Point</button>
-        <button type="button" id="edDel">− Point</button>
-        <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
-        <select id="edScope" hidden title="Apply the line to the whole motif or to each piece">
-          <option value="motif" selected>Per motif</option>
-          <option value="piece">Per piece</option>
-        </select>
-        <button type="button" id="edReset">Reset</button>
-        <button type="button" id="edDone">Done</button>
+  <div id="shapeEd">
+    <button type="button" id="edToggle" class="ed-toggle" aria-expanded="true" aria-controls="edBody">
+      <span>Fine-tune shape</span><span class="ed-toggle-chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="ed-body" id="edBody">
+      <div class="ed-bar">
+        <span class="ed-hint">Drag the points. Each point can be a smooth curve or a sharp corner.</span>
+        <div class="ed-btns">
+          <span class="ed-step" role="group" aria-label="Pieces">
+            <span class="ed-step-lbl">Pieces</span>
+            <button type="button" id="edPieceDn" aria-label="Fewer pieces">−</button>
+            <b id="edPieceN" aria-live="polite">4</b>
+            <button type="button" id="edPieceUp" aria-label="More pieces">+</button>
+          </span>
+          <button type="button" id="edSmooth">Smooth</button>
+          <button type="button" id="edCorner">Corner</button>
+          <button type="button" id="edAdd">+ Point</button>
+          <button type="button" id="edDel">− Point</button>
+          <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
+          <select id="edScope" hidden title="Apply the line to the whole motif or to each piece">
+            <option value="motif" selected>Per motif</option>
+            <option value="piece">Per piece</option>
+          </select>
+          <button type="button" id="edReset">Reset</button>
+        </div>
       </div>
+      <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
     </div>
-    <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
   </div>
   <div id="preview" role="img" aria-label="Pattern preview"></div>
   <div class="stage-foot"><span id="footL"></span><span id="footR"></span></div>
@@ -692,7 +704,7 @@ new ResizeObserver(render).observe(preview);
 let EDSEL=0, EDDRAG=false;
 function setShapeMode(){ /* the shape is always custom now — kept as a no-op for its callers */ }
 function renderEd(){
-  if(!SHAPE||$('shapeEd').hidden) return;
+  if(!SHAPE||!$('stage').classList.contains('editing')) return;   // skip while minimized
   const WP=shapeWarpedPts();                        // display points — base pts through the live twist
   const d=shapePath(1,WP), fg=val('cFg'), bg=val('cBg');
   const soft=chk('pinRound')?` stroke="${fg}" stroke-width="0.08" stroke-linejoin="round"`:'';
@@ -798,15 +810,19 @@ $('edReset').addEventListener('click',()=>{
   const o=document.querySelector('output[for="pinN"]'); if(o) o.value=4;
   EDSEL=0; renderEd(); render();
 });
-$('edDone').addEventListener('click',()=>{
-  $('shapeEd').hidden=true; $('stage').classList.remove('editing'); render();
-});
-$('edOpen').addEventListener('click',()=>{
-  if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; setShapeMode(true); }
-  EDSNAP=SHAPE.pts.map(p=>p.slice());
-  $('shapeEd').hidden=false; $('stage').classList.add('editing');
-  renderEd(); render();
-});
+// the fine-tune editor shows by default; edToggle minimizes it to just its title bar
+function setEditor(open){
+  $('stage').classList.toggle('editing',open);
+  $('edToggle').setAttribute('aria-expanded',open?'true':'false');
+  try{ localStorage.setItem('lavoet-ed-open',open?'1':'0'); }catch(e){}
+  if(open){
+    if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; }
+    EDSNAP=SHAPE.pts.map(p=>p.slice());   // editor "Reset" baselines to the shape as you opened it
+    renderEd();
+  }
+  render();
+}
+$('edToggle').addEventListener('click',()=>setEditor(!$('stage').classList.contains('editing')));
 /* motif extracted photogrammetrically from the Bagage Collection 1930s malle
    courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
    Richardson-Lucy deconvolved, contour-traced */
@@ -1086,6 +1102,8 @@ restoring=false;
 setSlots(val('mqSlots'));
 syncRows();
 render();
+/* the fine-tune editor is shown by default (remembered across visits) */
+(function initEditor(){ let o=true; try{ const s=localStorage.getItem('lavoet-ed-open'); if(s!==null) o=s==='1'; }catch(e){} setEditor(o); })();
 </script>
 </body>
 </html>
