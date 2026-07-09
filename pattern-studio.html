@@ -794,64 +794,36 @@ let EDSEL=0, EDDRAG=false;
 function setShapeMode(){ /* the shape is always custom now — kept as a no-op for its callers */ }
 function renderEd(){
   if(!SHAPE||!$('stage').classList.contains('editing')) return;   // skip while minimized
+  syncOutlineColor();                               // auto outline tone may lag render()'s pass
   const WP=shapeWarpedPts();                        // display points — base pts through the live twist
-  const d=shapePath(1,WP), fg=val('cFg'), bg=val('cBg');
-  const soft=chk('pinRound')?` stroke="${fg}" stroke-width="0.08" stroke-linejoin="round"`:'';
+  const fg=val('cFg'), bg=val('cBg');
   const N=Math.max(1,num('pinN')||4);
   let s=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${bg}"/>`;
   // divider lines fan out to one ray per piece — the seams the copies rotate about
   let div='';
   for(let k=0;k<N;k++){ const a=k*2*Math.PI/N; div+=`M 0 0 L ${(1.45*Math.cos(a)).toFixed(3)} ${(1.45*Math.sin(a)).toFixed(3)} `; }
   s+=`<path d="${div}" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
-  // when shading, keep the other pieces visible enough to show how the line cuts them
-  const gop=chk('shadeLine')?0.7:0.3;
-  // show the outline here too, in the chosen style (unit-space widths: outlineW / motif R)
-  const outOn=chk('outlineOn'), ol=val('cOl'), Rp=num('cell')*num('scale')/200||1, ew=(num('outlineW')||2)/Rp;
-  const edgeMode=outOn&&val('outlineMode')==='edge', shapeMode=outOn&&!edgeMode;
-  const pieceStroke=edgeMode?` stroke="${ol}" stroke-width="${ew.toFixed(4)}" stroke-linejoin="miter" stroke-miterlimit="9"`:(outOn?'':soft);
-  // 3D relief shows here too: extruded dark backs (+ lit bevel rim) behind lit top faces
+  // the motif EXACTLY as the pattern draws it — the same generator functions at the real R,
+  // scaled into editor units — so 3D depth/highlight/bevel, shading, soft corners and both
+  // outline styles all match the pattern with zero discrepancy
+  const R=num('cell')*num('scale')/200||1;
   const depth3=(num('depth3d')||0)>0 && !chk('shadeLine');
-  let faceFill=fg;
-  if(depth3){
-    const dep=(num('depth3d')||0)/100, a3=(num('angle3d')||55)*Math.PI/180;
-    const ex=Math.cos(a3)*dep, ey=Math.sin(a3)*dep, bev=(num('bevel')||0)/100;
-    const side=shade(fg,-(num('shade3d')||34)/100), bv=shade(fg,0.22+(num('highlight')||0)/200);
-    faceFill=shade(fg,(num('highlight')||0)/100);
-    const poly=piecePolygon(1), F=v=>v.toFixed(3), Q=(...p)=>`<path d="M ${p.map(q=>F(q[0])+' '+F(q[1])).join(' L ')} Z"/>`;
-    for(let k=0;k<N;k++){
-      const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th), op=k?gop:1;
-      const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]), back=g.map(([x,y])=>[x+ex,y+ey]);
-      let body=`<path d="M ${back.map(p=>F(p[0])+' '+F(p[1])).join(' L ')} Z"/>`, rim='';
-      for(let i=0;i<g.length;i++){ const A=g[i],B=g[(i+1)%g.length],TA=back[i],TB=back[(i+1)%g.length];
-        if(bev>0.01){ const MA=[A[0]+ex*bev,A[1]+ey*bev], MB=[B[0]+ex*bev,B[1]+ey*bev]; rim+=Q(A,B,MB,MA); body+=Q(MA,MB,TB,TA); }
-        else body+=Q(A,B,TB,TA); }
-      s+=`<g fill="${side}" opacity="${op}">${body}</g>`+(rim?`<g fill="${bv}" opacity="${op}">${rim}</g>`:'');
-    }
-  }
-  const edPiece=(rot,op)=>{ const t=`transform="rotate(${rot})"`, o=op<1?` opacity="${op}"`:'';
-    return (shapeMode?`<path d="${d}" ${t} fill="${ol}" stroke="${ol}" stroke-width="${(2*ew).toFixed(4)}" stroke-linejoin="miter" stroke-miterlimit="9"${o}/>`:'')
-         + `<path d="${d}" ${t} fill="${faceFill}"${pieceStroke}${o}/>`; };
-  for(let k=1;k<N;k++) s+=edPiece(+(k*360/N).toFixed(1),gop);
-  s+=edPiece(0,1);
+  let m;
+  if(depth3){ const L3=motif3DLayers(R); m=L3.body+L3.face; }
+  else m=motifPin(R,'MOTIF_FG');
+  s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${m}</g>`,colors());
   if(chk('shadeLine')){
-    // preview the light/shadow split on every piece, then the draggable line
-    const poly=piecePolygon(1), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(1);
-    const dc=shade(fg,-(num('shade3d')||38)/100);
-    for(let k=0;k<N;k++){
-      const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
-      const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);
-      const dark=clipHalf(g, per?nx*ct-ny*st:nx, per?nx*st+ny*ct:ny, c);
-      if(dark.length>2) s+=`<path d="M ${dark.map(p=>p[0].toFixed(3)+' '+p[1].toFixed(3)).join(' L ')} Z" fill="${dc}" opacity="${k?gop:1}"/>`;
-    }
+    // the split itself is drawn by motifPin above — just add the draggable light/shadow line
     const L=SHADELINE||DEFAULT_SLINE;
     s+=`<line x1="${L[0][0]}" y1="${L[0][1]}" x2="${L[1][0]}" y2="${L[1][1]}" stroke="#F4EFE4" stroke-width=".022" stroke-dasharray=".06 .045" opacity=".9"/>`;
     for(let i=0;i<2;i++) s+=`<circle data-line="${i}" cx="${L[i][0]}" cy="${L[i][1]}" r=".075" fill="#8C3B31" stroke="#F4EFE4" stroke-width=".022"/>`;
   }
   WP.forEach((p,ix)=>{                              // handles sit at the WARPED positions; data-ix = base index
     // the dot morphs with the point's roundness: square (sharp) → squircle → circle (rounded);
-    // fills are see-through so the outline underneath stays visible while you work
+    // fills are near-transparent (selected included) so the shape reads through — the ink rim
+    // is what marks the spot
     const half=0.054, rx=(half*Math.max(0,Math.min(1,(+p[2]||0)/2))).toFixed(3);
-    const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" fill-opacity="${ix===EDSEL?0.72:0.45}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
+    const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" fill-opacity="${ix===EDSEL?0.25:0.15}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.026:0.014}"`;
     s+=`<rect data-ix="${ix}" x="${(p[0]-half).toFixed(3)}" y="${(p[1]-half).toFixed(3)}" width=".108" height=".108" rx="${rx}" ry="${rx}" ${st}/>`;
   });
   $('edSvg').innerHTML=s;
