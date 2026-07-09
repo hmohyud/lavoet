@@ -137,10 +137,13 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
   <div class="sec">
     <h2 lang="fr">Relief — 3D</h2>
-    <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
-    <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
+    <label class="chk"><input type="checkbox" id="shadeLine">Shade across a line</label>
+    <label class="chk" id="scopeRow" hidden><input type="checkbox" id="shadeScope">Line per piece <span style="color:var(--sepia)">(else whole motif)</span></label>
+    <p class="hint" id="lineHint" hidden>Open <b>Edit shape…</b> to drag the shading line where you want it.</p>
+    <div class="row" data-hide="line"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
+    <div class="row" data-hide="line"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
     <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
-    <p class="hint">Backs each piece with a flat darker shade so it reads as a raised tile — no gradients. Set depth to 0 for a flat pattern.</p>
+    <p class="hint" data-hide="line">Backs each piece with a flat darker shade so it reads as a raised tile. Set depth to 0 for flat, or tick "Shade across a line" for a light/shadow split.</p>
   </div>
 
   <div class="sec">
@@ -158,10 +161,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="col"><label for="cBg">Background</label><input type="color" id="cBg" value="#4E3A26"></div>
       <div class="col"><label for="cFg">Motif</label><input type="color" id="cFg" value="#C69A45"></div>
       <div class="col"><label for="cAc">Dots</label><input type="color" id="cAc" value="#C69A45"></div>
-      <div class="col"><label for="cOl">Outline</label><input type="color" id="cOl" value="#2B2620"></div>
+      <div class="col"><label for="cOl">Outline</label><input type="color" id="cOl" value="#79602f"></div>
     </div>
-    <label class="chk"><input type="checkbox" id="multiTone">Vary piece tones</label>
-    <div class="row" id="toneRow" hidden><label for="toneSpread">Tone spread</label><input type="range" id="toneSpread" min="5" max="60" value="30"><output for="toneSpread">30</output></div>
     <div class="presets" id="presets"></div>
   </div>
 
@@ -328,24 +329,53 @@ function piecePathD(R){
     for(let m=0;m<M;m++){ const t=m/M,w=warp(x0+(x1-x0)*t,y0+(y1-y0)*t); pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2)); } }
   return 'M '+pts.join(' L ')+' Z';
 }
-// per-piece tone: pieces fan from darker to lighter around the wheel when "vary tones" is on
-function pieceAmt(k,N){ const sp=(num('toneSpread')||30)/100, t=N>1?(k/(N-1))*2-1:0; return t*sp; }
-function pieceTone(k,N){ return `PTONE:${pieceAmt(k,N).toFixed(3)}`; }
 // a piece's stroke: an outline colour if outlining, else the soft-corner fatten in its own tone
 function strokeAttr(R,tok){
   if(chk('outlineOn')) return ` stroke="OUTLINE_C" stroke-width="${(num('outlineW')||2).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round"`;
   if(chk('pinRound')) return ` stroke="${tok}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="round"`;
   return '';
 }
-// flat motif: one group, or one group per piece when tones vary
+// Sutherland–Hodgman half-plane clip: keep the polygon on the side n·p >= c
+function clipHalf(poly,nx,ny,c){
+  const out=[], M=poly.length;
+  for(let i=0;i<M;i++){
+    const A=poly[i], B=poly[(i+1)%M];
+    const da=nx*A[0]+ny*A[1]-c, db=nx*B[0]+ny*B[1]-c;
+    if(da>=0) out.push(A);
+    if((da<0)!==(db<0)){ const t=da/(da-db); out.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); }
+  }
+  return out;
+}
+const DEFAULT_SLINE=[[-0.95,-0.32],[0.95,0.32]];
+let SHADELINE=null; // [[x1,y1],[x2,y2]] in R-normalised units; null = default
+// normal + offset of the shading line (in R units), plus the light-side test
+function shadeLineNC(R){
+  const L=SHADELINE||DEFAULT_SLINE, p1=[L[0][0]*R,L[0][1]*R], p2=[L[1][0]*R,L[1][1]*R];
+  let nx=p2[1]-p1[1], ny=-(p2[0]-p1[0]); const nl=Math.hypot(nx,ny)||1; nx/=nl; ny/=nl;
+  return {nx,ny,c:nx*p1[0]+ny*p1[1]};
+}
+// flat motif — either plain pieces or split across a light/shadow line
 function motifPin(R,fg){
   const d=piecePathD(R), N=Math.max(1,num('pinN')||4);
-  if(!chk('multiTone')){
+  if(!chk('shadeLine')){
     let pieces=''; for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
     return `<g fill="${fg}"${strokeAttr(R,fg)}>${pieces}</g>`;
   }
+  // shade across a line: light full piece + a darker region clipped to the shadow side
+  const poly=piecePolygon(R), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(R);
+  const soft=chk('pinRound'), outline=chk('outlineOn');
+  const lightStroke=(!outline&&soft)?` stroke="${fg}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="round"`:'';
   let out='';
-  for(let k=0;k<N;k++){ const tok=pieceTone(k,N); out+=`<g fill="${tok}"${strokeAttr(R,tok)}><path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/></g>`; }
+  for(let k=0;k<N;k++){
+    const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th), rot=+(k*360/N).toFixed(1);
+    const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);              // piece k in global frame
+    // whole-motif: one fixed line for all pieces; per-piece: the line rotates with the piece
+    const lnx=per?nx*ct-ny*st:nx, lny=per?nx*st+ny*ct:ny;
+    const dark=clipHalf(g,lnx,lny,c);
+    const darkPath=dark.length>2?`<path d="M ${dark.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z" fill="MOTIF_SIDE"/>`:'';
+    out+=`<path d="${d}" transform="rotate(${rot})" fill="${fg}"${lightStroke}/>${darkPath}`;
+    if(outline) out+=`<path d="${d}" transform="rotate(${rot})" fill="none"${strokeAttr(R,fg)}/>`;
+  }
   return out;
 }
 // Two-tone relief: split the motif into a BACK layer (each piece backed by one flat
@@ -358,21 +388,17 @@ function motif3DLayers(R){
   let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
   let dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); // stay in cell
   const a=(num('angle3d')||55)*Math.PI/180, ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
-  const multi=chk('multiTone'), sideAmt=(num('shade3d')||38)/100;
-  let body='', face='';
+  let bodyPaths='', face='';
   for(let k=0;k<N;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);          // piece in global frame
     const back=g.map(([x,y])=>[x+ex,y+ey]);
-    let bp=`<path d="M ${back.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
+    bodyPaths+=`<path d="M ${back.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
     for(let i=0;i<g.length;i++){ const A=g[i],B=g[(i+1)%g.length],TA=back[i],TB=back[(i+1)%g.length];
-      bp+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${TB[0].toFixed(2)} ${TB[1].toFixed(2)} L ${TA[0].toFixed(2)} ${TA[1].toFixed(2)} Z"/>`; }
-    const faceTok=multi?pieceTone(k,N):'MOTIF_FG';
-    const bodyTok=multi?`PTONE:${(pieceAmt(k,N)-sideAmt).toFixed(3)}`:'MOTIF_SIDE';
-    body+=`<g fill="${bodyTok}">${bp}</g>`;
-    face+=`<g fill="${faceTok}"${strokeAttr(R,faceTok)}><path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/></g>`;
+      bodyPaths+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${TB[0].toFixed(2)} ${TB[1].toFixed(2)} L ${TA[0].toFixed(2)} ${TA[1].toFixed(2)} Z"/>`; }
+    face+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
   }
-  return {body,face};
+  return {body:`<g fill="MOTIF_SIDE">${bodyPaths}</g>`, face:`<g fill="MOTIF_FG"${strokeAttr(R,'MOTIF_FG')}>${face}</g>`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -406,7 +432,7 @@ function placeAll(W,H,excl,ph){
   const accLayer=accs.map(([x,y])=>use('pa',x,y,false)).join('');
   // two-tone relief: draw every dark BACK block, then accents, then every flat FACE on
   // top — so no block ever overlaps a neighbour's face
-  if((num('depth3d')||0)>0){
+  if((num('depth3d')||0)>0 && !chk('shadeLine')){
     const {body,face}=motif3DLayers(num('cell')*num('scale')/200);
     let out=`<defs><g id="pmB">${body}</g><g id="pmF">${face}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
     out+=spots.map(([x,y,a])=>use('pmB',x,y,a)).join('');
@@ -478,9 +504,7 @@ function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white *
 }
 function fill(motifs,c){
   const side=shade(c.fg,-(num('shade3d')||38)/100);
-  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac).replaceAll('OUTLINE_C',c.ol)
-    // per-piece tones: PTONE:<amt> → a lighter/darker shade of the motif colour
-    .replace(/PTONE:(-?\d+(?:\.\d+)?)/g,(_,a)=>shade(c.fg,parseFloat(a)));
+  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac).replaceAll('OUTLINE_C',c.ol);
 }
 
 function buildSwatch(W,H,{marque=true,style=''}={}){
@@ -504,9 +528,12 @@ function buildTile(){
 /* ---------- preview ---------- */
 const preview=$('preview');
 let raf=0;
+let olAuto=true;
+function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
 function render(){
   clearTimeout(raf);
   raf=setTimeout(()=>{
+    syncOutlineColor();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
     const T=tileSize();
@@ -538,6 +565,20 @@ function renderEd(){
   s+=`<path d="${div}" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
   for(let k=1;k<N;k++) s+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${fg}"${soft} opacity=".3"/>`;
   s+=`<path d="${d}" fill="${fg}"${soft}/>`;
+  if(chk('shadeLine')){
+    // preview the light/shadow split, then the draggable line
+    const poly=piecePolygon(1), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(1);
+    const dc=shade(fg,-(num('shade3d')||38)/100);
+    for(let k=0;k<N;k++){
+      const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
+      const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);
+      const dark=clipHalf(g, per?nx*ct-ny*st:nx, per?nx*st+ny*ct:ny, c);
+      if(dark.length>2) s+=`<path d="M ${dark.map(p=>p[0].toFixed(3)+' '+p[1].toFixed(3)).join(' L ')} Z" fill="${dc}" opacity="${k?0.3:1}"/>`;
+    }
+    const L=SHADELINE||DEFAULT_SLINE;
+    s+=`<line x1="${L[0][0]}" y1="${L[0][1]}" x2="${L[1][0]}" y2="${L[1][1]}" stroke="#F4EFE4" stroke-width=".022" stroke-dasharray=".06 .045" opacity=".9"/>`;
+    for(let i=0;i<2;i++) s+=`<circle data-line="${i}" cx="${L[i][0]}" cy="${L[i][1]}" r=".075" fill="#8C3B31" stroke="#F4EFE4" stroke-width=".022"/>`;
+  }
   SHAPE.pts.forEach((p,ix)=>{
     const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
     s+=p[2]
@@ -561,14 +602,22 @@ function edPos(ev){
   const cl=v=>Math.max(-1.42,Math.min(1.42,v));
   return [cl((ev.clientX-x0)/sc-vb/2), cl((ev.clientY-y0)/sc-vb/2)];
 }
+let EDLINE=0;
 $('edSvg').addEventListener('pointerdown',ev=>{
+  const tl=ev.target.closest('[data-line]');
+  if(tl){ EDLINE=+tl.dataset.line; EDDRAG='line'; try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){} return; }
   const t=ev.target.closest('[data-ix]');
-  if(t){ EDSEL=+t.dataset.ix; EDDRAG=true; try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){} }
+  if(t){ EDSEL=+t.dataset.ix; EDDRAG='pt'; try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){} }
   renderEd();
 });
 $('edSvg').addEventListener('pointermove',ev=>{
-  if(!EDDRAG||!SHAPE) return;
+  if(!EDDRAG) return;
   const [x,y]=edPos(ev);
+  if(EDDRAG==='line'){
+    if(!SHADELINE) SHADELINE=DEFAULT_SLINE.map(p=>p.slice());
+    SHADELINE[EDLINE]=[+x.toFixed(3),+y.toFixed(3)]; renderEd(); render(); return;
+  }
+  if(!SHAPE) return;
   SHAPE.pts[EDSEL][0]=+x.toFixed(3); SHAPE.pts[EDSEL][1]=+y.toFixed(3);
   renderEd(); render();
 });
@@ -629,10 +678,16 @@ function setSlots(v){
   $('mqOpts').style.opacity=v==='0'?.35:1;
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
-function syncRows(){ $('outlineRow').hidden=!chk('outlineOn'); $('toneRow').hidden=!chk('multiTone'); }
+function syncRows(){
+  $('outlineRow').hidden=!chk('outlineOn');
+  const ln=chk('shadeLine');
+  $('scopeRow').hidden=!ln; $('lineHint').hidden=!ln;
+  for(const el of document.querySelectorAll('[data-hide="line"]')) el.hidden=ln;
+}
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
-  if(el.id==='outlineOn'||el.id==='multiTone') syncRows();
+  if(el.id==='outlineOn'||el.id==='shadeLine') syncRows();
+  if(el.id==='cOl') olAuto=false;
   renderEd(); render();
 }));
 
@@ -776,15 +831,16 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','toneSpread','outlineW','cell','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','outlineW','cell','accentSize',
   'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots','pngScale'];
-const HASH_CHK=['pinRound','outlineOn','multiTone','quinconce','mirrorAlt','accentOn'];
+const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn'];
 let restoring=true, hashT=0;
 function paramsString(){
   const p=new URLSearchParams();
   for(const id of HASH_IDS) p.set(id,val(id));
   for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
   if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
+  if(SHADELINE) p.set('sline',SHADELINE.map(q=>q.join(':')).join(';'));
   return p.toString();
 }
 function saveHash(){
@@ -810,12 +866,17 @@ function applyParams(p){
     if(o) o.value=el.value; /* el.value is post-clamp, not the raw string */
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
+  if(p.has('cOl')) olAuto=false; // an explicit outline colour was saved
   if(p.has('shape')){
     const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
     if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&(q[2]===0||q[2]===1))){
       SHAPE={pts}; setShapeMode(true);
     }
   } else if(SHAPE){ SHAPE=null; setShapeMode(false); }
+  if(p.has('sline')){
+    const pts=p.get('sline').split(';').map(s=>s.split(':').map(Number));
+    if(pts.length===2&&pts.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&Math.abs(v)<=2))) SHADELINE=pts;
+  } else SHADELINE=null;
   setSlots(val('mqSlots'));
 }
 function loadHash(){
