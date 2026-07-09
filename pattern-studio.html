@@ -848,9 +848,10 @@ function renderEd(){
     for(let i=0;i<2;i++) s+=`<circle data-line="${i}" cx="${L[i][0]}" cy="${L[i][1]}" r=".075" fill="#8C3B31" stroke="#F4EFE4" stroke-width=".022"/>`;
   }
   WP.forEach((p,ix)=>{                              // handles sit at the WARPED positions; data-ix = base index
-    // the dot morphs with the point's roundness: square (sharp) → squircle → circle (rounded)
+    // the dot morphs with the point's roundness: square (sharp) → squircle → circle (rounded);
+    // fills are see-through so the outline underneath stays visible while you work
     const half=0.054, rx=(half*Math.max(0,Math.min(1,(+p[2]||0)/2))).toFixed(3);
-    const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
+    const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" fill-opacity="${ix===EDSEL?0.72:0.45}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
     s+=`<rect data-ix="${ix}" x="${(p[0]-half).toFixed(3)}" y="${(p[1]-half).toFixed(3)}" width=".108" height=".108" rx="${rx}" ry="${rx}" ${st}/>`;
   });
   $('edSvg').innerHTML=s;
