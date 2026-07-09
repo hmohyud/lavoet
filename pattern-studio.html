@@ -39,6 +39,13 @@ main{flex:1;display:flex;min-height:0}
 .acc-q:hover{border-color:var(--brass);color:var(--brass)}
 .acc-chev{flex:none;color:var(--sepia);font-size:9px;transition:transform .18s;transform:rotate(90deg)}
 .acc.closed .acc-chev{transform:rotate(0)}
+/* header on/off switch — toggle a whole section without opening it */
+.acc-sw{position:relative;flex:none;width:30px;height:17px;cursor:pointer}
+.acc-sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.acc-sw .tk{display:block;width:30px;height:17px;border-radius:9px;background:var(--hair);transition:background .15s}
+.acc-sw .tk::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .15s}
+.acc-sw input:checked+.tk{background:var(--brass)}
+.acc-sw input:checked+.tk::after{transform:translateX(13px)}
 .acc-body{padding:0 0 18px}
 .acc.closed .acc-body{display:none}
 .opt-off{opacity:.4;pointer-events:none}   /* a sub-option whose parent toggle is off: greyed, not hidden */
@@ -94,6 +101,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-btns button:hover{border-color:var(--brass)}
 .ed-btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .ed-btns select{font:500 10.5px var(--sans);padding:7px 8px;background:var(--paper);border:1px solid var(--hair);color:var(--ink);width:auto}
+.ed-gear{font-size:12px!important;line-height:1;padding:6px 9px!important}
+.ed-round{display:inline-flex;align-items:center;gap:7px}
+.ed-round input[type=range]{width:84px;margin:0}
+.ed-round output{font:500 10px var(--sans);color:var(--sepia);min-width:26px;text-align:right;font-variant-numeric:tabular-nums}
 .ed-step{display:inline-flex;align-items:center;gap:6px;padding:0 4px 0 0;margin-right:2px;border-right:1px solid var(--hair)}
 .ed-step-lbl{font:500 10.5px var(--sans);letter-spacing:.08em;color:var(--sepia)}
 .ed-step b{font:600 11px var(--sans);min-width:12px;text-align:center;font-variant-numeric:tabular-nums}
@@ -169,10 +180,9 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Outline</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Outline</span><label class="acc-sw" title="Outline on/off"><input type="checkbox" id="outlineOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Draws a line around every shape. Turn it on, then set the line’s weight and colour.</p>
-      <label class="chk"><input type="checkbox" id="outlineOn">Outline the shapes</label>
+      <p class="acc-info" hidden>Draws a line around every shape. Use the switch in this section’s header to turn it on, then set the line’s weight and colour.</p>
       <div id="outlineRow">
         <div class="row"><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="0.3" max="8" step="0.1" value="2"><output for="outlineW">2</output></div>
         <div class="cols"><div class="col"><label for="cOlB">Outline colour</label><input type="color" id="cOlB" data-syncs="cOl" value="#79602f"></div></div>
@@ -181,10 +191,9 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Dots</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Dots</span><label class="acc-sw" title="Dots on/off"><input type="checkbox" id="accentOn" checked><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>The small accents in the gaps between motifs — switch them on or off, choose a shape, size them, and colour them.</p>
-      <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
+      <p class="acc-info" hidden>The small accents in the gaps between motifs — use the switch in this section’s header to turn them on or off, then choose a shape, size, and colour.</p>
       <label class="chk"><input type="checkbox" id="dotsInLogoB" data-syncs="dotsInLogo">Dots in the logo area</label>
       <div class="row-sel"><label for="accentStyle">Dot style</label>
         <select id="accentStyle">
@@ -204,7 +213,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">3D &amp; shading</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">3D &amp; shading</span><label class="acc-sw" title="3D on/off"><input type="checkbox" id="sw3d"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Makes the motif look raised — a lit top face over a darker side, lit from one direction. Depth 0 is flat. For a flat light/shadow split across the motif instead, use “Shade line” inside Fine-tune shape.</p>
       <div class="row"><label for="depth3d">Depth</label><input type="range" id="depth3d" min="0" max="60" value="0"><output for="depth3d">0</output></div>
@@ -228,7 +237,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Logo</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Logo</span><label class="acc-sw" title="Logo on/off"><input type="checkbox" id="swLogo"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch, replacing one motif or a block of four so the pattern stays even. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
       <div class="seg" role="group" aria-label="Centre logo">
@@ -288,6 +297,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           </span>
           <button type="button" id="edSmooth">Smooth</button>
           <button type="button" id="edCorner">Corner</button>
+          <button type="button" id="edRound" class="ed-gear" title="Fine-tune this point’s roundness / sharpness" aria-pressed="false" aria-label="Roundness">⚙</button>
+          <span id="edRoundWrap" class="ed-round" hidden><input type="range" id="edRoundAmt" min="0" max="150" value="100" aria-label="Roundness amount"><output for="edRoundAmt">100</output></span>
           <button type="button" id="edAdd">+ Point</button>
           <button type="button" id="edDel">− Point</button>
           <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
@@ -384,16 +395,16 @@ function shapeModify(x,y){ const p=shapeRadial(x,y); return twistWarp(p[0],p[1])
 function shapeUnmodify(x,y){ const p=twistUnwarp(x,y); return shapeRadialInv(p[0],p[1]); }
 function shapeWarpedPts(){ return SHAPE.pts.map(p=>{ const w=shapeModify(p[0],p[1]); return [w[0],w[1],p[2]]; }); }
 function shapePath(sc,pts){
-  // closed path through the points: smooth points get Catmull-Rom handles,
-  // corner points get zero handles (segments between two corners run straight)
+  // closed path through the points: each point's [2] is a ROUNDNESS amount that scales its
+  // Catmull-Rom handle (0 = sharp corner, 1 = normal smooth, up to 1.5 = extra round)
   const P=pts||SHAPE.pts, n=P.length, pt=i=>P[(i%n+n)%n];
   const f=v=>(v*sc).toFixed(2);
   let d=`M ${f(pt(0)[0])} ${f(pt(0)[1])}`;
   for(let i=0;i<n;i++){
-    const a=pt(i), b=pt(i+1);
-    const ha=a[2]?[(b[0]-pt(i-1)[0])/6,(b[1]-pt(i-1)[1])/6]:[0,0];
-    const hb=b[2]?[(pt(i+2)[0]-a[0])/6,(pt(i+2)[1]-a[1])/6]:[0,0];
-    d+=(!a[2]&&!b[2])
+    const a=pt(i), b=pt(i+1), sa=+a[2]||0, sb=+b[2]||0;
+    const ha=[(b[0]-pt(i-1)[0])/6*sa,(b[1]-pt(i-1)[1])/6*sa];
+    const hb=[(pt(i+2)[0]-a[0])/6*sb,(pt(i+2)[1]-a[1])/6*sb];
+    d+=(!sa&&!sb)
       ? ` L ${f(b[0])} ${f(b[1])}`
       : ` C ${f(a[0]+ha[0])} ${f(a[1]+ha[1])} ${f(b[0]-hb[0])} ${f(b[1]-hb[1])} ${f(b[0])} ${f(b[1])}`;
   }
@@ -405,10 +416,10 @@ function piecePolygon(R){
   if(SHAPE){
     const P=shapeWarpedPts(), n=P.length, pt=i=>P[((i%n)+n)%n], CS=8;
     for(let i=0;i<n;i++){
-      const a=pt(i), b=pt(i+1);
-      const ha=a[2]?[(b[0]-pt(i-1)[0])/6,(b[1]-pt(i-1)[1])/6]:[0,0];
-      const hb=b[2]?[(pt(i+2)[0]-a[0])/6,(pt(i+2)[1]-a[1])/6]:[0,0];
-      const c1=[a[0]+ha[0],a[1]+ha[1]], c2=[b[0]-hb[0],b[1]-hb[1]], st=!a[2]&&!b[2], SS=st?1:CS;
+      const a=pt(i), b=pt(i+1), sa=+a[2]||0, sb=+b[2]||0;
+      const ha=[(b[0]-pt(i-1)[0])/6*sa,(b[1]-pt(i-1)[1])/6*sa];
+      const hb=[(pt(i+2)[0]-a[0])/6*sb,(pt(i+2)[1]-a[1])/6*sb];
+      const c1=[a[0]+ha[0],a[1]+ha[1]], c2=[b[0]-hb[0],b[1]-hb[1]], st=!sa&&!sb, SS=st?1:CS;
       for(let s=0;s<SS;s++){ const t=s/SS,u=1-t;
         const x=st?a[0]:u*u*u*a[0]+3*u*u*t*c1[0]+3*u*t*t*c2[0]+t*t*t*b[0];
         const y=st?a[1]:u*u*u*a[1]+3*u*u*t*c1[1]+3*u*t*t*c2[1]+t*t*t*b[1];
@@ -688,7 +699,7 @@ function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs
 function render(){
   clearTimeout(raf);
   raf=setTimeout(()=>{
-    syncOutlineColor(); updateMirrors();
+    syncOutlineColor(); updateMirrors(); syncHeaderToggles();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
     const T=tileSize();
@@ -739,8 +750,11 @@ function renderEd(){
       : `<rect data-ix="${ix}" x="${p[0]-0.054}" y="${p[1]-0.054}" width=".108" height=".108" ${st}/>`;
   });
   $('edSvg').innerHTML=s;
-  $('edSmooth').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===1);
-  $('edCorner').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===0);
+  const rnd=+SHAPE.pts[EDSEL][2]||0;                 // this point's roundness amount
+  $('edSmooth').setAttribute('aria-pressed',rnd>0);
+  $('edCorner').setAttribute('aria-pressed',rnd===0);
+  $('edRoundAmt').value=Math.round(rnd*100);
+  document.querySelector('output[for="edRoundAmt"]').value=Math.round(rnd*100);
   $('edPieceN').textContent=N;
   syncEdShade();
 }
@@ -779,6 +793,7 @@ $('edSvg').addEventListener('pointermove',ev=>{
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
 $('edSmooth').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=1; renderEd(); render(); } });
 $('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; renderEd(); render(); } });
+$('edRound').addEventListener('click',()=>{ const w=$('edRoundWrap'); w.hidden=!w.hidden; $('edRound').setAttribute('aria-pressed',!w.hidden); });
 function syncEdShade(){
   const on=chk('shadeLine');
   $('edShadeLine').setAttribute('aria-pressed',on);
@@ -855,17 +870,26 @@ function applyTrunkMotif(){
 $('edTrunk').addEventListener('click',()=>{ applyTrunkMotif(); renderEd(); render(); });
 
 /* ---------- interactions ---------- */
+let lastSlots='4', last3d=30;                          // remembered "on" values for the header switches
 function setSlots(v){
   $('mqSlots').value=v;
+  if(v!=='0') lastSlots=v;
   for(const b of document.querySelectorAll('[data-slots]')) b.setAttribute('aria-pressed',b.dataset.slots===v);
   $('mqOpts').style.opacity=v==='0'?.35:1;
+  const s=$('swLogo'); if(s) s.checked=v!=='0';
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
 function syncRows(){ $('outlineRow').classList.toggle('opt-off',!chk('outlineOn')); }
+// keep the header switches in step with the values they stand for
+function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')||0)>0; const b=$('swLogo'); if(b) b.checked=val('mqSlots')!=='0'; }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
   if(el.dataset.syncs){ const t=$(el.dataset.syncs); if(el.type==='checkbox') t.checked=el.checked; else { t.value=el.value; if(t.id==='cOl') olAuto=false; } }
   if(el.id==='outlineOn') syncRows();
+  if(el.id==='sw3d'){ if(el.checked){ setOut('depth3d',last3d>0?last3d:30); } else { if((num('depth3d')||0)>0) last3d=num('depth3d'); setOut('depth3d',0); } }
+  if(el.id==='swLogo'){ setSlots(el.checked?(lastSlots==='0'?'4':lastSlots):'0'); }
+  if(el.id==='depth3d'&&(num('depth3d')||0)>0) last3d=num('depth3d');
+  if(el.id==='edRoundAmt'&&SHAPE) SHAPE.pts[EDSEL][2]=+(+el.value/100).toFixed(2);   // per-point roundness
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   renderEd(); render();
@@ -884,7 +908,7 @@ function saveAccState(){
     const open=saved?!!saved[key]:false;          // default: all closed
     acc.classList.toggle('closed',!open);
     acc.querySelector('.acc-head').addEventListener('click',e=>{
-      if(e.target.closest('.acc-q')) return;
+      if(e.target.closest('.acc-q')||e.target.closest('.acc-sw')) return;   // ? and on/off switch don't collapse
       acc.classList.toggle('closed'); saveAccState();
     });
     const q=acc.querySelector('.acc-q'), info=acc.querySelector('.acc-info');
@@ -1077,7 +1101,7 @@ function applyParams(p){
   if(p.has('cOl')) olAuto=false; // an explicit outline colour was saved
   if(p.has('shape')){
     const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
-    if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&(q[2]===0||q[2]===1))){
+    if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&q[2]>=0&&q[2]<=2)){
       SHAPE={pts};
     }
   } else { SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; }   // no saved shape → the trunk (always custom now)
