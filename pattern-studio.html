@@ -109,11 +109,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-round input[type=range]{width:96px;margin:0}
 .ed-round-lbl{font:500 10px var(--sans);letter-spacing:.08em;color:var(--sepia)}
 /* Shade line + its Per motif/piece scope + a help "?" grouped as one control */
-.ed-shade{display:inline-flex;align-items:stretch;border:1px solid var(--hair)}
+.ed-shade{position:relative;display:inline-flex;align-items:stretch;border:1px solid var(--hair)}
 .ed-shade>button,.ed-shade>select{border:none!important}
 .ed-shade>button:not(:last-child),.ed-shade>select{border-right:1px solid var(--hair)!important}
 .ed-shade-q{min-width:24px;color:var(--sepia)}
-.ed-info{margin:0;padding:10px 14px;background:rgba(0,0,0,.035);border-bottom:1px solid var(--hair);font-size:11px;line-height:1.5;color:var(--sepia)}
+/* the shade-line "?" speech bubble — drops below the group, anchored to the right so it never runs off screen */
+.help-bubble{position:absolute;top:calc(100% + 7px);right:0;z-index:50;width:max-content;max-width:min(300px,calc(100vw - 16px));margin:0;padding:10px 13px;background:var(--ink);color:var(--paper);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.32);font:400 11px/1.55 var(--sans);letter-spacing:normal;text-transform:none;text-align:left;cursor:default}
+.help-bubble::after{content:"";position:absolute;top:-6px;right:13px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
+.help-bubble b{color:var(--brass)}
 .ed-step{display:inline-flex;align-items:center;gap:6px;padding:0 4px 0 0;margin-right:2px;border-right:1px solid var(--hair)}
 .ed-step-lbl{font:500 10.5px var(--sans);letter-spacing:.08em;color:var(--sepia)}
 .ed-step b{font:600 11px var(--sans);min-width:12px;text-align:center;font-variant-numeric:tabular-nums}
@@ -312,6 +315,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <button type="button" id="edAdd">+ Point</button>
           <button type="button" id="edDel">− Point</button>
           <span class="ed-shade">
+            <p class="help-bubble" id="edShadeInfo" hidden>Shade line gives a flat, two-tone “shaded” look: it splits the motif into a lit half and a shadow half along a line you drag on the canvas. <b>Per motif</b> keeps one straight line across the whole motif (reads like a lit 3-D form); <b>Per piece</b> turns the line with each piece (a uniform faceted pinwheel). Drag the two round handles to aim the light.</p>
             <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
             <select id="edScope" hidden title="Apply the line to the whole motif or to each piece">
               <option value="motif" selected>Per motif</option>
@@ -322,7 +326,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <button type="button" id="edReset">Reset</button>
         </div>
       </div>
-      <p class="ed-info" id="edShadeInfo" hidden>Shade line gives a flat, two-tone “shaded” look: it splits the motif into a lit half and a shadow half along a line you drag on the canvas. <b>Per motif</b> keeps one straight line across the whole motif (reads like a lit 3-D form); <b>Per piece</b> turns the line with each piece (a uniform faceted pinwheel). Drag the two round handles to aim the light.</p>
       <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
     </div>
   </div>
@@ -812,7 +815,20 @@ $('edSvg').addEventListener('pointermove',ev=>{
   renderEd(); render();
 });
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
-$('edShadeHelp').addEventListener('click',()=>{ const i=$('edShadeInfo'); i.hidden=!i.hidden; });
+$('edShadeInfo').addEventListener('click',e=>e.stopPropagation());
+$('edShadeHelp').addEventListener('click',e=>{
+  e.stopPropagation();
+  const i=$('edShadeInfo'), show=i.hidden;
+  hideAllHelp();                                     // one help bubble at a time
+  i.hidden=!show;
+  if(!i.hidden){                                     // nudge it back on-screen if a rail is clipped
+    i.style.transform='';
+    const r=i.getBoundingClientRect(), m=6;
+    let dx=0;
+    if(r.left<m) dx=m-r.left; else if(r.right>innerWidth-m) dx=innerWidth-m-r.right;
+    if(dx) i.style.transform=`translateX(${dx.toFixed(1)}px)`;
+  }
+});
 function syncEdShade(){
   const on=chk('shadeLine');
   $('edShadeLine').setAttribute('aria-pressed',on);
@@ -913,6 +929,8 @@ document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   renderEd(); render();
 }));
+/* close every help bubble — section "?" popovers and the shade-line one */
+function hideAllHelp(){ for(const i of document.querySelectorAll('.acc-info,.help-bubble')) i.hidden=true; }
 /* accordion open/close + per-section “?” info; remembered across visits, closed by default */
 const ACC_KEY='lavoet-acc-open';
 function saveAccState(){
@@ -936,14 +954,14 @@ function saveAccState(){
       q.addEventListener('click',e=>{
         e.stopPropagation();
         const show=info.hidden;
-        for(const i of document.querySelectorAll('.acc-info')) i.hidden=true;   // one bubble at a time
+        hideAllHelp();                                 // one bubble at a time (accordion + shade)
         info.hidden=!show;
       });
       info.addEventListener('click',e=>e.stopPropagation());
     }
   }
-  // click anywhere else (or scroll) dismisses an open help bubble
-  document.addEventListener('click',e=>{ if(!e.target.closest('.acc-q')) for(const i of document.querySelectorAll('.acc-info')) i.hidden=true; });
+  // click anywhere else dismisses any open help bubble (accordion or shade line)
+  document.addEventListener('click',e=>{ if(!e.target.closest('.acc-q')&&!e.target.closest('#edShadeHelp')&&!e.target.closest('.help-bubble')&&!e.target.closest('.acc-info')) hideAllHelp(); });
 })();
 
 /* presets */
