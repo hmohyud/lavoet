@@ -126,6 +126,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <p class="hint" id="customNote" hidden>Custom shape active — the four shape sliders are paused while you use your own points.</p>
     <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
     <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
+    <label class="chk"><input type="checkbox" id="outlineOn">Outline the shapes</label>
+    <div class="row" id="outlineRow" hidden><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="1" max="8" value="2"><output for="outlineW">2</output></div>
     <div class="btns" style="margin-top:12px">
       <button type="button" id="edTrunk">Original trunk motif</button>
       <button type="button" id="edOpen">Fine-tune shape…</button>
@@ -135,16 +137,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
   <div class="sec">
     <h2 lang="fr">Relief — 3D</h2>
-    <div class="row-sel"><label for="style3d">Shade</label>
-      <select id="style3d">
-        <option value="two" selected>Two-tone (raised)</option>
-        <option value="full">Full-shaded</option>
-      </select>
-    </div>
     <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
     <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
     <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
-    <p class="hint">Two-tone backs each piece with a raised darker shade; Full-shaded splits every piece into a lit half and a shadow half. Both use two flat shades — no gradients. Set depth to 0 for flat.</p>
+    <p class="hint">Backs each piece with a flat darker shade so it reads as a raised tile — no gradients. Set depth to 0 for a flat pattern.</p>
   </div>
 
   <div class="sec">
@@ -162,7 +158,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="col"><label for="cBg">Background</label><input type="color" id="cBg" value="#4E3A26"></div>
       <div class="col"><label for="cFg">Motif</label><input type="color" id="cFg" value="#C69A45"></div>
       <div class="col"><label for="cAc">Dots</label><input type="color" id="cAc" value="#C69A45"></div>
+      <div class="col"><label for="cOl">Outline</label><input type="color" id="cOl" value="#2B2620"></div>
     </div>
+    <label class="chk"><input type="checkbox" id="multiTone">Vary piece tones</label>
+    <div class="row" id="toneRow" hidden><label for="toneSpread">Tone spread</label><input type="range" id="toneSpread" min="5" max="60" value="30"><output for="toneSpread">30</output></div>
     <div class="presets" id="presets"></div>
   </div>
 
@@ -322,56 +321,31 @@ function piecePolygon(R){
   }
   return out;
 }
-function motifPin(R,fg){
-  let d;
-  if(SHAPE){ d=shapePath(R); }
-  else {
-    const {poly,warp}=pieceGeom();
-    const N=12, pts=[];
-    for(let e=0;e<poly.length;e++){
-      const [x0,y0]=poly[e], [x1,y1]=poly[(e+1)%poly.length];
-      for(let k=0;k<N;k++){
-        const t=k/N, w=warp(x0+(x1-x0)*t, y0+(y1-y0)*t);
-        pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2));
-      }
-    }
-    d='M '+pts.join(' L ')+' Z';
-  }
-  const soft=chk('pinRound')?R*0.08:0;
-  const N=Math.max(1,num('pinN')||4);
-  let pieces='';
-  for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
-  const faceStroke=soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
-  const depth=num('depth3d')||0;
-  if(depth<=0) return `<g fill="${fg}"${faceStroke}>${pieces}</g>`;
-  // Full-shaded: split every piece into a lit half (MOTIF_FG) and a shadow half
-  // (MOTIF_SIDE) along one global line, so the whole piece carries two flat tones —
-  // a folded-facet read. Two-tone is handled as two passes in placeAll, not here.
-  const poly=piecePolygon(R), a=(num('angle3d')||55)*Math.PI/180;
-  const nx=Math.cos(a), ny=Math.sin(a);                 // shadow-ward normal (global)
-  let cx=0,cy=0; for(const p of poly){ cx+=p[0]; cy+=p[1]; } cx/=poly.length; cy/=poly.length;
-  const depthMix=Math.min(0.9,0.15+depth/60);           // 3D depth shifts the fold line
-  const c0=(nx*cx+ny*cy);
-  let out='';
-  for(let k=0;k<N;k++){
-    const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
-    const nlx=nx*ct+ny*st, nly=-nx*st+ny*ct;            // normal in the piece's local frame
-    const c=c0*depthMix;                                 // slide the split toward the lit side
-    const dark=clipHalf(poly,nlx,nly,c,true);            // keep n·p >= c (shadow side)
-    const darkPath=dark.length>2?`<path d="M ${dark.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`:'';
-    out+=`<g transform="rotate(${+(k*360/N).toFixed(1)})"><path d="${d}" fill="${fg}"${faceStroke}/><g fill="MOTIF_SIDE">${darkPath}</g></g>`;
-  }
-  return out;
+function piecePathD(R){
+  if(SHAPE) return shapePath(R);
+  const {poly,warp}=pieceGeom(); const M=12, pts=[];
+  for(let e=0;e<poly.length;e++){ const [x0,y0]=poly[e],[x1,y1]=poly[(e+1)%poly.length];
+    for(let m=0;m<M;m++){ const t=m/M,w=warp(x0+(x1-x0)*t,y0+(y1-y0)*t); pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2)); } }
+  return 'M '+pts.join(' L ')+' Z';
 }
-// Sutherland-Hodgman half-plane clip: keep points with n·p <= c (ge=true flips to >=)
-function clipHalf(poly,nx,ny,c,ge){
-  const s=ge?-1:1, cc=ge?-c:c, out=[], N=poly.length;
-  for(let i=0;i<N;i++){
-    const A=poly[i], B=poly[(i+1)%N];
-    const da=s*(nx*A[0]+ny*A[1])-cc, db=s*(nx*B[0]+ny*B[1])-cc;
-    if(da<=0) out.push(A);
-    if((da<0)!==(db<0)){ const t=da/(da-db); out.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); }
+// per-piece tone: pieces fan from darker to lighter around the wheel when "vary tones" is on
+function pieceAmt(k,N){ const sp=(num('toneSpread')||30)/100, t=N>1?(k/(N-1))*2-1:0; return t*sp; }
+function pieceTone(k,N){ return `PTONE:${pieceAmt(k,N).toFixed(3)}`; }
+// a piece's stroke: an outline colour if outlining, else the soft-corner fatten in its own tone
+function strokeAttr(R,tok){
+  if(chk('outlineOn')) return ` stroke="OUTLINE_C" stroke-width="${(num('outlineW')||2).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round"`;
+  if(chk('pinRound')) return ` stroke="${tok}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="round"`;
+  return '';
+}
+// flat motif: one group, or one group per piece when tones vary
+function motifPin(R,fg){
+  const d=piecePathD(R), N=Math.max(1,num('pinN')||4);
+  if(!chk('multiTone')){
+    let pieces=''; for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+    return `<g fill="${fg}"${strokeAttr(R,fg)}>${pieces}</g>`;
   }
+  let out='';
+  for(let k=0;k<N;k++){ const tok=pieceTone(k,N); out+=`<g fill="${tok}"${strokeAttr(R,tok)}><path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/></g>`; }
   return out;
 }
 // Two-tone relief: split the motif into a BACK layer (each piece backed by one flat
@@ -379,31 +353,26 @@ function clipHalf(poly,nx,ny,c,ge){
 // draws every back first, then every face, so a block never covers a neighbour's face —
 // no gradients, no shading lines, just two flat shades of the base colour.
 function motif3DLayers(R){
-  let d;
-  if(SHAPE){ d=shapePath(R); }
-  else {
-    const {poly,warp}=pieceGeom(); const M=12, pts=[];
-    for(let e=0;e<poly.length;e++){ const [x0,y0]=poly[e],[x1,y1]=poly[(e+1)%poly.length];
-      for(let k=0;k<M;k++){ const t=k/M,w=warp(x0+(x1-x0)*t,y0+(y1-y0)*t); pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2)); } }
-    d='M '+pts.join(' L ')+' Z';
-  }
-  const soft=chk('pinRound')?R*0.08:0, N=Math.max(1,num('pinN')||4);
+  const d=piecePathD(R), N=Math.max(1,num('pinN')||4);
   const S=num('cell'), poly=piecePolygon(R);
   let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
   let dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); // stay in cell
   const a=(num('angle3d')||55)*Math.PI/180, ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
-  let bodyPaths='';
+  const multi=chk('multiTone'), sideAmt=(num('shade3d')||38)/100;
+  let body='', face='';
   for(let k=0;k<N;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);          // piece in global frame
     const back=g.map(([x,y])=>[x+ex,y+ey]);
-    bodyPaths+=`<path d="M ${back.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
+    let bp=`<path d="M ${back.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
     for(let i=0;i<g.length;i++){ const A=g[i],B=g[(i+1)%g.length],TA=back[i],TB=back[(i+1)%g.length];
-      bodyPaths+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${TB[0].toFixed(2)} ${TB[1].toFixed(2)} L ${TA[0].toFixed(2)} ${TA[1].toFixed(2)} Z"/>`; }
+      bp+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${TB[0].toFixed(2)} ${TB[1].toFixed(2)} L ${TA[0].toFixed(2)} ${TA[1].toFixed(2)} Z"/>`; }
+    const faceTok=multi?pieceTone(k,N):'MOTIF_FG';
+    const bodyTok=multi?`PTONE:${(pieceAmt(k,N)-sideAmt).toFixed(3)}`:'MOTIF_SIDE';
+    body+=`<g fill="${bodyTok}">${bp}</g>`;
+    face+=`<g fill="${faceTok}"${strokeAttr(R,faceTok)}><path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/></g>`;
   }
-  const faceStroke=soft?` stroke="MOTIF_FG" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
-  let facePaths=''; for(let k=0;k<N;k++) facePaths+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
-  return {body:`<g fill="MOTIF_SIDE">${bodyPaths}</g>`, face:`<g fill="MOTIF_FG"${faceStroke}>${facePaths}</g>`};
+  return {body,face};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -437,7 +406,7 @@ function placeAll(W,H,excl,ph){
   const accLayer=accs.map(([x,y])=>use('pa',x,y,false)).join('');
   // two-tone relief: draw every dark BACK block, then accents, then every flat FACE on
   // top — so no block ever overlaps a neighbour's face
-  if((num('depth3d')||0)>0 && (val('style3d')||'two')==='two'){
+  if((num('depth3d')||0)>0){
     const {body,face}=motif3DLayers(num('cell')*num('scale')/200);
     let out=`<defs><g id="pmB">${body}</g><g id="pmF">${face}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
     out+=spots.map(([x,y,a])=>use('pmB',x,y,a)).join('');
@@ -445,7 +414,7 @@ function placeAll(W,H,excl,ph){
     out+=spots.map(([x,y,a])=>use('pmF',x,y,a)).join('');
     return out;
   }
-  // flat / full-shaded: single motif def, one pass
+  // flat: single motif def, one pass
   const base=motifMarkup('MOTIF_FG');
   let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
   out+=spots.map(([x,y,a])=>use('pm',x,y,a)).join('');
@@ -500,7 +469,7 @@ function tileSize(){
   const S=num('cell');
   return (!chk('quinconce')&&chk('mirrorAlt'))?2*S:S;
 }
-function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
+function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc'),ol:val('cOl')}; }
 function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white */
   const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
   const to=amt<0?0:255, p=Math.min(1,Math.abs(amt));
@@ -509,7 +478,9 @@ function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white *
 }
 function fill(motifs,c){
   const side=shade(c.fg,-(num('shade3d')||38)/100);
-  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac);
+  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac).replaceAll('OUTLINE_C',c.ol)
+    // per-piece tones: PTONE:<amt> → a lighter/darker shade of the motif colour
+    .replace(/PTONE:(-?\d+(?:\.\d+)?)/g,(_,a)=>shade(c.fg,parseFloat(a)));
 }
 
 function buildSwatch(W,H,{marque=true,style=''}={}){
@@ -658,8 +629,10 @@ function setSlots(v){
   $('mqOpts').style.opacity=v==='0'?.35:1;
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
+function syncRows(){ $('outlineRow').hidden=!chk('outlineOn'); $('toneRow').hidden=!chk('multiTone'); }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
+  if(el.id==='outlineOn'||el.id==='multiTone') syncRows();
   renderEd(); render();
 }));
 
@@ -803,9 +776,9 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','style3d','depth3d','angle3d','shade3d','cell','accentSize',
-  'cBg','cFg','cAc','mqMode','mqSize','mqShift','mqSlots','pngScale'];
-const HASH_CHK=['pinRound','quinconce','mirrorAlt','accentOn'];
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','toneSpread','outlineW','cell','accentSize',
+  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots','pngScale'];
+const HASH_CHK=['pinRound','outlineOn','multiTone','quinconce','mirrorAlt','accentOn'];
 let restoring=true, hashT=0;
 function paramsString(){
   const p=new URLSearchParams();
@@ -824,8 +797,6 @@ function saveHash(){
   },350);
 }
 function applyParams(p){
-  // retired relief styles (prism/elongate) collapse to the current two-tone
-  if(['prism','elongate'].includes(p.get('style3d'))){ $('style3d').value='two'; p.delete('style3d'); }
   // the dots list became a toggle: any old accent value except 'none' means dots on
   if(p.has('accent')){ $('accentOn').checked=p.get('accent')!=='none'; }
   for(const id of HASH_IDS){
@@ -860,6 +831,7 @@ if(location.hash.length<2) applyTrunkMotif(); /* first visit: the real 1930s can
 else loadHash();
 restoring=false;
 setSlots(val('mqSlots'));
+syncRows();
 render();
 </script>
 </body>
