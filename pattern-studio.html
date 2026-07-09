@@ -208,24 +208,24 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Emblem</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Logo</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Places the Lavoët bellboy mark in the centre of a swatch, replacing one motif or a block of four so the pattern stays even. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
-      <div class="seg" role="group" aria-label="Centre emblem">
+      <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch, replacing one motif or a block of four so the pattern stays even. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
+      <div class="seg" role="group" aria-label="Centre logo">
         <button type="button" data-slots="0" aria-pressed="false">Off</button>
         <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
         <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
       </div>
       <input type="hidden" id="mqSlots" value="4">
       <div id="mqOpts">
-        <div class="row-sel"><label for="mqMode">Emblem</label>
+        <div class="row-sel"><label for="mqMode">Logo</label>
           <select id="mqMode">
             <option value="full" selected>Bellboy + LAVOËT</option>
             <option value="figure">Bellboy only</option>
             <option value="text">LAVOËT only</option>
           </select>
         </div>
-        <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
+        <div class="row"><label for="mqSize">Logo size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
       </div>
     </div>
@@ -590,7 +590,7 @@ function render(){
     const T=tileSize();
     $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
-    $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the emblem.`;
+    $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the logo.`;
     saveHash();
   },30);
 }
