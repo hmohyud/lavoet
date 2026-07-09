@@ -30,6 +30,18 @@ main{flex:1;display:flex;min-height:0}
 .sec{padding:16px 0 18px;border-bottom:1px solid var(--hair)}
 .sec:last-child{border-bottom:none}
 .sec h2{font-size:10.5px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--brassD);margin-bottom:12px}
+/* accordion sections */
+.acc{border-bottom:1px solid var(--hair)}
+.acc:last-child{border-bottom:none}
+.acc-head{display:flex;align-items:center;gap:9px;padding:15px 0 14px;cursor:pointer;user-select:none}
+.acc-title{flex:1;font:500 10.5px var(--sans);letter-spacing:.28em;text-transform:uppercase;color:var(--brassD)}
+.acc-q{flex:none;width:17px;height:17px;border:1px solid var(--hair);border-radius:50%;background:none;color:var(--sepia);font:600 10px var(--sans);cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.acc-q:hover{border-color:var(--brass);color:var(--brass)}
+.acc-chev{flex:none;color:var(--sepia);font-size:9px;transition:transform .18s;transform:rotate(90deg)}
+.acc.closed .acc-chev{transform:rotate(0)}
+.acc-body{padding:0 0 18px}
+.acc.closed .acc-body{display:none}
+.acc-info{font-size:10.5px;line-height:1.5;color:var(--sepia);margin:0 0 12px;padding:9px 11px;background:color-mix(in srgb,var(--brass) 9%,transparent);border-left:2px solid var(--brass)}
 .seg{display:flex;border:1px solid var(--ink);width:100%}
 .seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
 .seg button:last-child{border-right:none}
@@ -71,6 +83,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-btns button{font:500 10.5px var(--sans);letter-spacing:.08em;padding:7px 10px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
 .ed-btns button:hover{border-color:var(--brass)}
 .ed-btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ed-btns select{font:500 10.5px var(--sans);padding:7px 8px;background:var(--paper);border:1px solid var(--hair);color:var(--ink);width:auto}
 .ed-step{display:inline-flex;align-items:center;gap:6px;padding:0 4px 0 0;margin-right:2px;border-right:1px solid var(--hair)}
 .ed-step-lbl{font:500 10.5px var(--sans);letter-spacing:.08em;color:var(--sepia)}
 .ed-step b{font:600 11px var(--sans);min-width:12px;text-align:center;font-variant-numeric:tabular-nums}
@@ -113,96 +126,129 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 <main>
 <aside id="panel">
 
-  <div class="sec">
-    <h2 lang="fr">Le motif</h2>
-    <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
-    <div class="row"><label for="pinN">Pieces</label><input type="range" id="pinN" min="2" max="8" value="4"><output for="pinN">4</output></div>
-    <div id="autoRows">
-      <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
-      <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
-      <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
-      <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
-    </div>
-    <p class="hint" id="customNote" hidden>Custom shape active — the four shape sliders are paused while you use your own points.</p>
-    <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
-    <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
-    <label class="chk"><input type="checkbox" id="outlineOn">Outline the shapes</label>
-    <div class="row" id="outlineRow" hidden><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="1" max="8" value="2"><output for="outlineW">2</output></div>
-    <div class="btns" style="margin-top:12px">
-      <button type="button" id="edTrunk">Original trunk motif</button>
-      <button type="button" id="edOpen">Fine-tune shape…</button>
-      <button type="button" id="backAuto" hidden>Back to sliders</button>
-    </div>
-  </div>
-
-  <div class="sec">
-    <h2 lang="fr">Relief — 3D</h2>
-    <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
-    <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
-    <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
-    <p class="hint">Backs each piece with a flat darker shade so it reads as a raised tile (depth 0 = flat). For a light/shadow split instead, use <b>Shade line</b> inside “Fine-tune shape…”.</p>
-    <input type="checkbox" id="shadeLine" hidden>
-    <input type="checkbox" id="shadeScope" hidden>
-  </div>
-
-  <div class="sec">
-    <h2 lang="fr">Disposition</h2>
-    <div class="row"><label for="cell">Zoom</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
-    <label class="chk"><input type="checkbox" id="quinconce" checked>Diagonal layout</label>
-    <label class="chk"><input type="checkbox" id="mirrorAlt">Mirror every other motif</label>
-    <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
-    <div class="row"><label for="accentSize">Dot size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
-  </div>
-
-  <div class="sec">
-    <h2 lang="fr">Couleurs</h2>
-    <div class="cols">
-      <div class="col"><label for="cBg">Background</label><input type="color" id="cBg" value="#4E3A26"></div>
-      <div class="col"><label for="cFg">Motif</label><input type="color" id="cFg" value="#C69A45"></div>
-      <div class="col"><label for="cAc">Dots</label><input type="color" id="cAc" value="#C69A45"></div>
-      <div class="col"><label for="cOl">Outline</label><input type="color" id="cOl" value="#79602f"></div>
-    </div>
-    <div class="presets" id="presets"></div>
-  </div>
-
-  <div class="sec">
-    <h2 lang="fr">La marque</h2>
-    <div class="seg" role="group" aria-label="Centre emblem">
-      <button type="button" data-slots="0" aria-pressed="false">Off</button>
-      <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
-      <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
-    </div>
-    <input type="hidden" id="mqSlots" value="4">
-    <div id="mqOpts">
-      <div class="row-sel"><label for="mqMode">Emblem</label>
-        <select id="mqMode">
-          <option value="full" selected>Bellboy + LAVOËT</option>
-          <option value="figure">Bellboy only</option>
-          <option value="text">LAVOËT only</option>
-        </select>
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Shape</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>The motif and its shape — its size, how many pieces fan around the centre, and their form. “Fine-tune shape” lets you drag the outline points and set a light/shadow line.</p>
+      <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
+      <div class="row"><label for="pinN">Pieces</label><input type="range" id="pinN" min="2" max="8" value="4"><output for="pinN">4</output></div>
+      <div id="autoRows">
+        <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
+        <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
+        <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
+        <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
       </div>
-      <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
-      <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
-    </div>
-    <p class="hint">The emblem sits on the pattern grid and replaces exactly one motif — or a block of four — so the pattern around it stays perfectly even. It appears on swatches only; the downloadable tile stays a clean repeat.</p>
-  </div>
-
-  <div class="sec">
-    <h2>Export</h2>
-    <div class="btns">
-      <button type="button" id="dlTile">Tile · SVG (seamless)</button>
-      <button type="button" id="dlSwatch">Swatch · SVG</button>
-      <div class="png-row">
-        <button type="button" id="dlPng">Swatch · PNG</button>
-        <select id="pngScale" aria-label="PNG scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
+      <p class="hint" id="customNote" hidden>Custom shape active — the four shape sliders are paused while you use your own points.</p>
+      <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
+      <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
+      <div class="btns" style="margin-top:12px">
+        <button type="button" id="edTrunk">Original trunk motif</button>
+        <button type="button" id="edOpen">Fine-tune shape…</button>
+        <button type="button" id="backAuto" hidden>Back to sliders</button>
       </div>
-      <button type="button" id="cfgLoad">Load config…</button>
-      <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
     </div>
-    <p class="hint">Every download carries your full settings inside it — Load config… reads them back from any saved swatch or tile.</p>
-    <p class="hint" id="tileInfo"></p>
-    <p class="sig" lang="fr">La maison continue — les motifs aussi.</p>
-  </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Colours</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>The core palette — the background and the motif colour. Dot and outline colours also appear in their own sections. Pick a preset below or set your own.</p>
+      <div class="cols">
+        <div class="col"><label for="cBg">Background</label><input type="color" id="cBg" value="#4E3A26"></div>
+        <div class="col"><label for="cFg">Motif</label><input type="color" id="cFg" value="#C69A45"></div>
+        <div class="col"><label for="cAc">Dots</label><input type="color" id="cAc" value="#C69A45"></div>
+        <div class="col"><label for="cOl">Outline</label><input type="color" id="cOl" value="#79602f"></div>
+      </div>
+      <div class="presets" id="presets"></div>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Outline</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Draws a line around every shape. Turn it on, then set the line’s weight and colour.</p>
+      <label class="chk"><input type="checkbox" id="outlineOn">Outline the shapes</label>
+      <div id="outlineRow" hidden>
+        <div class="row"><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="1" max="8" value="2"><output for="outlineW">2</output></div>
+        <div class="cols"><div class="col"><label for="cOlB">Outline colour</label><input type="color" id="cOlB" data-syncs="cOl" value="#79602f"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Dots</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>The small diamond accents in the gaps between motifs — switch them on or off, size them, and colour them.</p>
+      <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
+      <div class="row"><label for="accentSize">Dot size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
+      <div class="cols"><div class="col"><label for="cAcB">Dot colour</label><input type="color" id="cAcB" data-syncs="cAc" value="#C69A45"></div></div>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Relief — 3D</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Gives the motif depth — a raised darker shade behind each piece. For a flat light/shadow split instead, use “Shade line” inside Fine-tune shape.</p>
+      <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
+      <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
+      <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
+      <input type="checkbox" id="shadeLine" hidden>
+      <input type="checkbox" id="shadeScope" hidden>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Layout</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>How the motifs are arranged and spaced across the canvas.</p>
+      <div class="row"><label for="cell">Zoom</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
+      <label class="chk"><input type="checkbox" id="quinconce" checked>Diagonal layout</label>
+      <label class="chk"><input type="checkbox" id="mirrorAlt">Mirror every other motif</label>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Emblem</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Places the Lavoët bellboy mark in the centre of a swatch, replacing one motif or a block of four so the pattern stays even. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
+      <div class="seg" role="group" aria-label="Centre emblem">
+        <button type="button" data-slots="0" aria-pressed="false">Off</button>
+        <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
+        <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
+      </div>
+      <input type="hidden" id="mqSlots" value="4">
+      <div id="mqOpts">
+        <div class="row-sel"><label for="mqMode">Emblem</label>
+          <select id="mqMode">
+            <option value="full" selected>Bellboy + LAVOËT</option>
+            <option value="figure">Bellboy only</option>
+            <option value="text">LAVOËT only</option>
+          </select>
+        </div>
+        <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
+        <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Export</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Download a seamless tile or a swatch. Every file carries its full settings inside it — load one back with “Load config…” to restore that exact design.</p>
+      <div class="btns">
+        <button type="button" id="dlTile">Tile · SVG (seamless)</button>
+        <button type="button" id="dlSwatch">Swatch · SVG</button>
+        <div class="png-row">
+          <button type="button" id="dlPng">Swatch · PNG</button>
+          <select id="pngScale" aria-label="PNG scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
+        </div>
+        <button type="button" id="cfgLoad">Load config…</button>
+        <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
+      </div>
+      <p class="hint" id="tileInfo"></p>
+      <p class="sig" lang="fr">La maison continue — les motifs aussi.</p>
+    </div>
+  </section>
 
 </aside>
 
@@ -222,7 +268,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <button type="button" id="edAdd">+ Point</button>
         <button type="button" id="edDel">− Point</button>
         <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
-        <button type="button" id="edPerPiece" hidden title="Apply the line to each piece instead of the whole motif">Per piece</button>
+        <select id="edScope" hidden title="Apply the line to the whole motif or to each piece">
+          <option value="motif" selected>Per motif</option>
+          <option value="piece">Per piece</option>
+        </select>
         <button type="button" id="edReset">Reset</button>
         <button type="button" id="edDone">Done</button>
       </div>
@@ -531,10 +580,11 @@ const preview=$('preview');
 let raf=0;
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
+function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')) el.value=$(el.dataset.syncs).value; }
 function render(){
   clearTimeout(raf);
   raf=setTimeout(()=>{
-    syncOutlineColor();
+    syncOutlineColor(); updateMirrors();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
     const T=tileSize();
@@ -631,11 +681,11 @@ $('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; r
 function syncEdShade(){
   const on=chk('shadeLine');
   $('edShadeLine').setAttribute('aria-pressed',on);
-  $('edPerPiece').hidden=!on;
-  $('edPerPiece').setAttribute('aria-pressed',chk('shadeScope'));
+  $('edScope').hidden=!on;
+  $('edScope').value=chk('shadeScope')?'piece':'motif';
 }
 $('edShadeLine').addEventListener('click',()=>{ $('shadeLine').checked=!chk('shadeLine'); syncEdShade(); renderEd(); render(); });
-$('edPerPiece').addEventListener('click',()=>{ $('shadeScope').checked=!chk('shadeScope'); syncEdShade(); renderEd(); render(); });
+$('edScope').addEventListener('change',()=>{ $('shadeScope').checked=$('edScope').value==='piece'; renderEd(); render(); });
 $('edPieceDn').addEventListener('click',()=>setPieces((num('pinN')||4)-1));
 $('edPieceUp').addEventListener('click',()=>setPieces((num('pinN')||4)+1));
 $('edAdd').addEventListener('click',()=>{
@@ -693,10 +743,21 @@ for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('cl
 function syncRows(){ $('outlineRow').hidden=!chk('outlineOn'); }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
+  if(el.dataset.syncs){ const t=$(el.dataset.syncs); t.value=el.value; if(t.id==='cOl') olAuto=false; }
   if(el.id==='outlineOn') syncRows();
-  if(el.id==='cOl') olAuto=false;
+  if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
+  if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   renderEd(); render();
 }));
+/* accordion open/close + per-section “?” info */
+for(const acc of document.querySelectorAll('.acc')){
+  acc.querySelector('.acc-head').addEventListener('click',e=>{
+    if(e.target.closest('.acc-q')) return;
+    acc.classList.toggle('closed');
+  });
+  const q=acc.querySelector('.acc-q'), info=acc.querySelector('.acc-info');
+  if(q&&info) q.addEventListener('click',e=>{ e.stopPropagation(); info.hidden=!info.hidden; });
+}
 
 /* presets */
 const PRESETS=[
