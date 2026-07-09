@@ -194,8 +194,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Outline</span><label class="acc-sw" title="Outline on/off"><input type="checkbox" id="outlineOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Draws a line around every shape. Use the switch in this section’s header to turn it on, then set the line’s weight and colour.</p>
+      <p class="acc-info" hidden>Draws a line on the motif (turn it on with the switch in this section’s header). <b>Around the shape</b> traces one clean line hugging the outside of the whole motif — it doesn’t cut into the fill or show the seams between pieces. <b>Along each edge</b> instead strokes every edge of every piece, right on the outline you drew with the fine-tune points.</p>
       <div id="outlineRow">
+        <div class="row-sel"><label for="outlineMode">Outline style</label>
+          <select id="outlineMode">
+            <option value="shape" selected>Around the shape</option>
+            <option value="edge">Along each edge</option>
+          </select>
+        </div>
         <div class="row"><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="0.3" max="8" step="0.1" value="2"><output for="outlineW">2</output></div>
         <div class="cols"><div class="col"><label for="cOlB">Outline colour</label><input type="color" id="cOlB" data-syncs="cOl" value="#79602f"></div></div>
       </div>
@@ -461,14 +467,24 @@ function piecePathD(R){
     for(let m=0;m<M;m++){ const t=m/M,w=warp(x0+(x1-x0)*t,y0+(y1-y0)*t); pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2)); } }
   return 'M '+pts.join(' L ')+' Z';
 }
-// a piece's stroke: an outline colour if outlining, else the soft-corner fatten in its own tone
+// a piece's stroke: the "Along each edge" outline centred on every edge, else the soft-corner
+// fatten in its own tone. In "Around the shape" mode the fill carries NO stroke — the outline is
+// a separate underlay (outlineUnderlay) so it hugs the outer silhouette instead of every edge.
+// MITER joins keep a roundness-0 corner truly sharp; smooth points are curves with no sharp joins.
 function strokeAttr(R,tok){
-  // MITER joins so a roundness-0 point stays truly sharp; smooth points are curves with no
-  // sharp joins, so they're unaffected. (Round joins used to soften every corner — the reason
-  // a "fully sharp" point still read as mostly sharp.) Roundness is now the per-point control.
-  if(chk('outlineOn')) return ` stroke="OUTLINE_C" stroke-width="${(num('outlineW')||2).toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`;
+  if(chk('outlineOn')) return val('outlineMode')==='edge'
+    ? ` stroke="OUTLINE_C" stroke-width="${(num('outlineW')||2).toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`
+    : '';
   if(chk('pinRound')) return ` stroke="${tok}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`;
   return '';
+}
+// "Around the shape" outline: an underlay of all N pieces, filled AND stroked in the outline colour
+// so each is grown by outlineW; the normal fills draw on top, leaving a clean border hugging the
+// motif's silhouette (overlapping pieces merge; internal seams are covered).
+function outlineUnderlay(d,N){
+  if(!chk('outlineOn')||val('outlineMode')==='edge') return '';
+  let pieces=''; for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+  return `<g fill="OUTLINE_C" stroke="OUTLINE_C" stroke-width="${(2*(num('outlineW')||2)).toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9">${pieces}</g>`;
 }
 // Sutherland–Hodgman half-plane clip: keep the polygon on the side n·p >= c
 function clipHalf(poly,nx,ny,c){
@@ -494,13 +510,14 @@ function motifPin(R,fg){
   const d=piecePathD(R), N=Math.max(1,num('pinN')||4);
   if(!chk('shadeLine')){
     let pieces=''; for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
-    return `<g fill="${fg}"${strokeAttr(R,fg)}>${pieces}</g>`;
+    return `${outlineUnderlay(d,N)}<g fill="${fg}"${strokeAttr(R,fg)}>${pieces}</g>`;
   }
   // shade across a line: light full piece + a darker region clipped to the shadow side
   const poly=piecePolygon(R), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(R);
   const soft=chk('pinRound'), outline=chk('outlineOn');
   const lightStroke=(!outline&&soft)?` stroke="${fg}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="round"`:'';
-  let out='';
+  const edgeOut=outline&&val('outlineMode')==='edge';
+  let out=outlineUnderlay(d,N);                          // "Around the shape" border, behind the fills
   for(let k=0;k<N;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th), rot=+(k*360/N).toFixed(1);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);              // piece k in global frame
@@ -509,7 +526,7 @@ function motifPin(R,fg){
     const dark=clipHalf(g,lnx,lny,c);
     const darkPath=dark.length>2?`<path d="M ${dark.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z" fill="MOTIF_SIDE"/>`:'';
     out+=`<path d="${d}" transform="rotate(${rot})" fill="${fg}"${lightStroke}/>${darkPath}`;
-    if(outline) out+=`<path d="${d}" transform="rotate(${rot})" fill="none"${strokeAttr(R,fg)}/>`;
+    if(edgeOut) out+=`<path d="${d}" transform="rotate(${rot})" fill="none"${strokeAttr(R,fg)}/>`;
   }
   return out;
 }
@@ -538,7 +555,7 @@ function motif3DLayers(R){
     face+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
   }
   const body=`<g fill="MOTIF_SIDE">${bodyPaths}</g>`+(bevPaths?`<g fill="MOTIF_BEV">${bevPaths}</g>`:'');
-  return {body, face:`<g fill="MOTIF_TOP"${strokeAttr(R,'MOTIF_TOP')}>${face}</g>`};
+  return {body, face:`${outlineUnderlay(d,N)}<g fill="MOTIF_TOP"${strokeAttr(R,'MOTIF_TOP')}>${face}</g>`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -581,7 +598,8 @@ function motifSystem(){
   // clear a disk large enough that no partial motif is left poking out beside the logo
   const poly=piecePolygon(R); let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
   let dep=0; if(depth3){ dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); }
-  const reach=Rmax+dep+(chk('outlineOn')?(num('outlineW')||2)/2:R*0.08)+2;
+  const olExt=chk('outlineOn')?(val('outlineMode')==='edge'?(num('outlineW')||2)/2:(num('outlineW')||2)):R*0.08;
+  const reach=Rmax+dep+olExt+2;
   let defs='';
   if(depth3){ const {body,face}=motif3DLayers(R); defs=`<g id="mB">${body}</g><g id="mF">${face}</g>`; }
   else defs=`<g id="m0">${motifMarkup('MOTIF_FG')}</g>`;
@@ -755,8 +773,15 @@ function renderEd(){
   s+=`<path d="${div}" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
   // when shading, keep the other pieces visible enough to show how the line cuts them
   const gop=chk('shadeLine')?0.7:0.3;
-  for(let k=1;k<N;k++) s+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${fg}"${soft} opacity="${gop}"/>`;
-  s+=`<path d="${d}" fill="${fg}"${soft}/>`;
+  // show the outline here too, in the chosen style (unit-space widths: outlineW / motif R)
+  const outOn=chk('outlineOn'), ol=val('cOl'), Rp=num('cell')*num('scale')/200||1, ew=(num('outlineW')||2)/Rp;
+  const edgeMode=outOn&&val('outlineMode')==='edge', shapeMode=outOn&&!edgeMode;
+  const pieceStroke=edgeMode?` stroke="${ol}" stroke-width="${ew.toFixed(4)}" stroke-linejoin="miter" stroke-miterlimit="9"`:(outOn?'':soft);
+  const edPiece=(rot,op)=>{ const t=`transform="rotate(${rot})"`, o=op<1?` opacity="${op}"`:'';
+    return (shapeMode?`<path d="${d}" ${t} fill="${ol}" stroke="${ol}" stroke-width="${(2*ew).toFixed(4)}" stroke-linejoin="miter" stroke-miterlimit="9"${o}/>`:'')
+         + `<path d="${d}" ${t} fill="${fg}"${pieceStroke}${o}/>`; };
+  for(let k=1;k<N;k++) s+=edPiece(+(k*360/N).toFixed(1),gop);
+  s+=edPiece(0,1);
   if(chk('shadeLine')){
     // preview the light/shadow split on every piece, then the draggable line
     const poly=piecePolygon(1), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(1);
@@ -1111,7 +1136,7 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineW','cell','accentStyle','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
   'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d'];
 let restoring=true, hashT=0;
