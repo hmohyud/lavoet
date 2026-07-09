@@ -180,7 +180,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="acc-body">
       <p class="acc-info" hidden>The small accents in the gaps between motifs — switch them on or off, choose a shape, size them, and colour them.</p>
       <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
-      <label class="chk"><input type="checkbox" id="dotsInLogoB" data-syncs="dotsInLogo" checked>Dots in the logo area</label>
+      <label class="chk"><input type="checkbox" id="dotsInLogoB" data-syncs="dotsInLogo">Dots in the logo area</label>
       <div class="row-sel"><label for="accentStyle">Dot style</label>
         <select id="accentStyle">
           <option value="losange" selected>Diamond</option>
@@ -242,7 +242,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         </div>
         <div class="row"><label for="mqSize">Logo size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
-        <label class="chk"><input type="checkbox" id="dotsInLogo" checked>Dots in the logo area</label>
+        <label class="chk"><input type="checkbox" id="logo3d">3D logo (matches the motif relief)</label>
+        <label class="chk"><input type="checkbox" id="dotsInLogo">Dots in the logo area</label>
       </div>
     </div>
   </section>
@@ -584,7 +585,8 @@ function marqueBox(W,H){
   const rM=slots==='1'?0.3*S:(q?0.8:1.1)*S, rA=0.3*S;
   return {E,mode,figH,figW,F1,F2,textW,blockH,cx,cy,rM,rA};
 }
-function marqueMarkup(b,fg){
+// the marque's ink, drawn in currentColor so a caller can <use> it in any tone
+function marqueMarkup(b){
   let y=b.cy-b.blockH/2, s='';
   if(b.figH){
     // centre the bellboy by his ink centroid — the artwork's mass sits 54.3%
@@ -592,13 +594,25 @@ function marqueMarkup(b,fg){
     // the mass on both axes
     const fx=b.cx-b.figW*0.543;
     const fy=b.mode==='figure'?b.cy-b.figH*0.571:y;
-    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}" color="${fg}"/>`;
+    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}"/>`;
     y+=b.figH;
   }
-  const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="${fg}">${txt}</text>`;
+  const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="currentColor">${txt}</text>`;
   if(b.F1){ s+=T('LAVOËT',b.F1,b.F1*1.18,0.22); y+=b.F1*1.55; }
   if(b.F2){ s+=T('1869',b.F2,b.F2*1.15,0.3); }
-  return `<g>${s}</g>`;
+  return s;
+}
+// the logo, flat or RAISED like the motifs (same depth3d/angle3d/shade3d/highlight):
+// a stack of dark offset copies (the extruded side) under a lit face
+function marque3D(b){
+  const def=`<defs><g id="mqi">${marqueMarkup(b)}</g></defs>`;
+  const on=chk('logo3d') && (num('depth3d')||0)>0 && !chk('shadeLine');
+  if(!on) return def+`<use href="#mqi" xlink:href="#mqi" color="MOTIF_FG"/>`;
+  const a=(num('angle3d')||55)*Math.PI/180, dep=(num('depth3d')||0)/100*b.E*0.22;
+  const ex=Math.cos(a)*dep, ey=Math.sin(a)*dep, N=Math.max(4,Math.min(22,Math.round(dep/1.3)));
+  let stack='';
+  for(let k=N;k>=1;k--){ const t=k/N; stack+=`<use href="#mqi" xlink:href="#mqi" color="MOTIF_SIDE" transform="translate(${(ex*t).toFixed(2)} ${(ey*t).toFixed(2)})"/>`; }
+  return def+stack+`<use href="#mqi" xlink:href="#mqi" color="MOTIF_TOP"/>`;
 }
 
 /* ---------- documents ---------- */
@@ -631,12 +645,14 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
     // the pattern paints a motif in every slot, so wipe a disk big enough to erase the
     // logo's motif(s) WHOLE (clearR covers a removed motif's full reach — no partial arcs
     // left over), then re-stamp only the surrounding motifs that overhang into it
-    const clearR=b.rM+sys.reach, RR=b.rM+2*sys.reach+sys.S, span=Math.ceil(RR/sys.S)+1;
+    // a raised 3D logo extrudes up to logoDep beyond its slot — grow the clear disk to swallow it
+    const logoDep=(chk('logo3d')&&(num('depth3d')||0)>0&&!chk('shadeLine'))?(num('depth3d')||0)/100*b.E*0.22:0;
+    const clearR=b.rM+sys.reach+logoDep, RR=clearR+sys.reach+sys.S, span=Math.ceil(RR/sys.S)+1;
     // "Dots in logo area" off → push the dot-clear radius out to the whole cleared disk
     const aR=chk('dotsInLogo')?b.rA:clearR, excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:aR};
     const ci=Math.round((b.cx-ph.ox)/sys.S), cj=Math.round((b.cy-ph.oy)/sys.S);
     const r=sys.stampRange(ci-span,ci+span,cj-span,cj+span,ph.ox,ph.oy,excl,RR);
-    marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${clearR.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marqueMarkup(b,'MOTIF_FG')}`;
+    marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${clearR.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marque3D(b)}`;
   }
   const patt=`<pattern id="fld" width="${sys.T}" height="${sys.T}" patternUnits="userSpaceOnUse" patternTransform="translate(${ph.ox.toFixed(1)} ${ph.oy.toFixed(1)})">${tileBody(sys)}</pattern>`;
   const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
@@ -1009,7 +1025,7 @@ $('dlPng').addEventListener('click',async()=>{
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineW','cell','accentStyle','accentSize',
   'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots','pngScale'];
-const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo'];
+const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d'];
 let restoring=true, hashT=0;
 function paramsString(){
   const p=new URLSearchParams();
