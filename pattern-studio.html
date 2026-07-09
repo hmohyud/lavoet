@@ -137,13 +137,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
   <div class="sec">
     <h2 lang="fr">Relief — 3D</h2>
-    <label class="chk"><input type="checkbox" id="shadeLine">Shade across a line</label>
-    <label class="chk" id="scopeRow" hidden><input type="checkbox" id="shadeScope">Line per piece <span style="color:var(--sepia)">(else whole motif)</span></label>
-    <p class="hint" id="lineHint" hidden>Open <b>Edit shape…</b> to drag the shading line where you want it.</p>
-    <div class="row" data-hide="line"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
-    <div class="row" data-hide="line"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
+    <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
+    <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
     <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
-    <p class="hint" data-hide="line">Backs each piece with a flat darker shade so it reads as a raised tile. Set depth to 0 for flat, or tick "Shade across a line" for a light/shadow split.</p>
+    <p class="hint">Backs each piece with a flat darker shade so it reads as a raised tile (depth 0 = flat). For a light/shadow split instead, use <b>Shade line</b> inside “Fine-tune shape…”.</p>
+    <input type="checkbox" id="shadeLine" hidden>
+    <input type="checkbox" id="shadeScope" hidden>
   </div>
 
   <div class="sec">
@@ -222,6 +221,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <button type="button" id="edCorner">Corner</button>
         <button type="button" id="edAdd">+ Point</button>
         <button type="button" id="edDel">− Point</button>
+        <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
+        <button type="button" id="edPerPiece" hidden title="Apply the line to each piece instead of the whole motif">Per piece</button>
         <button type="button" id="edReset">Reset</button>
         <button type="button" id="edDone">Done</button>
       </div>
@@ -563,17 +564,19 @@ function renderEd(){
   let div='';
   for(let k=0;k<N;k++){ const a=k*2*Math.PI/N; div+=`M 0 0 L ${(1.45*Math.cos(a)).toFixed(3)} ${(1.45*Math.sin(a)).toFixed(3)} `; }
   s+=`<path d="${div}" stroke="${fg}" stroke-width=".008" opacity=".3" fill="none"/>`;
-  for(let k=1;k<N;k++) s+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${fg}"${soft} opacity=".3"/>`;
+  // when shading, keep the other pieces visible enough to show how the line cuts them
+  const gop=chk('shadeLine')?0.7:0.3;
+  for(let k=1;k<N;k++) s+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${fg}"${soft} opacity="${gop}"/>`;
   s+=`<path d="${d}" fill="${fg}"${soft}/>`;
   if(chk('shadeLine')){
-    // preview the light/shadow split, then the draggable line
+    // preview the light/shadow split on every piece, then the draggable line
     const poly=piecePolygon(1), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(1);
     const dc=shade(fg,-(num('shade3d')||38)/100);
     for(let k=0;k<N;k++){
       const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
       const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);
       const dark=clipHalf(g, per?nx*ct-ny*st:nx, per?nx*st+ny*ct:ny, c);
-      if(dark.length>2) s+=`<path d="M ${dark.map(p=>p[0].toFixed(3)+' '+p[1].toFixed(3)).join(' L ')} Z" fill="${dc}" opacity="${k?0.3:1}"/>`;
+      if(dark.length>2) s+=`<path d="M ${dark.map(p=>p[0].toFixed(3)+' '+p[1].toFixed(3)).join(' L ')} Z" fill="${dc}" opacity="${k?gop:1}"/>`;
     }
     const L=SHADELINE||DEFAULT_SLINE;
     s+=`<line x1="${L[0][0]}" y1="${L[0][1]}" x2="${L[1][0]}" y2="${L[1][1]}" stroke="#F4EFE4" stroke-width=".022" stroke-dasharray=".06 .045" opacity=".9"/>`;
@@ -589,6 +592,7 @@ function renderEd(){
   $('edSmooth').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===1);
   $('edCorner').setAttribute('aria-pressed',SHAPE.pts[EDSEL][2]===0);
   $('edPieceN').textContent=N;
+  syncEdShade();
 }
 function setPieces(n){
   n=Math.max(2,Math.min(8,n));
@@ -624,6 +628,14 @@ $('edSvg').addEventListener('pointermove',ev=>{
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
 $('edSmooth').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=1; renderEd(); render(); } });
 $('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; renderEd(); render(); } });
+function syncEdShade(){
+  const on=chk('shadeLine');
+  $('edShadeLine').setAttribute('aria-pressed',on);
+  $('edPerPiece').hidden=!on;
+  $('edPerPiece').setAttribute('aria-pressed',chk('shadeScope'));
+}
+$('edShadeLine').addEventListener('click',()=>{ $('shadeLine').checked=!chk('shadeLine'); syncEdShade(); renderEd(); render(); });
+$('edPerPiece').addEventListener('click',()=>{ $('shadeScope').checked=!chk('shadeScope'); syncEdShade(); renderEd(); render(); });
 $('edPieceDn').addEventListener('click',()=>setPieces((num('pinN')||4)-1));
 $('edPieceUp').addEventListener('click',()=>setPieces((num('pinN')||4)+1));
 $('edAdd').addEventListener('click',()=>{
@@ -678,15 +690,10 @@ function setSlots(v){
   $('mqOpts').style.opacity=v==='0'?.35:1;
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
-function syncRows(){
-  $('outlineRow').hidden=!chk('outlineOn');
-  const ln=chk('shadeLine');
-  $('scopeRow').hidden=!ln; $('lineHint').hidden=!ln;
-  for(const el of document.querySelectorAll('[data-hide="line"]')) el.hidden=ln;
-}
+function syncRows(){ $('outlineRow').hidden=!chk('outlineOn'); }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
-  if(el.id==='outlineOn'||el.id==='shadeLine') syncRows();
+  if(el.id==='outlineOn') syncRows();
   if(el.id==='cOl') olAuto=false;
   renderEd(); render();
 }));
