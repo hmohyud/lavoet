@@ -33,7 +33,7 @@ main{flex:1;display:flex;min-height:0}
 /* accordion sections */
 .acc{border-bottom:1px solid var(--hair)}
 .acc:last-child{border-bottom:none}
-.acc-head{display:flex;align-items:center;gap:9px;padding:15px 0 14px;cursor:pointer;user-select:none}
+.acc-head{position:relative;display:flex;align-items:center;gap:9px;padding:15px 0 14px;cursor:pointer;user-select:none}
 .acc-title{flex:1;font:500 10.5px var(--sans);letter-spacing:.28em;text-transform:uppercase;color:var(--brassD)}
 .acc-q{flex:none;width:17px;height:17px;border:1px solid var(--hair);border-radius:50%;background:none;color:var(--sepia);font:600 10px var(--sans);cursor:pointer;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
 .acc-q:hover{border-color:var(--brass);color:var(--brass)}
@@ -49,7 +49,10 @@ main{flex:1;display:flex;min-height:0}
 .acc-body{padding:0 0 18px}
 .acc.closed .acc-body{display:none}
 .opt-off{opacity:.4;pointer-events:none}   /* a sub-option whose parent toggle is off: greyed, not hidden */
-.acc-info{font-size:10.5px;line-height:1.5;color:var(--sepia);margin:0 0 12px;padding:9px 11px;background:color-mix(in srgb,var(--brass) 9%,transparent);border-left:2px solid var(--brass)}
+/* the "?" help now pops a speech bubble anchored to the header, so it works even when the section is collapsed */
+.acc-info{position:absolute;top:calc(100% - 7px);right:4px;z-index:40;width:max-content;max-width:calc(100% - 8px);margin:0;padding:10px 13px;background:var(--ink);color:var(--paper);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:400 11px/1.55 var(--sans);letter-spacing:normal;text-transform:none;cursor:default}
+.acc-info::after{content:"";position:absolute;top:-6px;right:22px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
+.acc-info b{color:var(--brass)}
 .seg{display:flex;border:1px solid var(--ink);width:100%}
 .seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
 .seg button:last-child{border-right:none}
@@ -928,8 +931,19 @@ function saveAccState(){
       acc.classList.toggle('closed'); saveAccState();
     });
     const q=acc.querySelector('.acc-q'), info=acc.querySelector('.acc-info');
-    if(q&&info) q.addEventListener('click',e=>{ e.stopPropagation(); info.hidden=!info.hidden; });
+    if(q&&info){
+      acc.querySelector('.acc-head').appendChild(info);   // out of the collapsible body → shows even when closed
+      q.addEventListener('click',e=>{
+        e.stopPropagation();
+        const show=info.hidden;
+        for(const i of document.querySelectorAll('.acc-info')) i.hidden=true;   // one bubble at a time
+        info.hidden=!show;
+      });
+      info.addEventListener('click',e=>e.stopPropagation());
+    }
   }
+  // click anywhere else (or scroll) dismisses an open help bubble
+  document.addEventListener('click',e=>{ if(!e.target.closest('.acc-q')) for(const i of document.querySelectorAll('.acc-info')) i.hidden=true; });
 })();
 
 /* presets */
