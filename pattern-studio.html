@@ -142,9 +142,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .col input[type=color]{height:46px}
   .mast{padding:12px 16px}
   .mast .loc{display:none}
-  #stage.editing #preview{height:20vh}
-  #stage.editing #shapeEd{height:34vh;flex:none}
-  .ed-btns button{padding:11px 12px;font-size:12px}
+  #stage.editing #preview{height:16vh}
+  #stage.editing #shapeEd{height:42vh;flex:none}
+  /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room */
+  .ed-hint{display:none}
+  .ed-bar{padding:6px 10px}
+  .ed-btns{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:3px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .ed-btns>*{flex:none}
+  .ed-btns button{padding:11px 12px;font-size:12px;white-space:nowrap}
+  .ed-round input[type=range]{width:110px}
+  .ed-toggle{padding:13px 14px}
+  /* bigger thumb for the header on/off switches without changing their look */
+  .acc-sw{padding:10px 6px;margin:-10px -6px;box-sizing:content-box}
 }
 </style>
 </head>
@@ -748,6 +757,8 @@ function render(){
     syncOutlineColor(); updateMirrors(); syncHeaderToggles();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
+    // cover, don't letterbox — a short strip (e.g. phone while editing) crops instead of shrinking
+    const psvg=preview.querySelector('svg'); if(psvg) psvg.setAttribute('preserveAspectRatio','xMidYMid slice');
     const T=tileSize();
     $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
@@ -846,12 +857,18 @@ $('edShadeHelp').addEventListener('click',e=>{
   const i=$('edShadeInfo'), show=i.hidden;
   hideAllHelp();                                     // one help bubble at a time
   i.hidden=!show;
-  if(!i.hidden){                                     // nudge it back on-screen if a rail is clipped
-    i.style.transform='';
-    const r=i.getBoundingClientRect(), m=6;
-    let dx=0;
-    if(r.left<m) dx=m-r.left; else if(r.right>innerWidth-m) dx=innerWidth-m-r.right;
-    if(dx) i.style.transform=`translateX(${dx.toFixed(1)}px)`;
+  if(!i.hidden){
+    i.style.cssText='';                              // reset any previous positioning
+    if(matchMedia('(max-width:760px)').matches){
+      // phone: the toolbar scrolls (a clipping box), so float the bubble over the page instead
+      const b=$('edShadeHelp').getBoundingClientRect();
+      i.style.cssText=`position:fixed;top:${(b.bottom+7).toFixed(0)}px;left:8px;right:8px;width:auto;max-width:none`;
+    }else{                                           // desktop: nudge back on-screen if a rail is clipped
+      const r=i.getBoundingClientRect(), m=6;
+      let dx=0;
+      if(r.left<m) dx=m-r.left; else if(r.right>innerWidth-m) dx=innerWidth-m-r.right;
+      if(dx) i.style.transform=`translateX(${dx.toFixed(1)}px)`;
+    }
   }
 });
 function syncEdShade(){
