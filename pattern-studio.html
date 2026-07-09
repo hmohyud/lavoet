@@ -129,14 +129,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Shape</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>The motif and its shape — its size, how many pieces fan around the centre, and their form. “Fine-tune shape” lets you drag the outline points and set a light/shadow line.</p>
+      <p class="acc-info" hidden>The motif and its shape. Every slider reshapes the outline’s points: Gap spreads the pieces out or in, Centre gap opens a hole at the middle, Inner/Outer twist swirl it, Rotate spins it. “Fine-tune shape” lets you drag the points and set a light/shadow line.</p>
       <div class="row"><label for="scale">Motif size</label><input type="range" id="scale" min="30" max="100" value="50"><output for="scale">50</output></div>
       <div class="row"><label for="pinN">Pieces</label><input type="range" id="pinN" min="2" max="8" value="4"><output for="pinN">4</output></div>
-      <div id="autoRows">
-        <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
-        <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
-      </div>
-      <p class="hint" id="customNote" hidden>Custom shape — Gap and Centre gap build the four-piece diamond, so they’re paused. Twist and Rotate still bend your own outline.</p>
+      <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
+      <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
       <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
       <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
       <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
@@ -144,7 +141,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="btns" style="margin-top:12px">
         <button type="button" id="edTrunk">Original trunk motif</button>
         <button type="button" id="edOpen">Fine-tune shape…</button>
-        <button type="button" id="backAuto" hidden>Back to sliders</button>
       </div>
     </div>
   </section>
@@ -353,21 +349,30 @@ function twistUnwarp(x,y){
   const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
   return [x*c+y*s, -x*s+y*c];                       // rotate by −a
 }
-function bakeShape(){
-  // freeze the current parametric piece into editable points: corners at the logical
-  // vertices, a smooth point mid-edge to carry the bend. Store the UN-warped base
-  // geometry — shapeWarpedPts re-applies the live twist ONCE at render, so the baked
-  // shape matches the parametric look without being warped twice.
-  const {poly}=pieceGeom(), pts=[];
-  for(let e=0;e<poly.length;e++){
-    const [x0,y0]=poly[e], [x1,y1]=poly[(e+1)%poly.length];
-    pts.push([x0,y0,0]);
-    pts.push([(x0+x1)/2,(y0+y1)/2,1]);
-  }
-  SHAPE={pts:pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3),p[2]])};
+// radial shaping applied BEFORE the twist: Gap spreads the whole outline out/in from
+// the motif centre, Centre gap opens/closes a hole at its heart (moves the inner points
+// more). Both are pure radius maps (angle preserved), neutral at the slider defaults
+// (Gap 16, Centre 20), so they compose INVERTIBLY with the twist rotation.
+function radialAmt(){ return {g:((num('pinGap')||0)-16)*0.015, h:((num('pinHole')||0)-20)/100*0.6}; }
+function shapeRadial(x,y){
+  const r=Math.hypot(x,y); if(r<1e-6) return [x,y];
+  const {g,h}=radialAmt(); if(!g&&!h) return [x,y];
+  let rn=r+g+h*Math.max(0,1-Math.min(r,1)); rn=Math.max(0.02,rn);
+  const k=rn/r; return [x*k,y*k];
 }
-// warped copy of the custom points (twist bends the trunk/custom outline too)
-function shapeWarpedPts(){ return SHAPE.pts.map(p=>{ const w=twistWarp(p[0],p[1]); return [w[0],w[1],p[2]]; }); }
+function shapeRadialInv(x,y){
+  const r=Math.hypot(x,y); if(r<1e-6) return [x,y];
+  const {g,h}=radialAmt(); if(!g&&!h) return [x,y];
+  const inner=(r-g-h)/(1-h);                          // r0<1 branch; boundary meets r-g at r0=1
+  let r0=inner<1?inner:(r-g); r0=Math.max(0.02,r0);
+  const k=r0/r; return [x*k,y*k];
+}
+// full shape modifier: base point → display point = radial shaping, then twist swirl.
+// Every shape slider moves the editor dots through this; shapeUnmodify inverts it so a
+// dragged handle maps back to its stored base point.
+function shapeModify(x,y){ const p=shapeRadial(x,y); return twistWarp(p[0],p[1]); }
+function shapeUnmodify(x,y){ const p=twistUnwarp(x,y); return shapeRadialInv(p[0],p[1]); }
+function shapeWarpedPts(){ return SHAPE.pts.map(p=>{ const w=shapeModify(p[0],p[1]); return [w[0],w[1],p[2]]; }); }
 function shapePath(sc,pts){
   // closed path through the points: smooth points get Catmull-Rom handles,
   // corner points get zero handles (segments between two corners run straight)
@@ -575,7 +580,7 @@ function marqueBox(W,H){
   const cx=W/2+mqShiftX(), cy=H/2;
   // emblem size: fill the freed slot(s) but never touch the surviving motifs
   const nd=slots==='1' ? (q?0.707:1)*S : (q?1.118:1.58)*S;
-  const maxr=SHAPE?Math.max(0.6,...SHAPE.pts.map(p=>Math.hypot(p[0],p[1])))+0.12:1.1;
+  const maxr=SHAPE?Math.max(0.6,...SHAPE.pts.map(p=>{const w=shapeModify(p[0],p[1]);return Math.hypot(w[0],w[1]);}))+0.12:1.1;
   const reach=num('cell')*num('scale')/200*maxr;
   const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)))*num('mqSize')/100;
   const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
@@ -687,12 +692,7 @@ new ResizeObserver(render).observe(preview);
 
 /* ---------- shape editor ---------- */
 let EDSEL=0, EDDRAG=false;
-function setShapeMode(custom){
-  $('autoRows').hidden=custom;
-  $('customNote').hidden=!custom;
-  $('backAuto').hidden=!custom;
-  $('edOpen').textContent=custom?'Edit shape…':'Fine-tune shape…';
-}
+function setShapeMode(){ /* the shape is always custom now — kept as a no-op for its callers */ }
 function renderEd(){
   if(!SHAPE||$('shapeEd').hidden) return;
   const WP=shapeWarpedPts();                        // display points — base pts through the live twist
@@ -762,7 +762,7 @@ $('edSvg').addEventListener('pointermove',ev=>{
     SHADELINE[EDLINE]=[+x.toFixed(3),+y.toFixed(3)]; renderEd(); render(); return;
   }
   if(!SHAPE) return;
-  const b=twistUnwarp(x,y);                          // pointer is a warped/display coord → store the base point
+  const b=shapeUnmodify(x,y);                        // pointer is a modified/display coord → store the base point
   SHAPE.pts[EDSEL][0]=+b[0].toFixed(3); SHAPE.pts[EDSEL][1]=+b[1].toFixed(3);
   renderEd(); render();
 });
@@ -782,9 +782,9 @@ $('edPieceUp').addEventListener('click',()=>setPieces((num('pinN')||4)+1));
 $('edAdd').addEventListener('click',()=>{
   if(!SHAPE||SHAPE.pts.length>=24) return;
   const a=SHAPE.pts[EDSEL], b=SHAPE.pts[(EDSEL+1)%SHAPE.pts.length];
-  // drop the new point at the VISUAL midpoint of the two warped handles, then store its base
-  const wa=twistWarp(a[0],a[1]), wb=twistWarp(b[0],b[1]);
-  const m=twistUnwarp((wa[0]+wb[0])/2,(wa[1]+wb[1])/2);
+  // drop the new point at the VISUAL midpoint of the two modified handles, then store its base
+  const wa=shapeModify(a[0],a[1]), wb=shapeModify(b[0],b[1]);
+  const m=shapeUnmodify((wa[0]+wb[0])/2,(wa[1]+wb[1])/2);
   SHAPE.pts.splice(EDSEL+1,0,[+m[0].toFixed(3),+m[1].toFixed(3),1]);
   EDSEL++; renderEd(); render();
 });
@@ -795,7 +795,7 @@ $('edDel').addEventListener('click',()=>{
 let EDSNAP=null;
 $('edReset').addEventListener('click',()=>{
   /* back to what the editor opened with, and to four pieces */
-  if(EDSNAP) SHAPE={pts:EDSNAP.map(p=>p.slice())}; else bakeShape();
+  if(EDSNAP) SHAPE={pts:EDSNAP.map(p=>p.slice())}; else SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())};
   $('pinN').value=4;
   const o=document.querySelector('output[for="pinN"]'); if(o) o.value=4;
   EDSEL=0; renderEd(); render();
@@ -804,7 +804,7 @@ $('edDone').addEventListener('click',()=>{
   $('shapeEd').hidden=true; $('stage').classList.remove('editing'); render();
 });
 $('edOpen').addEventListener('click',()=>{
-  if(!SHAPE){ bakeShape(); EDSEL=0; setShapeMode(true); }
+  if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; setShapeMode(true); }
   EDSNAP=SHAPE.pts.map(p=>p.slice());
   $('shapeEd').hidden=false; $('stage').classList.add('editing');
   renderEd(); render();
@@ -839,11 +839,6 @@ function applyTrunkMotif(){
   EDSNAP=SHAPE.pts.map(p=>p.slice());                // editor "Reset" now baselines to the trunk, not a stale shape
 }
 $('edTrunk').addEventListener('click',()=>{ applyTrunkMotif(); renderEd(); render(); });
-$('backAuto').addEventListener('click',()=>{
-  SHAPE=null; setShapeMode(false);
-  $('shapeEd').hidden=true; $('stage').classList.remove('editing');
-  render();
-});
 
 /* ---------- interactions ---------- */
 function setSlots(v){
@@ -1062,9 +1057,9 @@ function applyParams(p){
   if(p.has('shape')){
     const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
     if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&(q[2]===0||q[2]===1))){
-      SHAPE={pts}; setShapeMode(true);
+      SHAPE={pts};
     }
-  } else if(SHAPE){ SHAPE=null; setShapeMode(false); }
+  } else { SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; }   // no saved shape → the trunk (always custom now)
   if(p.has('sline')){
     const pts=p.get('sline').split(';').map(s=>s.split(':').map(Number));
     if(pts.length===2&&pts.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&Math.abs(v)<=2))) SHADELINE=pts;
