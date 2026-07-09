@@ -143,16 +143,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .col input[type=color]{height:46px}
   .mast{padding:12px 16px}
   .mast .loc{display:none}
-  /* one view at a time on a phone: the segmented switcher focuses the editor OR the pattern,
-     and whichever is focused gets the lion's share of the screen */
+  /* phone: BOTH views stay stacked and visible — the switcher just decides which one is big.
+     The stage takes most of the screen; the accordions scroll below it. */
   .view-seg{display:flex;border:none;border-bottom:1px solid var(--hair)}
   .view-seg button{flex:1;padding:13px 2px;font:500 12px var(--sans);letter-spacing:.1em;background:none;border:none;border-right:1px solid var(--hair);color:var(--ink);cursor:pointer}
   .view-seg button:last-child{border-right:none}
   .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-  .ed-toggle{display:none}                       /* the switcher replaces the title-bar toggle */
-  #preview{height:56vh}                           /* pattern focused: big */
-  #stage.editing #preview{display:none}           /* editor focused: pattern steps aside… */
-  #stage.editing #shapeEd{height:56vh;flex:none}  /* …and the editor gets the room */
+  .ed-toggle{display:none}                            /* the switcher replaces the title-bar toggle */
+  #stage.editing #shapeEd{height:44vh;flex:none}      /* Fine-tune focused: big canvas… */
+  #stage.editing #preview{height:16vh}                /* …with the pattern still live below */
+  #stage.editing.pat-focus #shapeEd{height:16vh}      /* Pattern focused: editor shrinks to a strip… */
+  #stage.editing.pat-focus #preview{height:48vh}      /* …and the pattern gets the room */
+  #stage.pat-focus .ed-bar{display:none}              /* the strip is all canvas; tools return on focus */
   /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room */
   .ed-hint{display:none}
   .ed-bar{padding:6px 10px}
@@ -918,8 +920,6 @@ $('edReset').addEventListener('click',()=>{
 function setEditor(open){
   $('stage').classList.toggle('editing',open);
   $('edToggle').setAttribute('aria-expanded',open?'true':'false');
-  $('vwEd').setAttribute('aria-pressed',open?'true':'false');     // phone view switcher mirrors the state
-  $('vwPat').setAttribute('aria-pressed',open?'false':'true');
   try{ localStorage.setItem('lavoet-ed-open',open?'1':'0'); }catch(e){}
   if(open){
     if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; }
@@ -929,8 +929,17 @@ function setEditor(open){
   render();
 }
 $('edToggle').addEventListener('click',()=>setEditor(!$('stage').classList.contains('editing')));
-$('vwEd').addEventListener('click',()=>setEditor(true));
-$('vwPat').addEventListener('click',()=>setEditor(false));
+// phone focus: both views stay visible, the switcher decides which one is BIG (pat-focus class)
+function setFocus(pat){
+  if(!$('stage').classList.contains('editing')) setEditor(true);   // both views live on the phone
+  $('stage').classList.toggle('pat-focus',pat);
+  $('vwEd').setAttribute('aria-pressed',pat?'false':'true');
+  $('vwPat').setAttribute('aria-pressed',pat?'true':'false');
+  try{ localStorage.setItem('lavoet-focus',pat?'pat':'ed'); }catch(e){}
+  renderEd(); render();
+}
+$('vwEd').addEventListener('click',()=>setFocus(false));
+$('vwPat').addEventListener('click',()=>setFocus(true));
 /* motif extracted photogrammetrically from the Bagage Collection 1930s malle
    courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
    Richardson-Lucy deconvolved, contour-traced */
@@ -1233,7 +1242,14 @@ setSlots(val('mqSlots'));
 syncRows();
 render();
 /* the fine-tune editor is shown by default (remembered across visits) */
-(function initEditor(){ let o=true; try{ const s=localStorage.getItem('lavoet-ed-open'); if(s!==null) o=s==='1'; }catch(e){} setEditor(o); })();
+(function initEditor(){
+  let o=true; try{ const s=localStorage.getItem('lavoet-ed-open'); if(s!==null) o=s==='1'; }catch(e){}
+  setEditor(o);
+  if(matchMedia('(max-width:760px)').matches){          // phone: both views live, restore which is big
+    let f='ed'; try{ f=localStorage.getItem('lavoet-focus')||'ed'; }catch(e){}
+    setFocus(f==='pat');
+  }
+})();
 </script>
 </body>
 </html>
