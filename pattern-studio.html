@@ -135,10 +135,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div id="autoRows">
         <div class="row"><label for="pinGap">Gap between pieces</label><input type="range" id="pinGap" min="0" max="40" value="16"><output for="pinGap">16</output></div>
         <div class="row"><label for="pinHole">Centre gap</label><input type="range" id="pinHole" min="0" max="45" value="20"><output for="pinHole">20</output></div>
-        <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
-        <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
       </div>
-      <p class="hint" id="customNote" hidden>Custom shape active — the four shape sliders are paused while you use your own points.</p>
+      <p class="hint" id="customNote" hidden>Custom shape — Gap and Centre gap build the four-piece diamond, so they’re paused. Twist and Rotate still bend your own outline.</p>
+      <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
+      <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
       <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
       <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
       <div class="btns" style="margin-top:12px">
@@ -236,6 +236,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         </div>
         <div class="row"><label for="mqSize">Logo size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
+        <label class="chk"><input type="checkbox" id="dotsInLogo" checked>Dots in the logo area</label>
       </div>
     </div>
   </section>
@@ -316,19 +317,23 @@ function pieceGeom(){
   // the corners moving. The field only rotates points around the centre,
   // so the gaps between pieces are preserved as swirled channels. All in
   // unit scale (D=1); callers multiply by R.
-  const i=num('pinGap')/200, cut=num('pinHole')/100*Math.SQRT2,
-        thI=num('pinTwist')*Math.PI/180, thO=num('pinTwistO')*Math.PI/180;
+  const i=num('pinGap')/200, cut=num('pinHole')/100*Math.SQRT2;
   const poly=cut>i*2+0.005
     ? [[i,i-cut],[i,-(1-i)],[1-i,-i],[cut-i,-i]]
     : [[i,-i],[i,-(1-i)],[1-i,-i]];
-  const warp=(x,y)=>{
-    const r=Math.hypot(x,y), f=Math.min(r,1);
-    // quadratic falloff keeps the two knobs independent: equal inner and outer
-    // twist still bends (a linear blend would collapse into a rigid rotation)
-    const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
-    return [x*c-y*s, x*s+y*c];
-  };
-  return {poly,warp};
+  return {poly,warp:twistWarp};
+}
+// radial swirl field (unit scale, D=1): rotate a point around the centre by an
+// angle blending Inner twist (centre) → Outer twist (rim). Works on ANY outline,
+// so custom / trunk shapes can be bent by the same two knobs as the parametric one.
+function twistWarp(x,y){
+  const thI=(num('pinTwist')||0)*Math.PI/180, thO=(num('pinTwistO')||0)*Math.PI/180;
+  if(!thI&&!thO) return [x,y];
+  const r=Math.hypot(x,y), f=Math.min(r,1);
+  // quadratic falloff keeps the two knobs independent: equal inner and outer
+  // twist still bends (a linear blend would collapse into a rigid rotation)
+  const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
+  return [x*c-y*s, x*s+y*c];
 }
 function bakeShape(){
   // freeze the current parametric piece into editable points:
@@ -341,10 +346,12 @@ function bakeShape(){
   }
   SHAPE={pts:pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3),p[2]])};
 }
-function shapePath(sc){
-  // closed path through SHAPE.pts: smooth points get Catmull-Rom handles,
+// warped copy of the custom points (twist bends the trunk/custom outline too)
+function shapeWarpedPts(){ return SHAPE.pts.map(p=>{ const w=twistWarp(p[0],p[1]); return [w[0],w[1],p[2]]; }); }
+function shapePath(sc,pts){
+  // closed path through the points: smooth points get Catmull-Rom handles,
   // corner points get zero handles (segments between two corners run straight)
-  const P=SHAPE.pts, n=P.length, pt=i=>P[(i%n+n)%n];
+  const P=pts||SHAPE.pts, n=P.length, pt=i=>P[(i%n+n)%n];
   const f=v=>(v*sc).toFixed(2);
   let d=`M ${f(pt(0)[0])} ${f(pt(0)[1])}`;
   for(let i=0;i<n;i++){
@@ -361,7 +368,7 @@ function shapePath(sc){
 function piecePolygon(R){
   const out=[];
   if(SHAPE){
-    const P=SHAPE.pts, n=P.length, pt=i=>P[((i%n)+n)%n], CS=8;
+    const P=shapeWarpedPts(), n=P.length, pt=i=>P[((i%n)+n)%n], CS=8;
     for(let i=0;i<n;i++){
       const a=pt(i), b=pt(i+1);
       const ha=a[2]?[(b[0]-pt(i-1)[0])/6,(b[1]-pt(i-1)[1])/6]:[0,0];
@@ -382,7 +389,7 @@ function piecePolygon(R){
   return out;
 }
 function piecePathD(R){
-  if(SHAPE) return shapePath(R);
+  if(SHAPE) return shapePath(R,shapeWarpedPts());
   const {poly,warp}=pieceGeom(); const M=12, pts=[];
   for(let e=0;e<poly.length;e++){ const [x0,y0]=poly[e],[x1,y1]=poly[(e+1)%poly.length];
     for(let m=0;m<M;m++){ const t=m/M,w=warp(x0+(x1-x0)*t,y0+(y1-y0)*t); pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2)); } }
@@ -584,11 +591,13 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
   let ph={ox:0,oy:0}, marquePart='';
   if(useMq){
     ph=marquePhase(W,H);
-    const b=marqueBox(W,H), excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:b.rA};
+    const b=marqueBox(W,H);
     // the pattern paints a motif in every slot, so wipe a disk big enough to erase the
     // logo's motif(s) WHOLE (clearR covers a removed motif's full reach — no partial arcs
     // left over), then re-stamp only the surrounding motifs that overhang into it
     const clearR=b.rM+sys.reach, RR=b.rM+2*sys.reach+sys.S, span=Math.ceil(RR/sys.S)+1;
+    // "Dots in logo area" off → push the dot-clear radius out to the whole cleared disk
+    const aR=chk('dotsInLogo')?b.rA:clearR, excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:aR};
     const ci=Math.round((b.cx-ph.ox)/sys.S), cj=Math.round((b.cy-ph.oy)/sys.S);
     const r=sys.stampRange(ci-span,ci+span,cj-span,cj+span,ph.ox,ph.oy,excl,RR);
     marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${clearR.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marqueMarkup(b,'MOTIF_FG')}`;
@@ -941,7 +950,7 @@ $('dlPng').addEventListener('click',async()=>{
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineW','cell','accentStyle','accentSize',
   'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots','pngScale'];
-const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn'];
+const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo'];
 let restoring=true, hashT=0;
 function paramsString(){
   const p=new URLSearchParams();
