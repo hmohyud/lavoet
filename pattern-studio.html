@@ -585,7 +585,11 @@ function motif3DLayers(R){
     face+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
   }
   const body=`<g fill="MOTIF_SIDE">${bodyPaths}</g>`+(bevPaths?`<g fill="MOTIF_BEV">${bevPaths}</g>`:'');
-  return {body, face:`${outlineUnderlay(d,N)}<g fill="MOTIF_TOP"${strokeAttr(R,'MOTIF_TOP')}>${face}</g>`};
+  // no "Bolder pieces" fatten on 3D faces: its lit-tone stroke rode over the dark block and
+  // read as an outline (worst with a strong highlight); the block already bolds the pieces.
+  // A real outline (edge style) still strokes the faces when it's on.
+  const fstroke=chk('outlineOn')?strokeAttr(R,'MOTIF_TOP'):'';
+  return {body, face:`${outlineUnderlay(d,N)}<g fill="MOTIF_TOP"${fstroke}>${face}</g>`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
