@@ -41,6 +41,7 @@ main{flex:1;display:flex;min-height:0}
 .acc.closed .acc-chev{transform:rotate(0)}
 .acc-body{padding:0 0 18px}
 .acc.closed .acc-body{display:none}
+.opt-off{opacity:.4;pointer-events:none}   /* a sub-option whose parent toggle is off: greyed, not hidden */
 .acc-info{font-size:10.5px;line-height:1.5;color:var(--sepia);margin:0 0 12px;padding:9px 11px;background:color-mix(in srgb,var(--brass) 9%,transparent);border-left:2px solid var(--brass)}
 .seg{display:flex;border:1px solid var(--ink);width:100%}
 .seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
@@ -164,8 +165,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="acc-body">
       <p class="acc-info" hidden>Draws a line around every shape. Turn it on, then set the line’s weight and colour.</p>
       <label class="chk"><input type="checkbox" id="outlineOn">Outline the shapes</label>
-      <div id="outlineRow" hidden>
-        <div class="row"><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="1" max="8" value="2"><output for="outlineW">2</output></div>
+      <div id="outlineRow">
+        <div class="row"><label for="outlineW">Outline weight</label><input type="range" id="outlineW" min="0.3" max="8" step="0.1" value="2"><output for="outlineW">2</output></div>
         <div class="cols"><div class="col"><label for="cOlB">Outline colour</label><input type="color" id="cOlB" data-syncs="cOl" value="#79602f"></div></div>
       </div>
     </div>
@@ -251,10 +252,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="btns">
         <button type="button" id="dlTile">Tile · SVG (seamless)</button>
         <button type="button" id="dlSwatch">Swatch · SVG</button>
-        <div class="png-row">
-          <button type="button" id="dlPng">Swatch · PNG</button>
-          <select id="pngScale" aria-label="PNG scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
-        </div>
+        <button type="button" id="dlPng">Swatch · PNG</button>
         <button type="button" id="cfgLoad">Load config…</button>
         <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
       </div>
@@ -847,7 +845,7 @@ function setSlots(v){
   $('mqOpts').style.opacity=v==='0'?.35:1;
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
-function syncRows(){ $('outlineRow').hidden=!chk('outlineOn'); }
+function syncRows(){ $('outlineRow').classList.toggle('opt-off',!chk('outlineOn')); }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
   if(el.dataset.syncs){ const t=$(el.dataset.syncs); if(el.type==='checkbox') t.checked=el.checked; else { t.value=el.value; if(t.id==='cOl') olAuto=false; } }
@@ -899,6 +897,13 @@ function download(name,blob){
   a.href=URL.createObjectURL(blob); a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+// short FNV-1a hash of the current settings — appended to filenames so tweaked
+// variations download side by side instead of overwriting each other
+function cfgHash(){
+  const s=paramsString(); let h=2166136261>>>0;
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return ('000000'+(h>>>0).toString(36)).slice(-6);
 }
 let fontCSS=null;
 async function embedFont(){
@@ -989,15 +994,15 @@ $('cfgFile').addEventListener('change',async()=>{
 });
 
 $('dlTile').addEventListener('click',()=>{
-  download(`lavoet-tuile-${tileSize()}px.svg`,new Blob([svgWithConfig(buildTile())],{type:'image/svg+xml'}));
+  download(`lavoet-tuile-${cfgHash()}.svg`,new Blob([svgWithConfig(buildTile())],{type:'image/svg+xml'}));
 });
 $('dlSwatch').addEventListener('click',async()=>{
   const [W,H]=swatchDims();
   const style=marqueTextOn()?await embedFont():'';
-  download(`lavoet-toile-${W}x${H}.svg`,new Blob([svgWithConfig(buildSwatch(W,H,{style}))],{type:'image/svg+xml'}));
+  download(`lavoet-toile-${cfgHash()}.svg`,new Blob([svgWithConfig(buildSwatch(W,H,{style}))],{type:'image/svg+xml'}));
 });
 $('dlPng').addEventListener('click',async()=>{
-  const [W,H]=swatchDims(), k=+val('pngScale');
+  const [W,H]=swatchDims(), k=2;
   const style=marqueTextOn()?await embedFont():'';
   const svg=buildSwatch(W,H,{style});
   const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
@@ -1008,10 +1013,10 @@ $('dlPng').addEventListener('click',async()=>{
       const cv=document.createElement('canvas'); cv.width=W*k; cv.height=H*k;
       cv.getContext('2d').drawImage(img,0,0,W*k,H*k);
       cv.toBlob(async b=>{
-        if(!b){ alert('PNG export failed — try a smaller scale.'); return; }
-        download(`lavoet-toile-${W*k}x${H*k}.png`,await pngWithConfig(b));
+        if(!b){ alert('PNG export failed.'); return; }
+        download(`lavoet-toile-${cfgHash()}.png`,await pngWithConfig(b));
       },'image/png');
-    }catch(e){ alert('PNG export failed — try a smaller scale.'); }
+    }catch(e){ alert('PNG export failed.'); }
     finally{ URL.revokeObjectURL(url); }
   };
   img.src=url;
@@ -1019,7 +1024,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots','pngScale'];
+  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d'];
 let restoring=true, hashT=0;
 function paramsString(){
