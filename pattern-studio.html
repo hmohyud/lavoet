@@ -180,11 +180,17 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="acc-body">
       <p class="acc-info" hidden>The small accents in the gaps between motifs — switch them on or off, choose a shape, size them, and colour them.</p>
       <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
+      <label class="chk"><input type="checkbox" id="dotsInLogoB" data-syncs="dotsInLogo" checked>Dots in the logo area</label>
       <div class="row-sel"><label for="accentStyle">Dot style</label>
         <select id="accentStyle">
           <option value="losange" selected>Diamond</option>
           <option value="point">Dot</option>
+          <option value="ring">Ring</option>
+          <option value="carre">Square</option>
+          <option value="triangle">Triangle</option>
           <option value="croix">Cross</option>
+          <option value="etoile">Star</option>
+          <option value="fleur">Flower</option>
         </select>
       </div>
       <div class="row"><label for="accentSize">Dot size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
@@ -335,14 +341,27 @@ function twistWarp(x,y){
   const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
   return [x*c-y*s, x*s+y*c];
 }
+// exact inverse of twistWarp: the warp is a pure rotation about the origin, so it
+// preserves radius — a(|warped|)==a(|base|) — and rotating back by −a recovers the
+// base point exactly. Lets the editor place handles at the WARPED positions while
+// storing SHAPE.pts un-warped: a dragged handle maps straight back to its base point.
+function twistUnwarp(x,y){
+  const thI=(num('pinTwist')||0)*Math.PI/180, thO=(num('pinTwistO')||0)*Math.PI/180;
+  if(!thI&&!thO) return [x,y];
+  const r=Math.hypot(x,y), f=Math.min(r,1);
+  const a=thI*(1-f)*(1-f)+thO*f*f, c=Math.cos(a), s=Math.sin(a);
+  return [x*c+y*s, -x*s+y*c];                       // rotate by −a
+}
 function bakeShape(){
-  // freeze the current parametric piece into editable points:
-  // corners at the logical vertices, a smooth point mid-edge to carry the bend
-  const {poly,warp}=pieceGeom(), pts=[];
+  // freeze the current parametric piece into editable points: corners at the logical
+  // vertices, a smooth point mid-edge to carry the bend. Store the UN-warped base
+  // geometry — shapeWarpedPts re-applies the live twist ONCE at render, so the baked
+  // shape matches the parametric look without being warped twice.
+  const {poly}=pieceGeom(), pts=[];
   for(let e=0;e<poly.length;e++){
     const [x0,y0]=poly[e], [x1,y1]=poly[(e+1)%poly.length];
-    pts.push([...warp(x0,y0),0]);
-    pts.push([...warp((x0+x1)/2,(y0+y1)/2),1]);
+    pts.push([x0,y0,0]);
+    pts.push([(x0+x1)/2,(y0+y1)/2,1]);
   }
   SHAPE={pts:pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3),p[2]])};
 }
@@ -477,9 +496,26 @@ function motifMarkup(fg){
 function accentMarkup(ac){
   const r=num('cell')*num('accentSize')/100/2, t=val('accentStyle');
   if(!chk('accentOn')||r<0.5) return '';
-  if(t==='point')   return `<circle r="${r.toFixed(2)}" fill="${ac}"/>`;
-  if(t==='croix')   return `<path d="M ${-r} ${-r/3.2} H ${r} V ${r/3.2} H ${-r} Z M ${-r/3.2} ${-r} V ${r} H ${r/3.2} V ${-r} Z" fill="${ac}"/>`;
-  return `<path d="M 0 ${-r} L ${r} 0 L 0 ${r} L ${-r} 0 Z" fill="${ac}"/>`;
+  const f=n=>(n*r).toFixed(2);                     // n·r — every shape sized off the same r, centred on the origin
+  switch(t){
+    case 'point':                                  // filled dot
+      return `<circle r="${r.toFixed(2)}" fill="${ac}"/>`;
+    case 'ring':                                   // hollow circle, outer edge lands on r
+      return `<circle r="${f(0.82)}" fill="none" stroke="${ac}" stroke-width="${f(0.36)}"/>`;
+    case 'carre':                                  // upright square, corners on r (area == diamond)
+      return `<rect x="${f(-0.7071)}" y="${f(-0.7071)}" width="${f(1.4142)}" height="${f(1.4142)}" fill="${ac}"/>`;
+    case 'triangle':                               // equilateral, apex up, centroid at origin
+      return `<path d="M 0 ${(-r).toFixed(2)} L ${f(0.866)} ${f(0.5)} L ${f(-0.866)} ${f(0.5)} Z" fill="${ac}"/>`;
+    case 'croix':                                  // thick plus / cross (both bars wound the SAME way so nonzero fills the centre)
+      return `<path d="M ${-r} ${-r/3.2} H ${r} V ${r/3.2} H ${-r} Z M ${-r/3.2} ${-r} H ${r/3.2} V ${r} H ${-r/3.2} Z" fill="${ac}"/>`;
+    case 'etoile':                                 // 4-point star, points on r, inner radius 0.5r
+      return `<path d="M ${r.toFixed(2)} 0 L ${f(0.3536)} ${f(0.3536)} L 0 ${r.toFixed(2)} L ${f(-0.3536)} ${f(0.3536)} L ${(-r).toFixed(2)} 0 L ${f(-0.3536)} ${f(-0.3536)} L 0 ${(-r).toFixed(2)} L ${f(0.3536)} ${f(-0.3536)} Z" fill="${ac}"/>`;
+    case 'fleur':                                  // quatrefoil — 4 equal disks on the axes, union = flower
+      return `<circle cx="${f(0.5)}" cy="0" r="${f(0.5)}" fill="${ac}"/><circle cx="${f(-0.5)}" cy="0" r="${f(0.5)}" fill="${ac}"/>`
+           + `<circle cx="0" cy="${f(0.5)}" r="${f(0.5)}" fill="${ac}"/><circle cx="0" cy="${f(-0.5)}" r="${f(0.5)}" fill="${ac}"/>`;
+    default:                                        // losange (diamond)
+      return `<path d="M 0 ${(-r).toFixed(2)} L ${r.toFixed(2)} 0 L 0 ${r.toFixed(2)} L ${(-r).toFixed(2)} 0 Z" fill="${ac}"/>`;
+  }
 }
 
 /* ---------- motif system: define the motif once, tile it with an SVG <pattern> ----------
@@ -617,7 +653,7 @@ const preview=$('preview');
 let raf=0;
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
-function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')) el.value=$(el.dataset.syncs).value; }
+function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')){ const s=$(el.dataset.syncs); if(el.type==='checkbox') el.checked=s.checked; else el.value=s.value; } }
 function render(){
   clearTimeout(raf);
   raf=setTimeout(()=>{
@@ -643,7 +679,8 @@ function setShapeMode(custom){
 }
 function renderEd(){
   if(!SHAPE||$('shapeEd').hidden) return;
-  const d=shapePath(1), fg=val('cFg'), bg=val('cBg');
+  const WP=shapeWarpedPts();                        // display points — base pts through the live twist
+  const d=shapePath(1,WP), fg=val('cFg'), bg=val('cBg');
   const soft=chk('pinRound')?` stroke="${fg}" stroke-width="0.08" stroke-linejoin="round"`:'';
   const N=Math.max(1,num('pinN')||4);
   let s=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${bg}"/>`;
@@ -669,7 +706,7 @@ function renderEd(){
     s+=`<line x1="${L[0][0]}" y1="${L[0][1]}" x2="${L[1][0]}" y2="${L[1][1]}" stroke="#F4EFE4" stroke-width=".022" stroke-dasharray=".06 .045" opacity=".9"/>`;
     for(let i=0;i<2;i++) s+=`<circle data-line="${i}" cx="${L[i][0]}" cy="${L[i][1]}" r=".075" fill="#8C3B31" stroke="#F4EFE4" stroke-width=".022"/>`;
   }
-  SHAPE.pts.forEach((p,ix)=>{
+  WP.forEach((p,ix)=>{                              // handles sit at the WARPED positions; data-ix = base index
     const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
     s+=p[2]
       ? `<circle data-ix="${ix}" cx="${p[0]}" cy="${p[1]}" r=".06" ${st}/>`
@@ -709,7 +746,8 @@ $('edSvg').addEventListener('pointermove',ev=>{
     SHADELINE[EDLINE]=[+x.toFixed(3),+y.toFixed(3)]; renderEd(); render(); return;
   }
   if(!SHAPE) return;
-  SHAPE.pts[EDSEL][0]=+x.toFixed(3); SHAPE.pts[EDSEL][1]=+y.toFixed(3);
+  const b=twistUnwarp(x,y);                          // pointer is a warped/display coord → store the base point
+  SHAPE.pts[EDSEL][0]=+b[0].toFixed(3); SHAPE.pts[EDSEL][1]=+b[1].toFixed(3);
   renderEd(); render();
 });
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
@@ -728,7 +766,10 @@ $('edPieceUp').addEventListener('click',()=>setPieces((num('pinN')||4)+1));
 $('edAdd').addEventListener('click',()=>{
   if(!SHAPE||SHAPE.pts.length>=24) return;
   const a=SHAPE.pts[EDSEL], b=SHAPE.pts[(EDSEL+1)%SHAPE.pts.length];
-  SHAPE.pts.splice(EDSEL+1,0,[+((a[0]+b[0])/2).toFixed(3),+((a[1]+b[1])/2).toFixed(3),1]);
+  // drop the new point at the VISUAL midpoint of the two warped handles, then store its base
+  const wa=twistWarp(a[0],a[1]), wb=twistWarp(b[0],b[1]);
+  const m=twistUnwarp((wa[0]+wb[0])/2,(wa[1]+wb[1])/2);
+  SHAPE.pts.splice(EDSEL+1,0,[+m[0].toFixed(3),+m[1].toFixed(3),1]);
   EDSEL++; renderEd(); render();
 });
 $('edDel').addEventListener('click',()=>{
@@ -756,12 +797,30 @@ $('edOpen').addEventListener('click',()=>{
    courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
    Richardson-Lucy deconvolved, contour-traced */
 const TRUNK_SHAPE=[[-0.059,-0.955,1],[0,-0.981,1],[0.096,-0.955,1],[0.434,-0.635,1],[0.628,-0.494,1],[0.649,-0.422,1],[0.619,-0.337,1],[0.458,-0.208,1],[0.301,-0.16,1],[0.188,-0.217,1],[-0.086,-0.819,1],[-0.093,-0.903,1]];
+// return EVERY control to its markup default — the clean slate the trunk preset builds on
+function resetDefaults(){
+  for(const id of HASH_IDS){
+    const el=$(id); if(!el) continue;
+    if(el.tagName==='SELECT'){ const d=[...el.options].find(o=>o.defaultSelected)||el.options[0]; el.value=d.value; }
+    else el.value=el.defaultValue;
+    const o=document.querySelector(`output[for="${id}"]`); if(o) o.value=el.value;
+  }
+  for(const id of HASH_CHK){ const el=$(id); if(el) el.checked=el.defaultChecked; }
+  SHADELINE=null; olAuto=true;                       // drop any dragged shade line; re-arm auto outline colour
+  // mqSlots is type=hidden, so its .value setter writes the content attribute and corrupts
+  // defaultValue — force the logo default ('4') explicitly and sync the segmented buttons
+  syncRows(); setSlots('4'); updateMirrors();
+}
+function setOut(id,v){ $(id).value=v; const o=document.querySelector(`output[for="${id}"]`); if(o) o.value=$(id).value; }
 function applyTrunkMotif(){
+  resetDefaults();                                   // 3D / outline / twist / dots / logo / zoom all back to default
   SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())};
   EDSEL=0; setShapeMode(true);
-  $('scale').value=52;
-  const o=document.querySelector('output[for="scale"]'); if(o) o.value=52;
+  setOut('scale',52);
+  setOut('pinTwist',0); setOut('pinTwistO',0);       // the original trunk shows UN-warped
   $('cBg').value='#543424'; $('cFg').value='#a8823f'; $('cAc').value='#a8823f';
+  olAuto=true; updateMirrors();                      // outline colour re-derives from the trunk gold
+  EDSNAP=SHAPE.pts.map(p=>p.slice());                // editor "Reset" now baselines to the trunk, not a stale shape
 }
 $('edTrunk').addEventListener('click',()=>{ applyTrunkMotif(); renderEd(); render(); });
 $('backAuto').addEventListener('click',()=>{
@@ -780,7 +839,7 @@ for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('cl
 function syncRows(){ $('outlineRow').hidden=!chk('outlineOn'); }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
-  if(el.dataset.syncs){ const t=$(el.dataset.syncs); t.value=el.value; if(t.id==='cOl') olAuto=false; }
+  if(el.dataset.syncs){ const t=$(el.dataset.syncs); if(el.type==='checkbox') t.checked=el.checked; else { t.value=el.value; if(t.id==='cOl') olAuto=false; } }
   if(el.id==='outlineOn') syncRows();
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
