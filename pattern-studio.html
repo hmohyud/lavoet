@@ -101,10 +101,22 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-btns button:hover{border-color:var(--brass)}
 .ed-btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .ed-btns select{font:500 10.5px var(--sans);padding:7px 8px;background:var(--paper);border:1px solid var(--hair);color:var(--ink);width:auto}
-.ed-gear{font-size:12px!important;line-height:1;padding:6px 9px!important}
+/* Smooth/Corner as a label + a gear that carries a ring showing the point's amount */
+.ed-mode{display:inline-flex;align-items:stretch;border:1px solid var(--hair)}
+.ed-mode>button{border:none!important}
+.ed-mode-lbl{border-right:1px solid var(--hair)!important}
+.ed-mode-gear{position:relative;min-width:30px;font-size:11px!important;line-height:1;padding:6px 7px!important}
+.ed-ring{position:absolute;inset:3px;border-radius:50%;background:conic-gradient(var(--brass) calc(var(--v,0)*1%),var(--hair) 0);opacity:.6;-webkit-mask:radial-gradient(farthest-side,transparent 55%,#000 57%);mask:radial-gradient(farthest-side,transparent 55%,#000 57%);pointer-events:none}
 .ed-round{display:inline-flex;align-items:center;gap:7px}
+.ed-round[hidden]{display:none}                     /* class display must not defeat the hidden attribute */
 .ed-round input[type=range]{width:84px;margin:0}
 .ed-round output{font:500 10px var(--sans);color:var(--sepia);min-width:26px;text-align:right;font-variant-numeric:tabular-nums}
+/* Shade line + its Per motif/piece scope + a help "?" grouped as one control */
+.ed-shade{display:inline-flex;align-items:stretch;border:1px solid var(--hair)}
+.ed-shade>button,.ed-shade>select{border:none!important}
+.ed-shade>button:not(:last-child),.ed-shade>select{border-right:1px solid var(--hair)!important}
+.ed-shade-q{min-width:24px;color:var(--sepia)}
+.ed-info{margin:0;padding:10px 14px;background:rgba(0,0,0,.035);border-bottom:1px solid var(--hair);font-size:11px;line-height:1.5;color:var(--sepia)}
 .ed-step{display:inline-flex;align-items:center;gap:6px;padding:0 4px 0 0;margin-right:2px;border-right:1px solid var(--hair)}
 .ed-step-lbl{font:500 10.5px var(--sans);letter-spacing:.08em;color:var(--sepia)}
 .ed-step b{font:600 11px var(--sans);min-width:12px;text-align:center;font-variant-numeric:tabular-nums}
@@ -295,20 +307,29 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
             <b id="edPieceN" aria-live="polite">4</b>
             <button type="button" id="edPieceUp" aria-label="More pieces">+</button>
           </span>
-          <button type="button" id="edSmooth">Smooth</button>
-          <button type="button" id="edCorner">Corner</button>
-          <button type="button" id="edRound" class="ed-gear" title="Fine-tune this point’s roundness / sharpness" aria-pressed="false" aria-label="Roundness">⚙</button>
+          <span class="ed-mode">
+            <button type="button" id="edSmooth" class="ed-mode-lbl">Smooth</button>
+            <button type="button" id="edSmoothGear" class="ed-mode-gear" title="Fine-tune roundness" aria-label="Fine-tune roundness"><span class="ed-ring"></span>⚙</button>
+          </span>
+          <span class="ed-mode">
+            <button type="button" id="edCorner" class="ed-mode-lbl">Corner</button>
+            <button type="button" id="edCornerGear" class="ed-mode-gear" title="Fine-tune sharpness" aria-label="Fine-tune sharpness"><span class="ed-ring"></span>⚙</button>
+          </span>
           <span id="edRoundWrap" class="ed-round" hidden><input type="range" id="edRoundAmt" min="0" max="150" value="100" aria-label="Roundness amount"><output for="edRoundAmt">100</output></span>
           <button type="button" id="edAdd">+ Point</button>
           <button type="button" id="edDel">− Point</button>
-          <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
-          <select id="edScope" hidden title="Apply the line to the whole motif or to each piece">
-            <option value="motif" selected>Per motif</option>
-            <option value="piece">Per piece</option>
-          </select>
+          <span class="ed-shade">
+            <button type="button" id="edShadeLine" title="Split the motif with a light/shadow line">Shade line</button>
+            <select id="edScope" hidden title="Apply the line to the whole motif or to each piece">
+              <option value="motif" selected>Per motif</option>
+              <option value="piece">Per piece</option>
+            </select>
+            <button type="button" id="edShadeHelp" class="ed-shade-q" aria-label="What is the shade line?">?</button>
+          </span>
           <button type="button" id="edReset">Reset</button>
         </div>
       </div>
+      <p class="ed-info" id="edShadeInfo" hidden>Shade line gives a flat, two-tone “shaded” look: it splits the motif into a lit half and a shadow half along a line you drag on the canvas. <b>Per motif</b> keeps one straight line across the whole motif (reads like a lit 3-D form); <b>Per piece</b> turns the line with each piece (a uniform faceted pinwheel). Drag the two round handles to aim the light.</p>
       <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
     </div>
   </div>
@@ -750,11 +771,14 @@ function renderEd(){
       : `<rect data-ix="${ix}" x="${p[0]-0.054}" y="${p[1]-0.054}" width=".108" height=".108" ${st}/>`;
   });
   $('edSvg').innerHTML=s;
-  const rnd=+SHAPE.pts[EDSEL][2]||0;                 // this point's roundness amount
+  const rnd=+SHAPE.pts[EDSEL][2]||0;                 // this point's roundness amount (0..1.5)
   $('edSmooth').setAttribute('aria-pressed',rnd>0);
   $('edCorner').setAttribute('aria-pressed',rnd===0);
   $('edRoundAmt').value=Math.round(rnd*100);
   document.querySelector('output[for="edRoundAmt"]').value=Math.round(rnd*100);
+  const rf=Math.max(0,Math.min(1,rnd/1.5));          // ring fill: Smooth shows roundness, Corner shows sharpness
+  $('edSmoothGear').style.setProperty('--v',Math.round(rf*100));
+  $('edCornerGear').style.setProperty('--v',Math.round((1-rf)*100));
   $('edPieceN').textContent=N;
   syncEdShade();
 }
@@ -793,7 +817,10 @@ $('edSvg').addEventListener('pointermove',ev=>{
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
 $('edSmooth').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=1; renderEd(); render(); } });
 $('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; renderEd(); render(); } });
-$('edRound').addEventListener('click',()=>{ const w=$('edRoundWrap'); w.hidden=!w.hidden; $('edRound').setAttribute('aria-pressed',!w.hidden); });
+function toggleRoundWrap(){ const w=$('edRoundWrap'); w.hidden=!w.hidden; }
+$('edSmoothGear').addEventListener('click',toggleRoundWrap);
+$('edCornerGear').addEventListener('click',toggleRoundWrap);
+$('edShadeHelp').addEventListener('click',()=>{ const i=$('edShadeInfo'); i.hidden=!i.hidden; });
 function syncEdShade(){
   const on=chk('shadeLine');
   $('edShadeLine').setAttribute('aria-pressed',on);
