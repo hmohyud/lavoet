@@ -137,14 +137,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <h2 lang="fr">Relief — 3D</h2>
     <div class="row-sel"><label for="style3d">Shade</label>
       <select id="style3d">
-        <option value="two" selected>Two-tone (flat)</option>
-        <option value="elongate">Elongated</option>
+        <option value="two" selected>Two-tone (raised)</option>
+        <option value="full">Full-shaded</option>
       </select>
     </div>
     <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
     <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
     <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
-    <p class="hint">Backs each piece with one flat darker shade of the motif colour, so it reads as a raised tile — no gradients, no shading lines. Set depth to 0 for a flat pattern.</p>
+    <p class="hint">Two-tone backs each piece with a raised darker shade; Full-shaded splits every piece into a lit half and a shadow half. Both use two flat shades — no gradients. Set depth to 0 for flat.</p>
   </div>
 
   <div class="sec">
@@ -152,14 +152,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="row"><label for="cell">Zoom</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
     <label class="chk"><input type="checkbox" id="quinconce" checked>Diagonal layout</label>
     <label class="chk"><input type="checkbox" id="mirrorAlt">Mirror every other motif</label>
-    <div class="row-sel"><label for="accent">Dots between motifs</label>
-      <select id="accent">
-        <option value="losange" selected>Diamond</option>
-        <option value="point">Dot</option>
-        <option value="croix">Cross</option>
-        <option value="none">None</option>
-      </select>
-    </div>
+    <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
     <div class="row"><label for="accentSize">Dot size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
   </div>
 
@@ -190,6 +183,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         </select>
       </div>
       <div class="row"><label for="mqSize">Emblem size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
+      <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
     </div>
     <p class="hint">The emblem sits on the pattern grid and replaces exactly one motif — or a block of four — so the pattern around it stays perfectly even. It appears on swatches only; the downloadable tile stays a clean repeat.</p>
   </div>
@@ -206,7 +200,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <button type="button" id="cfgLoad">Load config…</button>
       <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
     </div>
-    <label class="chk"><input type="checkbox" id="guide">Show repeat guide</label>
     <p class="hint">Every download carries your full settings inside it — Load config… reads them back from any saved swatch or tile.</p>
     <p class="hint" id="tileInfo"></p>
     <p class="sig" lang="fr">La maison continue — les motifs aussi.</p>
@@ -351,18 +344,35 @@ function motifPin(R,fg){
   const faceStroke=soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
   const depth=num('depth3d')||0;
   if(depth<=0) return `<g fill="${fg}"${faceStroke}>${pieces}</g>`;
-  // Elongated (legacy long-shadow): a stack of darker copies. Two-tone is handled
-  // as two global passes in placeAll (motif3DLayers), so it never reaches here.
-  const a=(num('angle3d')||55)*Math.PI/180, dep=depth/100*R;
-  const ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
-  const STEPS=Math.max(4,Math.min(60,Math.round(dep/0.9)));
-  const sideStroke=soft?` stroke="MOTIF_SIDE" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
-  let body='';
-  for(let s=STEPS;s>=1;s--){
-    const t=s/STEPS;
-    body+=`<g transform="translate(${(ex*t).toFixed(2)} ${(ey*t).toFixed(2)})" fill="MOTIF_SIDE"${sideStroke}>${pieces}</g>`;
+  // Full-shaded: split every piece into a lit half (MOTIF_FG) and a shadow half
+  // (MOTIF_SIDE) along one global line, so the whole piece carries two flat tones —
+  // a folded-facet read. Two-tone is handled as two passes in placeAll, not here.
+  const poly=piecePolygon(R), a=(num('angle3d')||55)*Math.PI/180;
+  const nx=Math.cos(a), ny=Math.sin(a);                 // shadow-ward normal (global)
+  let cx=0,cy=0; for(const p of poly){ cx+=p[0]; cy+=p[1]; } cx/=poly.length; cy/=poly.length;
+  const depthMix=Math.min(0.9,0.15+depth/60);           // 3D depth shifts the fold line
+  const c0=(nx*cx+ny*cy);
+  let out='';
+  for(let k=0;k<N;k++){
+    const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
+    const nlx=nx*ct+ny*st, nly=-nx*st+ny*ct;            // normal in the piece's local frame
+    const c=c0*depthMix;                                 // slide the split toward the lit side
+    const dark=clipHalf(poly,nlx,nly,c,true);            // keep n·p >= c (shadow side)
+    const darkPath=dark.length>2?`<path d="M ${dark.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`:'';
+    out+=`<g transform="rotate(${+(k*360/N).toFixed(1)})"><path d="${d}" fill="${fg}"${faceStroke}/><g fill="MOTIF_SIDE">${darkPath}</g></g>`;
   }
-  return body+`<g fill="${fg}"${faceStroke}>${pieces}</g>`;
+  return out;
+}
+// Sutherland-Hodgman half-plane clip: keep points with n·p <= c (ge=true flips to >=)
+function clipHalf(poly,nx,ny,c,ge){
+  const s=ge?-1:1, cc=ge?-c:c, out=[], N=poly.length;
+  for(let i=0;i<N;i++){
+    const A=poly[i], B=poly[(i+1)%N];
+    const da=s*(nx*A[0]+ny*A[1])-cc, db=s*(nx*B[0]+ny*B[1])-cc;
+    if(da<=0) out.push(A);
+    if((da<0)!==(db<0)){ const t=da/(da-db); out.push([A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t]); }
+  }
+  return out;
 }
 // Two-tone relief: split the motif into a BACK layer (each piece backed by one flat
 // darker shade, offset along the direction) and a FRONT layer (the flat faces). placeAll
@@ -399,10 +409,8 @@ function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
 }
 function accentMarkup(ac){
-  const r=num('cell')*num('accentSize')/100/2, t=val('accent');
-  if(t==='none'||r<0.5) return '';
-  if(t==='point')   return `<circle r="${r.toFixed(2)}" fill="${ac}"/>`;
-  if(t==='croix')   return `<path d="M ${-r} ${-r/3.2} H ${r} V ${r/3.2} H ${-r} Z M ${-r/3.2} ${-r} V ${r} H ${r/3.2} V ${-r} Z" fill="${ac}"/>`;
+  const r=num('cell')*num('accentSize')/100/2;
+  if(!chk('accentOn')||r<0.5) return '';
   return `<path d="M 0 ${-r} L ${r} 0 L 0 ${r} L ${-r} 0 Z" fill="${ac}"/>`;
 }
 
@@ -437,25 +445,27 @@ function placeAll(W,H,excl,ph){
     out+=spots.map(([x,y,a])=>use('pmF',x,y,a)).join('');
     return out;
   }
-  // flat / elongated: single motif def, one pass
+  // flat / full-shaded: single motif def, one pass
   const base=motifMarkup('MOTIF_FG');
   let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
   out+=spots.map(([x,y,a])=>use('pm',x,y,a)).join('');
   out+=accLayer;
   return out;
 }
-/* phase shift that puts a marque slot exactly at the swatch centre */
+/* horizontal nudge for the emblem, in px — moves the emblem and its cleared slot together */
+function mqShiftX(){ return (num('mqShift')||0)/100*num('cell'); }
+/* phase shift that puts a marque slot exactly under the (shifted) emblem centre */
 function marquePhase(W,H){
-  const S=num('cell'), q=chk('quinconce'), mod=v=>((v%S)+S)%S;
-  if(val('mqSlots')==='1') return {ox:mod(W/2), oy:mod(H/2)};
-  return q ? {ox:mod(W/2-S/2), oy:mod(H/2)} : {ox:mod(W/2-S/2), oy:mod(H/2-S/2)};
+  const S=num('cell'), q=chk('quinconce'), mod=v=>((v%S)+S)%S, sx=mqShiftX();
+  if(val('mqSlots')==='1') return {ox:mod(W/2+sx), oy:mod(H/2)};
+  return q ? {ox:mod(W/2-S/2+sx), oy:mod(H/2)} : {ox:mod(W/2-S/2+sx), oy:mod(H/2-S/2)};
 }
 
 /* ---------- la marque ---------- */
 function marqueBox(W,H){
   const S=num('cell'), q=chk('quinconce'), slots=val('mqSlots'), mode=val('mqMode');
-  // the lattice is phase-shifted so the slot sits exactly at the centre
-  const cx=W/2, cy=H/2;
+  // the lattice is phase-shifted so the slot sits exactly under the emblem centre
+  const cx=W/2+mqShiftX(), cy=H/2;
   // emblem size: fill the freed slot(s) but never touch the surviving motifs
   const nd=slots==='1' ? (q?0.707:1)*S : (q?1.118:1.58)*S;
   const maxr=SHAPE?Math.max(0.6,...SHAPE.pts.map(p=>Math.hypot(p[0],p[1])))+0.12:1.1;
@@ -497,15 +507,12 @@ function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white *
   r=Math.round(r+(to-r)*p); g=Math.round(g+(to-g)*p); b=Math.round(b+(to-b)*p);
   return '#'+(0x1000000+(r<<16)+(g<<8)+b).toString(16).slice(1);
 }
-function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
 function fill(motifs,c){
   const side=shade(c.fg,-(num('shade3d')||38)/100);
-  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac)
-    // isometric prism: every wall carries its own Lambert tone as MShade:<amt>
-    .replace(/MShade:(-?\d+(?:\.\d+)?)/g,(_,a)=>shade(c.fg,parseFloat(a)));
+  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac);
 }
 
-function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
+function buildSwatch(W,H,{marque=true,style=''}={}){
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
   let excl=null, mq='', ph=null;
   if(useMq){
@@ -515,10 +522,8 @@ function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
     mq=marqueMarkup(b,c.fg);
   }
   const body=fill(placeAll(W,H,excl,ph),c);
-  const T=tileSize(), gx=ph?ph.ox:0, gy=ph?ph.oy:0;
-  const g=guide?`<rect x="${gx}" y="${gy}" width="${T}" height="${T}" fill="none" stroke="${c.bg}" stroke-width="3"/><rect x="${gx}" y="${gy}" width="${T}" height="${T}" fill="none" stroke="${c.fg}" stroke-width="1.2" stroke-dasharray="5 4"/>`:'';
   const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/>${body}${mq}${g}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/>${body}${mq}</svg>`;
 }
 function buildTile(){
   const c=colors(), T=tileSize();
@@ -532,7 +537,7 @@ function render(){
   clearTimeout(raf);
   raf=setTimeout(()=>{
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
-    preview.innerHTML=buildSwatch(W,H,{guide:chk('guide')});
+    preview.innerHTML=buildSwatch(W,H);
     const T=tileSize();
     $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
@@ -653,13 +658,8 @@ function setSlots(v){
   $('mqOpts').style.opacity=v==='0'?.35:1;
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
-function sync3dRows(){
-  const st=val('style3d'), on=(num('depth3d')||0)>0;
-  for(const el of document.querySelectorAll('[data-3d]')) el.hidden=!(on&&el.dataset['3d']===st);
-}
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
   if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
-  if(el.id==='style3d'||el.id==='depth3d') sync3dRows();
   renderEd(); render();
 }));
 
@@ -803,9 +803,9 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','style3d','depth3d','angle3d','shade3d','cell','accent','accentSize',
-  'cBg','cFg','cAc','mqMode','mqSize','mqSlots','pngScale'];
-const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','style3d','depth3d','angle3d','shade3d','cell','accentSize',
+  'cBg','cFg','cAc','mqMode','mqSize','mqShift','mqSlots','pngScale'];
+const HASH_CHK=['pinRound','quinconce','mirrorAlt','accentOn'];
 let restoring=true, hashT=0;
 function paramsString(){
   const p=new URLSearchParams();
@@ -824,10 +824,10 @@ function saveHash(){
   },350);
 }
 function applyParams(p){
-  // a config saved before the relief-style selector existed expects the old
-  // long-shadow extrusion — restore it so those depth>0 configs render identically
-  if(!p.has('style3d')&&(+p.get('depth3d')>0)) $('style3d').value='elongate';
-  if(p.get('style3d')==='prism'){ $('style3d').value='two'; p.delete('style3d'); } // retired style
+  // retired relief styles (prism/elongate) collapse to the current two-tone
+  if(['prism','elongate'].includes(p.get('style3d'))){ $('style3d').value='two'; p.delete('style3d'); }
+  // the dots list became a toggle: any old accent value except 'none' means dots on
+  if(p.has('accent')){ $('accentOn').checked=p.get('accent')!=='none'; }
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
@@ -839,7 +839,6 @@ function applyParams(p){
     if(o) o.value=el.value; /* el.value is post-clamp, not the raw string */
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
-  sync3dRows();
   if(p.has('shape')){
     const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
     if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&(q[2]===0||q[2]===1))){
@@ -861,7 +860,6 @@ if(location.hash.length<2) applyTrunkMotif(); /* first visit: the real 1930s can
 else loadHash();
 restoring=false;
 setSlots(val('mqSlots'));
-sync3dRows();
 render();
 </script>
 </body>
