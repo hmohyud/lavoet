@@ -178,20 +178,29 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Dots</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>The small diamond accents in the gaps between motifs — switch them on or off, size them, and colour them.</p>
+      <p class="acc-info" hidden>The small accents in the gaps between motifs — switch them on or off, choose a shape, size them, and colour them.</p>
       <label class="chk"><input type="checkbox" id="accentOn" checked>Dots between motifs</label>
+      <div class="row-sel"><label for="accentStyle">Dot style</label>
+        <select id="accentStyle">
+          <option value="losange" selected>Diamond</option>
+          <option value="point">Dot</option>
+          <option value="croix">Cross</option>
+        </select>
+      </div>
       <div class="row"><label for="accentSize">Dot size</label><input type="range" id="accentSize" min="3" max="22" value="9"><output for="accentSize">9</output></div>
       <div class="cols"><div class="col"><label for="cAcB">Dot colour</label><input type="color" id="cAcB" data-syncs="cAc" value="#C69A45"></div></div>
     </div>
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Relief — 3D</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">3D &amp; shading</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Gives the motif depth — a raised darker shade behind each piece. For a flat light/shadow split instead, use “Shade line” inside Fine-tune shape.</p>
-      <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
-      <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
-      <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
+      <p class="acc-info" hidden>Makes the motif look raised — a lit top face over a darker side, lit from one direction. Depth 0 is flat. For a flat light/shadow split across the motif instead, use “Shade line” inside Fine-tune shape.</p>
+      <div class="row"><label for="depth3d">Depth</label><input type="range" id="depth3d" min="0" max="60" value="0"><output for="depth3d">0</output></div>
+      <div class="row"><label for="angle3d">Light direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
+      <div class="row"><label for="shade3d">Side shade</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
+      <div class="row"><label for="highlight">Top highlight</label><input type="range" id="highlight" min="0" max="50" value="0"><output for="highlight">0</output></div>
+      <div class="row"><label for="bevel">Edge bevel</label><input type="range" id="bevel" min="0" max="40" value="0"><output for="bevel">0</output></div>
       <input type="checkbox" id="shadeLine" hidden>
       <input type="checkbox" id="shadeScope" hidden>
     </div>
@@ -438,24 +447,31 @@ function motif3DLayers(R){
   let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
   let dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); // stay in cell
   const a=(num('angle3d')||55)*Math.PI/180, ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
-  let bodyPaths='', face='';
+  const bev=(num('bevel')||0)/100;                 // lit chamfer strip along the top edge
+  const P=(...pts)=>`<path d="M ${pts.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
+  let bodyPaths='', bevPaths='', face='';
   for(let k=0;k<N;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);          // piece in global frame
     const back=g.map(([x,y])=>[x+ex,y+ey]);
     bodyPaths+=`<path d="M ${back.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
     for(let i=0;i<g.length;i++){ const A=g[i],B=g[(i+1)%g.length],TA=back[i],TB=back[(i+1)%g.length];
-      bodyPaths+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${TB[0].toFixed(2)} ${TB[1].toFixed(2)} L ${TA[0].toFixed(2)} ${TA[1].toFixed(2)} Z"/>`; }
+      if(bev>0.01){ const MA=[A[0]+ex*bev,A[1]+ey*bev], MB=[B[0]+ex*bev,B[1]+ey*bev];
+        bevPaths+=P(A,B,MB,MA); bodyPaths+=P(MA,MB,TB,TA); }         // lit rim near the face, dark below
+      else bodyPaths+=P(A,B,TB,TA); }
     face+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
   }
-  return {body:`<g fill="MOTIF_SIDE">${bodyPaths}</g>`, face:`<g fill="MOTIF_FG"${strokeAttr(R,'MOTIF_FG')}>${face}</g>`};
+  const body=`<g fill="MOTIF_SIDE">${bodyPaths}</g>`+(bevPaths?`<g fill="MOTIF_BEV">${bevPaths}</g>`:'');
+  return {body, face:`<g fill="MOTIF_TOP"${strokeAttr(R,'MOTIF_TOP')}>${face}</g>`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
 }
 function accentMarkup(ac){
-  const r=num('cell')*num('accentSize')/100/2;
+  const r=num('cell')*num('accentSize')/100/2, t=val('accentStyle');
   if(!chk('accentOn')||r<0.5) return '';
+  if(t==='point')   return `<circle r="${r.toFixed(2)}" fill="${ac}"/>`;
+  if(t==='croix')   return `<path d="M ${-r} ${-r/3.2} H ${r} V ${r/3.2} H ${-r} Z M ${-r/3.2} ${-r} V ${r} H ${r/3.2} V ${-r} Z" fill="${ac}"/>`;
   return `<path d="M 0 ${-r} L ${r} 0 L 0 ${r} L ${-r} 0 Z" fill="${ac}"/>`;
 }
 
@@ -555,8 +571,11 @@ function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white *
   return '#'+(0x1000000+(r<<16)+(g<<8)+b).toString(16).slice(1);
 }
 function fill(motifs,c){
-  const side=shade(c.fg,-(num('shade3d')||38)/100);
-  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac).replaceAll('OUTLINE_C',c.ol);
+  const side=shade(c.fg,-(num('shade3d')||38)/100);   // dark side wall
+  const top=shade(c.fg,(num('highlight')||0)/100);     // lit top face
+  const bev=shade(c.fg,0.22+(num('highlight')||0)/200); // brighter bevel rim
+  return motifs.replaceAll('MOTIF_TOP',top).replaceAll('MOTIF_SIDE',side).replaceAll('MOTIF_BEV',bev)
+    .replaceAll('MOTIF_FG',c.fg).replaceAll('ACCENT_FG',c.ac).replaceAll('OUTLINE_C',c.ol);
 }
 
 function buildSwatch(W,H,{marque=true,style=''}={}){
@@ -920,7 +939,7 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','outlineW','cell','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineW','cell','accentStyle','accentSize',
   'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots','pngScale'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn'];
 let restoring=true, hashT=0;
@@ -943,7 +962,7 @@ function saveHash(){
 }
 function applyParams(p){
   // the dots list became a toggle: any old accent value except 'none' means dots on
-  if(p.has('accent')){ $('accentOn').checked=p.get('accent')!=='none'; }
+  if(p.has('accent')){ const a=p.get('accent'); $('accentOn').checked=a!=='none'; if(['losange','point','croix'].includes(a)) $('accentStyle').value=a; }
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
