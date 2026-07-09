@@ -170,7 +170,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="row"><label for="pinTwist">Inner twist</label><input type="range" id="pinTwist" min="-60" max="60" value="24"><output for="pinTwist">24</output></div>
       <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
       <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
-      <label class="chk"><input type="checkbox" id="pinRound" checked>Soft corners</label>
+      <label class="chk" title="Thicken each piece a touch with a same-tone edge (corners stay as sharp/round as you set them)"><input type="checkbox" id="pinRound" checked>Bolder pieces</label>
       <div class="btns" style="margin-top:12px">
         <button type="button" id="edTrunk">Original trunk motif</button>
       </div>
@@ -464,8 +464,11 @@ function piecePathD(R){
 }
 // a piece's stroke: an outline colour if outlining, else the soft-corner fatten in its own tone
 function strokeAttr(R,tok){
-  if(chk('outlineOn')) return ` stroke="OUTLINE_C" stroke-width="${(num('outlineW')||2).toFixed(2)}" stroke-linejoin="round" stroke-linecap="round"`;
-  if(chk('pinRound')) return ` stroke="${tok}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="round"`;
+  // MITER joins so a roundness-0 point stays truly sharp; smooth points are curves with no
+  // sharp joins, so they're unaffected. (Round joins used to soften every corner — the reason
+  // a "fully sharp" point still read as mostly sharp.) Roundness is now the per-point control.
+  if(chk('outlineOn')) return ` stroke="OUTLINE_C" stroke-width="${(num('outlineW')||2).toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`;
+  if(chk('pinRound')) return ` stroke="${tok}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`;
   return '';
 }
 // Sutherland–Hodgman half-plane clip: keep the polygon on the side n·p >= c
