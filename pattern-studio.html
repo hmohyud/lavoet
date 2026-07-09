@@ -135,18 +135,16 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
   <div class="sec">
     <h2 lang="fr">Relief — 3D</h2>
-    <div class="row-sel"><label for="style3d">Relief style</label>
+    <div class="row-sel"><label for="style3d">Shade</label>
       <select id="style3d">
-        <option value="prism" selected>Isometric block</option>
+        <option value="two" selected>Two-tone (flat)</option>
         <option value="elongate">Elongated</option>
       </select>
     </div>
     <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
-    <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="125"><output for="angle3d">125</output></div>
-    <div class="row" data-3d="prism"><label for="light3d">Light angle</label><input type="range" id="light3d" min="0" max="360" value="135"><output for="light3d">135</output></div>
-    <div class="row" data-3d="prism"><label for="reliefC">Contrast</label><input type="range" id="reliefC" min="0" max="40" value="24"><output for="reliefC">24</output></div>
-    <div class="row"><label for="shade3d">Shade</label><input type="range" id="shade3d" min="10" max="70" value="42"><output for="shade3d">42</output></div>
-    <p class="hint">Raises each piece into a lit 3D block so the whole repeat reads as one relief surface. Set depth to 0 for a flat pattern. "Elongated" is the older long-shadow look.</p>
+    <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="55"><output for="angle3d">55</output></div>
+    <div class="row"><label for="shade3d">Shade depth</label><input type="range" id="shade3d" min="10" max="70" value="34"><output for="shade3d">34</output></div>
+    <p class="hint">Backs each piece with one flat darker shade of the motif colour, so it reads as a raised tile — no gradients, no shading lines. Set depth to 0 for a flat pattern.</p>
   </div>
 
   <div class="sec">
@@ -353,12 +351,9 @@ function motifPin(R,fg){
   const faceStroke=soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
   const depth=num('depth3d')||0;
   if(depth<=0) return `<g fill="${fg}"${faceStroke}>${pieces}</g>`;
-  const style=val('style3d')||'prism';
-
-  if(style==='prism') return prismMotif(d,R,N,soft);
-
-  // Elongated (original): extrude along one direction as a stack of darker copies
-  const a=(num('angle3d')||125)*Math.PI/180, dep=depth/100*R;
+  // Elongated (legacy long-shadow): a stack of darker copies. Two-tone is handled
+  // as two global passes in placeAll (motif3DLayers), so it never reaches here.
+  const a=(num('angle3d')||55)*Math.PI/180, dep=depth/100*R;
   const ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
   const STEPS=Math.max(4,Math.min(60,Math.round(dep/0.9)));
   const sideStroke=soft?` stroke="MOTIF_SIDE" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
@@ -369,42 +364,36 @@ function motifPin(R,fg){
   }
   return body+`<g fill="${fg}"${faceStroke}>${pieces}</g>`;
 }
-// Isometric block: sweep each piece edge into a wall, cull hidden walls, Lambert-shade,
-// lay the lit top face on top, painter-sort the N blocks so the field reads as one lit relief
-function prismMotif(d,R,N,soft){
-  const S=num('cell'), depth=num('depth3d')||0;
-  const base=piecePolygon(R);
-  let cx=0,cy=0; for(const p of base){ cx+=p[0]; cy+=p[1]; } cx/=base.length; cy/=base.length;
-  let Rmax=0; for(const p of base){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
-  // keep the block inside its cell so the per-motif painter sort suffices (no cross-motif overlap)
-  let dep=depth/100*R;
-  dep=Math.min(dep, Math.max(2, S*0.5-Rmax));
-  const a=(num('angle3d')||125)*Math.PI/180, e=[Math.cos(a)*dep,Math.sin(a)*dep], eh=[Math.cos(a),Math.sin(a)];
-  const la=(num('light3d')||135)*Math.PI/180, L=[Math.cos(la),-Math.sin(la)];
-  const base3=num('shade3d')||42, contrast=num('reliefC')||24;
-  const topStroke=soft?` stroke="MShade:0.05" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
-  const parts=[];
+// Two-tone relief: split the motif into a BACK layer (each piece backed by one flat
+// darker shade, offset along the direction) and a FRONT layer (the flat faces). placeAll
+// draws every back first, then every face, so a block never covers a neighbour's face —
+// no gradients, no shading lines, just two flat shades of the base colour.
+function motif3DLayers(R){
+  let d;
+  if(SHAPE){ d=shapePath(R); }
+  else {
+    const {poly,warp}=pieceGeom(); const M=12, pts=[];
+    for(let e=0;e<poly.length;e++){ const [x0,y0]=poly[e],[x1,y1]=poly[(e+1)%poly.length];
+      for(let k=0;k<M;k++){ const t=k/M,w=warp(x0+(x1-x0)*t,y0+(y1-y0)*t); pts.push((w[0]*R).toFixed(2)+' '+(w[1]*R).toFixed(2)); } }
+    d='M '+pts.join(' L ')+' Z';
+  }
+  const soft=chk('pinRound')?R*0.08:0, N=Math.max(1,num('pinN')||4);
+  const S=num('cell'), poly=piecePolygon(R);
+  let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
+  let dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); // stay in cell
+  const a=(num('angle3d')||55)*Math.PI/180, ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
+  let bodyPaths='';
   for(let k=0;k<N;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
-    const ek=[e[0]*ct+e[1]*st, -e[0]*st+e[1]*ct];   // lift in local frame
-    const Lk=[L[0]*ct+L[1]*st, -L[0]*st+L[1]*ct];   // light in local frame
-    let w='';
-    for(let i=0;i<base.length;i++){
-      const A=base[i], B=base[(i+1)%base.length];
-      let nx=B[1]-A[1], ny=-(B[0]-A[0]);
-      if(nx*((A[0]+B[0])/2-cx)+ny*((A[1]+B[1])/2-cy)<0){ nx=-nx; ny=-ny; } // outward normal
-      const nl=Math.hypot(nx,ny)||1; nx/=nl; ny/=nl;
-      if(nx*ek[0]+ny*ek[1]<=0) continue;             // cull hidden walls
-      const lam=nx*Lk[0]+ny*Lk[1];
-      let amt=-base3/100+lam*contrast/100; amt=Math.max(-0.85,Math.min(0.08,amt));
-      w+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${(B[0]+ek[0]).toFixed(2)} ${(B[1]+ek[1]).toFixed(2)} L ${(A[0]+ek[0]).toFixed(2)} ${(A[1]+ek[1]).toFixed(2)} Z" fill="MShade:${amt.toFixed(3)}"/>`;
-    }
-    const top=`<path d="${d}" fill="MShade:0.05"${topStroke}/>`;
-    const gcx=cx*ct-cy*st, gcy=cx*st+cy*ct;          // centroid in global frame
-    parts.push({g:`<g transform="rotate(${+(k*360/N).toFixed(1)})">${w}${top}</g>`, key:gcx*eh[0]+gcy*eh[1]});
+    const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);          // piece in global frame
+    const back=g.map(([x,y])=>[x+ex,y+ey]);
+    bodyPaths+=`<path d="M ${back.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
+    for(let i=0;i<g.length;i++){ const A=g[i],B=g[(i+1)%g.length],TA=back[i],TB=back[(i+1)%g.length];
+      bodyPaths+=`<path d="M ${A[0].toFixed(2)} ${A[1].toFixed(2)} L ${B[0].toFixed(2)} ${B[1].toFixed(2)} L ${TB[0].toFixed(2)} ${TB[1].toFixed(2)} L ${TA[0].toFixed(2)} ${TA[1].toFixed(2)} Z"/>`; }
   }
-  parts.sort((p,q)=>q.key-p.key);                     // furthest back drawn first
-  return parts.map(p=>p.g).join('');
+  const faceStroke=soft?` stroke="MOTIF_FG" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
+  let facePaths=''; for(let k=0;k<N;k++) facePaths+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+  return {body:`<g fill="MOTIF_SIDE">${bodyPaths}</g>`, face:`<g fill="MOTIF_FG"${faceStroke}>${facePaths}</g>`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -421,25 +410,38 @@ function accentMarkup(ac){
 function placeAll(W,H,excl,ph){
   const S=num('cell'), q=chk('quinconce'), alt=chk('mirrorAlt'), tw=num('twist');
   const ox=ph?ph.ox:0, oy=ph?ph.oy:0;
-  const base=motifMarkup('MOTIF_FG'), acc=accentMarkup('ACCENT_FG');
+  const acc=accentMarkup('ACCENT_FG');
   const skipM=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rM;
   const skipA=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rA;
-  // motif and accent are defined once and stamped with <use> — a swatch can
-  // hold thousands of placements, so per-placement inline markup is too heavy
-  let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
-  const stamp=(id,x,y,mir)=>{
-    out+=`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tw})${mir?' scale(-1 1)':''}"/>`;
-  };
-  const put=(x,y,isAlt)=>{ if(!skipM(x,y)) stamp('pm',x,y,isAlt); };
+  // collect every motif and accent placement once
+  const spots=[], accs=[];
   const i0=-2, i1=Math.ceil(W/S)+1, j1=Math.ceil(H/S)+1;
   for(let i=i0;i<=i1;i++) for(let j=i0;j<=j1;j++){
+    const put=(x,y,isAlt)=>{ if(!skipM(x,y)) spots.push([x,y,isAlt]); };
     put(i*S+ox, j*S+oy, q?false:((i+j)&1)===1&&alt);
     if(q) put((i+0.5)*S+ox,(j+0.5)*S+oy, alt);
     if(acc){
       const pts=q?[[(i+0.5)*S+ox,j*S+oy],[i*S+ox,(j+0.5)*S+oy]]:[[(i+0.5)*S+ox,(j+0.5)*S+oy]];
-      for(const [ax,ay] of pts) if(!skipA(ax,ay)) stamp('pa',ax,ay,false);
+      for(const [ax,ay] of pts) if(!skipA(ax,ay)) accs.push([ax,ay]);
     }
   }
+  const use=(id,x,y,mir)=>`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tw})${mir?' scale(-1 1)':''}"/>`;
+  const accLayer=accs.map(([x,y])=>use('pa',x,y,false)).join('');
+  // two-tone relief: draw every dark BACK block, then accents, then every flat FACE on
+  // top — so no block ever overlaps a neighbour's face
+  if((num('depth3d')||0)>0 && (val('style3d')||'two')==='two'){
+    const {body,face}=motif3DLayers(num('cell')*num('scale')/200);
+    let out=`<defs><g id="pmB">${body}</g><g id="pmF">${face}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
+    out+=spots.map(([x,y,a])=>use('pmB',x,y,a)).join('');
+    out+=accLayer;
+    out+=spots.map(([x,y,a])=>use('pmF',x,y,a)).join('');
+    return out;
+  }
+  // flat / elongated: single motif def, one pass
+  const base=motifMarkup('MOTIF_FG');
+  let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
+  out+=spots.map(([x,y,a])=>use('pm',x,y,a)).join('');
+  out+=accLayer;
   return out;
 }
 /* phase shift that puts a marque slot exactly at the swatch centre */
@@ -801,7 +803,7 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','style3d','depth3d','angle3d','light3d','reliefC','shade3d','cell','accent','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','style3d','depth3d','angle3d','shade3d','cell','accent','accentSize',
   'cBg','cFg','cAc','mqMode','mqSize','mqSlots','pngScale'];
 const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
 let restoring=true, hashT=0;
@@ -825,6 +827,7 @@ function applyParams(p){
   // a config saved before the relief-style selector existed expects the old
   // long-shadow extrusion — restore it so those depth>0 configs render identically
   if(!p.has('style3d')&&(+p.get('depth3d')>0)) $('style3d').value='elongate';
+  if(p.get('style3d')==='prism'){ $('style3d').value='two'; p.delete('style3d'); } // retired style
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
