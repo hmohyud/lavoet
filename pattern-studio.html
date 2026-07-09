@@ -429,7 +429,7 @@ function motifPin(R,fg){
   return out;
 }
 // Two-tone relief: split the motif into a BACK layer (each piece backed by one flat
-// darker shade, offset along the direction) and a FRONT layer (the flat faces). placeAll
+// darker shade, offset along the direction) and a FRONT layer (the flat faces). The tile
 // draws every back first, then every face, so a block never covers a neighbour's face —
 // no gradients, no shading lines, just two flat shades of the base colour.
 function motif3DLayers(R){
@@ -459,44 +459,41 @@ function accentMarkup(ac){
   return `<path d="M 0 ${-r} L ${r} 0 L 0 ${r} L ${-r} 0 Z" fill="${ac}"/>`;
 }
 
-/* ---------- lattice ---------- */
-function placeAll(W,H,excl,ph){
-  const S=num('cell'), q=chk('quinconce'), alt=chk('mirrorAlt'), tw=num('twist');
-  const ox=ph?ph.ox:0, oy=ph?ph.oy:0;
+/* ---------- motif system: define the motif once, tile it with an SVG <pattern> ----------
+   The whole field is one <pattern> (constant element count) instead of thousands of
+   individual <use>. The logo clears a disk and only the ring of motifs around it is
+   re-stamped, so a swatch is ~a few dozen nodes regardless of size. */
+function motifSystem(){
+  const S=num('cell'), q=chk('quinconce'), alt=chk('mirrorAlt'), tw=num('twist'), T=tileSize();
+  const R=num('cell')*num('scale')/200;
   const acc=accentMarkup('ACCENT_FG');
-  const skipM=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rM;
-  const skipA=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rA;
-  // collect every motif and accent placement once
-  const spots=[], accs=[];
-  const i0=-2, i1=Math.ceil(W/S)+1, j1=Math.ceil(H/S)+1;
-  for(let i=i0;i<=i1;i++) for(let j=i0;j<=j1;j++){
-    const put=(x,y,isAlt)=>{ if(!skipM(x,y)) spots.push([x,y,isAlt]); };
-    put(i*S+ox, j*S+oy, q?false:((i+j)&1)===1&&alt);
-    if(q) put((i+0.5)*S+ox,(j+0.5)*S+oy, alt);
-    if(acc){
-      const pts=q?[[(i+0.5)*S+ox,j*S+oy],[i*S+ox,(j+0.5)*S+oy]]:[[(i+0.5)*S+ox,(j+0.5)*S+oy]];
-      for(const [ax,ay] of pts) if(!skipA(ax,ay)) accs.push([ax,ay]);
-    }
-  }
+  const depth3=(num('depth3d')||0)>0 && !chk('shadeLine');
+  let defs='';
+  if(depth3){ const {body,face}=motif3DLayers(R); defs=`<g id="mB">${body}</g><g id="mF">${face}</g>`; }
+  else defs=`<g id="m0">${motifMarkup('MOTIF_FG')}</g>`;
+  if(acc) defs+=`<g id="ma">${acc}</g>`;
   const use=(id,x,y,mir)=>`<use href="#${id}" xlink:href="#${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tw})${mir?' scale(-1 1)':''}"/>`;
-  const accLayer=accs.map(([x,y])=>use('pa',x,y,false)).join('');
-  // two-tone relief: draw every dark BACK block, then accents, then every flat FACE on
-  // top — so no block ever overlaps a neighbour's face
-  if((num('depth3d')||0)>0 && !chk('shadeLine')){
-    const {body,face}=motif3DLayers(num('cell')*num('scale')/200);
-    let out=`<defs><g id="pmB">${body}</g><g id="pmF">${face}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
-    out+=spots.map(([x,y,a])=>use('pmB',x,y,a)).join('');
-    out+=accLayer;
-    out+=spots.map(([x,y,a])=>use('pmF',x,y,a)).join('');
-    return out;
+  // stamp motifs+accents over a grid index range; excl clears a disk of radius rM,
+  // ringMax (with excl) keeps only motifs whose centre is within that radius
+  function stampRange(iA,iB,jA,jB,ox,oy,excl,ringMax){
+    let back='',accL='',face='';
+    const inRing=(x,y)=>!ringMax||Math.hypot(x-excl.cx,y-excl.cy)<=ringMax;
+    const skipM=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rM;
+    const skipA=(x,y)=>excl&&Math.hypot(x-excl.cx,y-excl.cy)<excl.rA;
+    const put=(x,y,a)=>{ if(!inRing(x,y)||skipM(x,y)) return; if(depth3){ back+=use('mB',x,y,a); face+=use('mF',x,y,a); } else face+=use('m0',x,y,a); };
+    for(let i=iA;i<=iB;i++)for(let j=jA;j<=jB;j++){
+      put(i*S+ox, j*S+oy, q?false:((i+j)&1)===1&&alt);
+      if(q) put((i+0.5)*S+ox,(j+0.5)*S+oy, alt);
+      if(acc){ const pts=q?[[(i+0.5)*S+ox,j*S+oy],[i*S+ox,(j+0.5)*S+oy]]:[[(i+0.5)*S+ox,(j+0.5)*S+oy]];
+        for(const [ax,ay] of pts) if(inRing(ax,ay)&&!skipA(ax,ay)) accL+=use('ma',ax,ay,false); }
+    }
+    return {back,accL,face};
   }
-  // flat: single motif def, one pass
-  const base=motifMarkup('MOTIF_FG');
-  let out=`<defs><g id="pm">${base}</g>${acc?`<g id="pa">${acc}</g>`:''}</defs>`;
-  out+=spots.map(([x,y,a])=>use('pm',x,y,a)).join('');
-  out+=accLayer;
-  return out;
+  return {defs,S,T,depth3,stampRange};
 }
+/* one tile's worth of motifs (with a wrap margin, clipped by the pattern/viewBox) —
+   backs first, then accents, then faces, so occlusion is right and it repeats seamlessly */
+function tileBody(sys){ const n=Math.ceil(sys.T/sys.S); const r=sys.stampRange(-1,n+1,-1,n+1,0,0,null); return r.back+r.accL+r.face; }
 /* horizontal nudge for the emblem, in px — moves the emblem and its cleared slot together */
 function mqShiftX(){ return (num('mqShift')||0)/100*num('cell'); }
 /* phase shift that puts a marque slot exactly under the (shifted) emblem centre */
@@ -559,20 +556,25 @@ function fill(motifs,c){
 
 function buildSwatch(W,H,{marque=true,style=''}={}){
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
-  let excl=null, mq='', ph=null;
+  const sys=motifSystem();
+  let ph={ox:0,oy:0}, marquePart='';
   if(useMq){
     ph=marquePhase(W,H);
-    const b=marqueBox(W,H);
-    excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:b.rA};
-    mq=marqueMarkup(b,c.fg);
+    const b=marqueBox(W,H), excl={cx:b.cx,cy:b.cy,rM:b.rM,rA:b.rA};
+    // clear the logo's disk, then re-stamp only the ring of motifs that poke back into it
+    const RR=b.rM+1.6*sys.S, span=Math.ceil(RR/sys.S)+1;
+    const ci=Math.round((b.cx-ph.ox)/sys.S), cj=Math.round((b.cy-ph.oy)/sys.S);
+    const r=sys.stampRange(ci-span,ci+span,cj-span,cj+span,ph.ox,ph.oy,excl,RR);
+    marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.rM.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marqueMarkup(b,'MOTIF_FG')}`;
   }
-  const body=fill(placeAll(W,H,excl,ph),c);
+  const patt=`<pattern id="fld" width="${sys.T}" height="${sys.T}" patternUnits="userSpaceOnUse" patternTransform="translate(${ph.ox.toFixed(1)} ${ph.oy.toFixed(1)})">${tileBody(sys)}</pattern>`;
   const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/>${body}${mq}</svg>`;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}${sys.defs}${patt}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/><rect width="${W}" height="${H}" fill="url(#fld)"/>${marquePart}</svg>`;
+  return fill(svg,c);
 }
 function buildTile(){
-  const c=colors(), T=tileSize();
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${T} ${T}" width="${T}" height="${T}"><rect width="${T}" height="${T}" fill="${c.bg}"/>${fill(placeAll(T,T,null),c)}</svg>`;
+  const c=colors(), sys=motifSystem();
+  return fill(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${sys.T} ${sys.T}" width="${sys.T}" height="${sys.T}"><defs>${sys.defs}</defs><rect width="${sys.T}" height="${sys.T}" fill="${c.bg}"/>${tileBody(sys)}</svg>`,c);
 }
 
 /* ---------- preview ---------- */
