@@ -134,6 +134,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </div>
 
   <div class="sec">
+    <h2 lang="fr">Relief — 3D</h2>
+    <div class="row"><label for="depth3d">3D depth</label><input type="range" id="depth3d" min="0" max="45" value="0"><output for="depth3d">0</output></div>
+    <div class="row"><label for="angle3d">Direction</label><input type="range" id="angle3d" min="0" max="360" value="125"><output for="angle3d">125</output></div>
+    <div class="row"><label for="shade3d">Side shade</label><input type="range" id="shade3d" min="10" max="70" value="42"><output for="shade3d">42</output></div>
+    <p class="hint">Extrudes each piece into a raised block lit from one side. Set depth to 0 for a flat pattern.</p>
+  </div>
+
+  <div class="sec">
     <h2 lang="fr">Disposition</h2>
     <div class="row"><label for="cell">Zoom</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
     <label class="chk"><input type="checkbox" id="quinconce" checked>Diagonal layout</label>
@@ -308,9 +316,24 @@ function motifPin(R,fg){
   }
   const soft=chk('pinRound')?R*0.08:0;
   const N=Math.max(1,num('pinN')||4);
-  let out='';
-  for(let k=0;k<N;k++) out+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
-  return `<g fill="${fg}"${soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:''}>${out}</g>`;
+  let pieces='';
+  for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+  const faceStroke=soft?` stroke="${fg}" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
+  const depth=num('depth3d')||0;
+  if(depth<=0) return `<g fill="${fg}"${faceStroke}>${pieces}</g>`;
+  // 3D relief: extrude every piece along one screen direction into a solid block —
+  // a lit top face (MOTIF_FG) over a stack of darker side-wall copies (MOTIF_SIDE),
+  // lit uniformly so the whole field reads like raised isometric tiles
+  const a=(num('angle3d')||125)*Math.PI/180, dep=depth/100*R;
+  const ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
+  const STEPS=Math.max(4,Math.min(60,Math.round(dep/0.9)));
+  const sideStroke=soft?` stroke="MOTIF_SIDE" stroke-width="${soft.toFixed(2)}" stroke-linejoin="round"`:'';
+  let body='';
+  for(let s=STEPS;s>=1;s--){
+    const t=s/STEPS;
+    body+=`<g transform="translate(${(ex*t).toFixed(2)} ${(ey*t).toFixed(2)})" fill="MOTIF_SIDE"${sideStroke}>${pieces}</g>`;
+  }
+  return body+`<g fill="${fg}"${faceStroke}>${pieces}</g>`;
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -395,7 +418,17 @@ function tileSize(){
   return (!chk('quinconce')&&chk('mirrorAlt'))?2*S:S;
 }
 function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
-function fill(motifs,c){ return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('ACCENT_FG',c.ac); }
+function shade(hex,amt){ /* amt<0 darken toward black, >0 lighten toward white */
+  const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  const to=amt<0?0:255, p=Math.min(1,Math.abs(amt));
+  r=Math.round(r+(to-r)*p); g=Math.round(g+(to-g)*p); b=Math.round(b+(to-b)*p);
+  return '#'+(0x1000000+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+function colors(){ return {bg:val('cBg'),fg:val('cFg'),ac:val('cAc')}; }
+function fill(motifs,c){
+  const side=shade(c.fg,-(num('shade3d')||38)/100);
+  return motifs.replaceAll('MOTIF_FG',c.fg).replaceAll('MOTIF_SIDE',side).replaceAll('ACCENT_FG',c.ac);
+}
 
 function buildSwatch(W,H,{marque=true,guide=false,style=''}={}){
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
@@ -690,7 +723,7 @@ $('dlPng').addEventListener('click',async()=>{
 });
 
 /* ---------- state in hash ---------- */
-const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','cell','accent','accentSize',
+const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','cell','accent','accentSize',
   'cBg','cFg','cAc','mqMode','mqSize','mqSlots','pngScale'];
 const HASH_CHK=['pinRound','quinconce','mirrorAlt','guide'];
 let restoring=true, hashT=0;
