@@ -101,16 +101,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .ed-btns button:hover{border-color:var(--brass)}
 .ed-btns button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .ed-btns select{font:500 10.5px var(--sans);padding:7px 8px;background:var(--paper);border:1px solid var(--hair);color:var(--ink);width:auto}
-/* Smooth/Corner as a label + a gear that carries a ring showing the point's amount */
-.ed-mode{display:inline-flex;align-items:stretch;border:1px solid var(--hair)}
-.ed-mode>button{border:none!important}
-.ed-mode-lbl{border-right:1px solid var(--hair)!important}
-.ed-mode-gear{position:relative;min-width:30px;font-size:11px!important;line-height:1;padding:6px 7px!important}
-.ed-ring{position:absolute;inset:3px;border-radius:50%;background:conic-gradient(var(--brass) calc(var(--v,0)*1%),var(--hair) 0);opacity:.6;-webkit-mask:radial-gradient(farthest-side,transparent 55%,#000 57%);mask:radial-gradient(farthest-side,transparent 55%,#000 57%);pointer-events:none}
+/* Sharp ↔ Rounded slider for the selected point (the editor dot morphs square↔circle) */
 .ed-round{display:inline-flex;align-items:center;gap:7px}
-.ed-round[hidden]{display:none}                     /* class display must not defeat the hidden attribute */
-.ed-round input[type=range]{width:84px;margin:0}
-.ed-round output{font:500 10px var(--sans);color:var(--sepia);min-width:26px;text-align:right;font-variant-numeric:tabular-nums}
+.ed-round input[type=range]{width:96px;margin:0}
+.ed-round-lbl{font:500 10px var(--sans);letter-spacing:.08em;color:var(--sepia)}
 /* Shade line + its Per motif/piece scope + a help "?" grouped as one control */
 .ed-shade{display:inline-flex;align-items:stretch;border:1px solid var(--hair)}
 .ed-shade>button,.ed-shade>select{border:none!important}
@@ -299,7 +293,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     </button>
     <div class="ed-body" id="edBody">
       <div class="ed-bar">
-        <span class="ed-hint">Drag the points. Each point can be a smooth curve or a sharp corner.</span>
+        <span class="ed-hint">Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.</span>
         <div class="ed-btns">
           <span class="ed-step" role="group" aria-label="Pieces">
             <span class="ed-step-lbl">Pieces</span>
@@ -307,15 +301,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
             <b id="edPieceN" aria-live="polite">4</b>
             <button type="button" id="edPieceUp" aria-label="More pieces">+</button>
           </span>
-          <span class="ed-mode">
-            <button type="button" id="edSmooth" class="ed-mode-lbl">Smooth</button>
-            <button type="button" id="edSmoothGear" class="ed-mode-gear" title="Fine-tune roundness" aria-label="Fine-tune roundness"><span class="ed-ring"></span>⚙</button>
+          <span class="ed-round" role="group" aria-label="Point roundness — the selected dot morphs square↔circle">
+            <span class="ed-round-lbl">Sharp</span>
+            <input type="range" id="edRoundAmt" min="0" max="100" value="50" step="1" aria-label="Point roundness — sharp to rounded">
+            <span class="ed-round-lbl">Rounded</span>
           </span>
-          <span class="ed-mode">
-            <button type="button" id="edCorner" class="ed-mode-lbl">Corner</button>
-            <button type="button" id="edCornerGear" class="ed-mode-gear" title="Fine-tune sharpness" aria-label="Fine-tune sharpness"><span class="ed-ring"></span>⚙</button>
-          </span>
-          <span id="edRoundWrap" class="ed-round" hidden><input type="range" id="edRoundAmt" min="0" max="150" value="100" aria-label="Roundness amount"><output for="edRoundAmt">100</output></span>
           <button type="button" id="edAdd">+ Point</button>
           <button type="button" id="edDel">− Point</button>
           <span class="ed-shade">
@@ -614,10 +604,14 @@ function motifSystem(){
 function tileBody(sys){ const n=Math.ceil(sys.T/sys.S); const r=sys.stampRange(-1,n+1,-1,n+1,0,0,null); return r.back+r.accL+r.face; }
 /* horizontal nudge for the emblem, in px — moves the emblem and its cleared slot together */
 function mqShiftX(){ return (num('mqShift')||0)/100*num('cell'); }
+/* the slot config that drives the phase — the live one, or the last non-zero one when the
+   logo is off, so toggling the logo never re-phases (and never falls into the wrong branch).
+   lastSlots is declared lower down but only read here at render time. */
+function effSlots(){ const s=val('mqSlots'); return s!=='0'?s:(lastSlots!=='0'?lastSlots:'4'); }
 /* phase shift that puts a marque slot exactly under the (shifted) emblem centre */
 function marquePhase(W,H){
   const S=num('cell'), q=chk('quinconce'), mod=v=>((v%S)+S)%S, sx=mqShiftX();
-  if(val('mqSlots')==='1') return {ox:mod(W/2+sx), oy:mod(H/2)};
+  if(effSlots()==='1') return {ox:mod(W/2+sx), oy:mod(H/2)};
   return q ? {ox:mod(W/2-S/2+sx), oy:mod(H/2)} : {ox:mod(W/2-S/2+sx), oy:mod(H/2-S/2)};
 }
 
@@ -691,9 +685,10 @@ function fill(motifs,c){
 function buildSwatch(W,H,{marque=true,style=''}={}){
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
   const sys=motifSystem();
-  let ph={ox:0,oy:0}, marquePart='';
+  // ALWAYS phase the lattice to the logo slot (using the remembered slot config) so toggling
+  // the logo on/off only adds/removes the emblem — the field itself never shifts
+  let ph=marque?marquePhase(W,H):{ox:0,oy:0}, marquePart='';
   if(useMq){
-    ph=marquePhase(W,H);
     const b=marqueBox(W,H);
     // the pattern paints a motif in every slot, so wipe a disk big enough to erase the
     // logo's motif(s) WHOLE (clearR covers a removed motif's full reach — no partial arcs
@@ -771,20 +766,13 @@ function renderEd(){
     for(let i=0;i<2;i++) s+=`<circle data-line="${i}" cx="${L[i][0]}" cy="${L[i][1]}" r=".075" fill="#8C3B31" stroke="#F4EFE4" stroke-width=".022"/>`;
   }
   WP.forEach((p,ix)=>{                              // handles sit at the WARPED positions; data-ix = base index
+    // the dot morphs with the point's roundness: square (sharp) → squircle → circle (rounded)
+    const half=0.054, rx=(half*Math.max(0,Math.min(1,(+p[2]||0)/2))).toFixed(3);
     const st=`fill="${ix===EDSEL?'#FFFFFF':'#F4EFE4'}" stroke="#2B2620" stroke-width="${ix===EDSEL?0.022:0.012}"`;
-    s+=p[2]
-      ? `<circle data-ix="${ix}" cx="${p[0]}" cy="${p[1]}" r=".06" ${st}/>`
-      : `<rect data-ix="${ix}" x="${p[0]-0.054}" y="${p[1]-0.054}" width=".108" height=".108" ${st}/>`;
+    s+=`<rect data-ix="${ix}" x="${(p[0]-half).toFixed(3)}" y="${(p[1]-half).toFixed(3)}" width=".108" height=".108" rx="${rx}" ry="${rx}" ${st}/>`;
   });
   $('edSvg').innerHTML=s;
-  const rnd=+SHAPE.pts[EDSEL][2]||0;                 // this point's roundness amount (0..1.5)
-  $('edSmooth').setAttribute('aria-pressed',rnd>0);
-  $('edCorner').setAttribute('aria-pressed',rnd===0);
-  $('edRoundAmt').value=Math.round(rnd*100);
-  document.querySelector('output[for="edRoundAmt"]').value=Math.round(rnd*100);
-  const rf=Math.max(0,Math.min(1,rnd/1.5));          // ring fill: Smooth shows roundness, Corner shows sharpness
-  $('edSmoothGear').style.setProperty('--v',Math.round(rf*100));
-  $('edCornerGear').style.setProperty('--v',Math.round((1-rf)*100));
+  $('edRoundAmt').value=Math.round((+SHAPE.pts[EDSEL][2]||0)*50);   // [2]0–2 → slider 0–100 (50 = medium)
   $('edPieceN').textContent=N;
   syncEdShade();
 }
@@ -821,11 +809,6 @@ $('edSvg').addEventListener('pointermove',ev=>{
   renderEd(); render();
 });
 $('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
-$('edSmooth').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=1; renderEd(); render(); } });
-$('edCorner').addEventListener('click',()=>{ if(SHAPE){ SHAPE.pts[EDSEL][2]=0; renderEd(); render(); } });
-function toggleRoundWrap(){ const w=$('edRoundWrap'); w.hidden=!w.hidden; }
-$('edSmoothGear').addEventListener('click',toggleRoundWrap);
-$('edCornerGear').addEventListener('click',toggleRoundWrap);
 $('edShadeHelp').addEventListener('click',()=>{ const i=$('edShadeInfo'); i.hidden=!i.hidden; });
 function syncEdShade(){
   const on=chk('shadeLine');
@@ -916,13 +899,13 @@ function syncRows(){ $('outlineRow').classList.toggle('opt-off',!chk('outlineOn'
 // keep the header switches in step with the values they stand for
 function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')||0)>0; const b=$('swLogo'); if(b) b.checked=val('mqSlots')!=='0'; }
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
-  if(el.type==='range') document.querySelector(`output[for="${el.id}"]`).value=el.value;
+  if(el.type==='range'){ const o=document.querySelector(`output[for="${el.id}"]`); if(o) o.value=el.value; }
   if(el.dataset.syncs){ const t=$(el.dataset.syncs); if(el.type==='checkbox') t.checked=el.checked; else { t.value=el.value; if(t.id==='cOl') olAuto=false; } }
   if(el.id==='outlineOn') syncRows();
   if(el.id==='sw3d'){ if(el.checked){ setOut('depth3d',last3d>0?last3d:30); } else { if((num('depth3d')||0)>0) last3d=num('depth3d'); setOut('depth3d',0); } }
   if(el.id==='swLogo'){ setSlots(el.checked?(lastSlots==='0'?'4':lastSlots):'0'); }
   if(el.id==='depth3d'&&(num('depth3d')||0)>0) last3d=num('depth3d');
-  if(el.id==='edRoundAmt'&&SHAPE) SHAPE.pts[EDSEL][2]=+(+el.value/100).toFixed(2);   // per-point roundness
+  if(el.id==='edRoundAmt'&&SHAPE) SHAPE.pts[EDSEL][2]=+(+el.value/50).toFixed(2);   // slider 0–100 → roundness 0–2 (50 = medium)
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   renderEd(); render();
