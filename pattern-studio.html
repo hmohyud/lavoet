@@ -815,7 +815,14 @@ function renderEd(){
   let m;
   if(depth3){ const L3=motif3DLayers(R); m=L3.body+L3.face; }
   else m=motifPin(R,'MOTIF_FG');
-  s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${m}</g>`,colors());
+  // the inter-motif accent dots read here too, so the Dots colour / shape / size / on-off all
+  // reflect in the editor. Their true cell-corner spot is off this single-motif view, so they
+  // sit in the gaps around the motif (correct direction) — drawn by the pattern's own generator.
+  const acc=accentMarkup('ACCENT_FG'); let dots='';
+  if(acc){ const pos=chk('quinconce')?[[1.25,0],[-1.25,0],[0,1.25],[0,-1.25]]:[[1.1,1.1],[-1.1,1.1],[1.1,-1.1],[-1.1,-1.1]];
+    for(const [dx,dy] of pos) dots+=`<g transform="translate(${dx} ${dy}) scale(${(1/R).toFixed(6)})">${acc}</g>`;
+  }
+  s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${m}</g>${dots}`,colors());
   if(chk('shadeLine')){
     // the split itself is drawn by motifPin above — just add the draggable light/shadow line
     const L=SHADELINE||DEFAULT_SLINE;
