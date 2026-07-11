@@ -86,10 +86,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #preview svg{display:block;width:100%;height:100%}
 #shapeEd{flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
 .ed-body{flex:1;min-height:0;display:flex;flex-direction:column}
-.ed-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:5px 10px 5px 14px;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+.ed-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:5px 10px 5px 14px;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
 /* a window-style minimise button, not an accordion chevron */
-.ed-min{flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--hair);color:var(--ink);font:600 15px/1 var(--sans);cursor:pointer;padding:0}
+.ed-min{flex:none;margin-left:auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--hair);color:var(--ink);font:600 15px/1 var(--sans);cursor:pointer;padding:0}
 .ed-min:hover{border-color:var(--brass);color:var(--brass)}
+/* minimized: the bar IS the way back in — a brass-washed button with an explicit invitation,
+   not something that reads as a mere section title */
+.ed-open-hint{display:none;font:400 10px var(--sans);letter-spacing:.14em;color:var(--brassD)}
+#stage:not(.editing) .ed-open-hint{display:inline;margin-left:auto}
+#stage:not(.editing) .ed-min{margin-left:0}
+#stage:not(.editing) .ed-toggle{cursor:pointer;background:color-mix(in srgb,var(--brass) 10%,transparent)}
+#stage:not(.editing) .ed-toggle:hover{background:color-mix(in srgb,var(--brass) 18%,transparent)}
+#stage:not(.editing) .ed-toggle:hover .ed-min{border-color:var(--brass);color:var(--brass)}
 /* draggable divider between the editor and the pattern — resize the split to taste */
 #split{flex:none;height:9px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;background:color-mix(in srgb,var(--ink) 3%,transparent)}
 #split span{width:44px;height:3px;border-radius:2px;background:var(--hair);pointer-events:none}
@@ -322,7 +330,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </div>
   <div id="shapeEd">
     <div class="ed-toggle">
-      <span>Fine-tune shape</span>
+      <span>✎ Fine-tune shape</span>
+      <span class="ed-open-hint" aria-hidden="true">Click to reopen the editor</span>
       <button type="button" id="edToggle" class="ed-min" aria-expanded="true" aria-controls="edBody" title="Minimise" aria-label="Minimise the shape editor">–</button>
     </div>
     <div class="ed-body" id="edBody">
@@ -965,6 +974,10 @@ function setEditor(open){
   render();
 }
 $('edToggle').addEventListener('click',()=>setEditor(!$('stage').classList.contains('editing')));
+/* minimized, the whole title bar reopens the editor (the button click is handled above) */
+document.querySelector('.ed-toggle').addEventListener('click',e=>{
+  if(!$('stage').classList.contains('editing')&&!e.target.closest('#edToggle')) setEditor(true);
+});
 // desktop: drag the divider to re-apportion editor vs pattern (persisted; double-click resets)
 (function initSplit(){
   const sp=$('split'), st=$('stage'), ed=$('shapeEd');
