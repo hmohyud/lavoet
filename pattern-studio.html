@@ -825,14 +825,22 @@ function renderEd(){
     // master's block below the ghost faces (pattern order: backs, then faces), its face on top
     inner=`${M3.body}<g opacity=".55">${m}</g>${M3.face}`; }
   else{
-    // flat: the motif EXACTLY as the pattern layers it (outline underlay behind every fill),
-    // then each ghost is veiled toward the background — grown to swallow its share of the
-    // outline ring — so the master keeps its full "around the shape" border, crisp
+    // flat: the motif EXACTLY as the pattern layers it, then ONE veil layer dims the
+    // ghost-only region — the ghost paths union inside a single .45 group (overlaps can't
+    // double-dim) and a mask carves the grown master out, so an overlap with the master
+    // shows the pattern's own full-strength pixels, never a phantom negative space
     const grow=chk('outlineOn')?(val('outlineMode')==='edge'?(num('outlineW')||2):2*(num('outlineW')||2))
               :(chk('pinRound')?R*0.08:0);
-    const d=piecePathD(R); let veil='';
-    for(let k=1;k<N;k++) veil+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${bg}"${grow?` stroke="${bg}" stroke-width="${grow.toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`:''} opacity=".45"/>`;
-    inner=m+veil;
+    const gs=grow?` stroke-width="${grow.toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`:'';
+    const d=piecePathD(R), E=(1.6*R).toFixed(1), W2=(3.2*R).toFixed(1);
+    let ghosts='';
+    for(let k=1;k<N;k++) ghosts+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+    inner=m
+      +`<mask id="edGhostVeil" maskUnits="userSpaceOnUse" x="-${E}" y="-${E}" width="${W2}" height="${W2}">`
+      +`<rect x="-${E}" y="-${E}" width="${W2}" height="${W2}" fill="#fff"/>`
+      +`<path d="${d}" fill="#000"${grow?` stroke="#000"${gs}`:''}/>`
+      +`</mask>`
+      +`<g mask="url(#edGhostVeil)" opacity=".45" fill="${bg}"${grow?` stroke="${bg}"${gs}`:''}>${ghosts}</g>`;
   }
   s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${inner}</g>`,colors());
   if(chk('shadeLine')){
