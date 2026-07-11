@@ -20,10 +20,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13px;display:flex;flex-direction:column}
-.mast{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:14px 22px;border-bottom:1px solid var(--hair)}
-.mast .wm{font-family:var(--serif);font-weight:600;font-size:22px;letter-spacing:.22em;text-indent:.22em}
-.mast .sub{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--sepia)}
-.mast .loc{font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--sepia)}
 main{flex:1;display:flex;min-height:0}
 /* ---------- panel ---------- */
 #panel{width:300px;flex:none;overflow-y:auto;border-right:1px solid var(--hair);padding:6px 20px 28px;scrollbar-width:thin}
@@ -131,12 +127,15 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #edSvg{flex:1;min-height:0;display:block;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;cursor:default}
 #edSvg [data-ix]{cursor:grab}
 .stage-foot{display:flex;justify-content:space-between;gap:14px;padding:8px 18px;border-top:1px solid var(--hair);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--sepia)}
+/* the branding lives here now — the old masthead gave its space to the studio */
+.foot-brand{font-family:var(--serif);font-weight:600;font-size:11.5px;letter-spacing:.22em;color:var(--ink);white-space:nowrap}
+.foot-brand .foot-sub{font-family:var(--sans);font-weight:400;font-size:10px;color:var(--sepia)}
 /* ---------- phone: preview stays pinned on top, controls get big touch targets ---------- */
 @media (max-width:760px){
   main{flex-direction:column;overflow-y:auto;overflow-x:hidden}
   #stage{order:-1;position:sticky;top:0;z-index:5;background:var(--paper);flex:none;box-shadow:0 1px 0 var(--hair)}
   #preview{flex:none}
-  .stage-foot{padding:6px 14px;font-size:9px}
+  .stage-foot{padding:6px 14px;font-size:9px;flex-wrap:wrap;row-gap:2px}   /* wrap, never clip */
   #panel{width:100%;border-right:none;overflow:visible;padding:0 16px 44px}
   .row{grid-template-columns:1fr 96px 36px;min-height:44px}
   input[type=range]{height:34px}
@@ -146,8 +145,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   select{padding:11px 8px;font-size:13px}
   .btns button{padding:14px 10px}
   .col input[type=color]{height:46px}
-  .mast{padding:12px 16px}
-  .mast .loc{display:none}
+  .foot-brand{display:none}                           /* phone: the footer keeps only the tile/swatch facts */
   /* phone: BOTH views stay stacked and visible — the switcher just decides which one is big.
      The stage takes most of the screen; the accordions scroll below it. */
   .view-seg{display:flex;border:none;border-bottom:1px solid var(--hair)}
@@ -174,12 +172,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 </style>
 </head>
 <body>
-
-<header class="mast">
-  <div class="wm">LAVOËT</div>
-  <div class="sub"><span lang="fr">Atelier de la toile</span> — pattern studio</div>
-  <div class="loc" lang="fr">Paris — VIII<sup>e</sup></div>
-</header>
 
 <main>
 <aside id="panel">
@@ -367,7 +359,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </div>
   <div id="split" title="Drag to resize the editor / pattern split" aria-hidden="true"><span></span></div>
   <div id="preview" role="img" aria-label="Pattern preview"></div>
-  <div class="stage-foot"><span id="footL"></span><span id="footR"></span></div>
+  <div class="stage-foot"><span class="foot-brand">LAVOËT<span class="foot-sub" lang="fr"> — Atelier de la toile</span></span><span id="footL"></span><span id="footR"></span></div>
 </section>
 </main>
 
