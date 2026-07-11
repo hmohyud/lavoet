@@ -781,6 +781,7 @@ function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs
 function render(){
   clearTimeout(raf);
   raf=setTimeout(()=>{
+    renderEd();          // the editor follows every render path — it can never lag the pattern
     syncOutlineColor(); updateMirrors(); syncHeaderToggles();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
@@ -1016,7 +1017,9 @@ for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('cl
 function syncRows(){ $('outlineRow').classList.toggle('opt-off',!chk('outlineOn')); }
 // keep the header switches in step with the values they stand for
 function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')||0)>0; const b=$('swLogo'); if(b) b.checked=val('mqSlots')!=='0'; }
-document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{
+/* bound to BOTH input and change: native colour pickers (the Windows dialog especially)
+   can commit their final value with only a change event — input alone left stale views */
+document.querySelectorAll('input,select').forEach(el=>['input','change'].forEach(evt=>el.addEventListener(evt,()=>{
   if(el.type==='range'){ const o=document.querySelector(`output[for="${el.id}"]`); if(o) o.value=el.value; }
   if(el.dataset.syncs){ const t=$(el.dataset.syncs); if(el.type==='checkbox') t.checked=el.checked; else { t.value=el.value; if(t.id==='cOl') olAuto=false; } }
   if(el.id==='outlineOn') syncRows();
@@ -1027,7 +1030,7 @@ document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   renderEd(); render();
-}));
+})));
 /* close every help bubble — section "?" popovers and the shade-line one */
 function hideAllHelp(){ for(const i of document.querySelectorAll('.acc-info,.help-bubble')) i.hidden=true; }
 /* accordion open/close + per-section “?” info; remembered across visits, closed by default */
