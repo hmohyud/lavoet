@@ -535,20 +535,22 @@ function shadeLineNC(R){
   let nx=p2[1]-p1[1], ny=-(p2[0]-p1[0]); const nl=Math.hypot(nx,ny)||1; nx/=nl; ny/=nl;
   return {nx,ny,c:nx*p1[0]+ny*p1[1]};
 }
-// flat motif — either plain pieces or split across a light/shadow line
-function motifPin(R,fg){
-  const d=piecePathD(R), N=Math.max(1,num('pinN')||4);
+// flat motif — either plain pieces or split across a light/shadow line.
+// solo: draw only the master piece (k=0) — the editor overlays it full-strength above
+// the faded ghost copies; the geometry per piece is identical to the full render.
+function motifPin(R,fg,solo){
+  const d=piecePathD(R), N=Math.max(1,num('pinN')||4), K=solo?1:N;
   if(!chk('shadeLine')){
-    let pieces=''; for(let k=0;k<N;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
-    return `${outlineUnderlay(d,N)}<g fill="${fg}"${strokeAttr(R,fg)}>${pieces}</g>`;
+    let pieces=''; for(let k=0;k<K;k++) pieces+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+    return `${outlineUnderlay(d,K)}<g fill="${fg}"${strokeAttr(R,fg)}>${pieces}</g>`;
   }
   // shade across a line: light full piece + a darker region clipped to the shadow side
   const poly=piecePolygon(R), per=chk('shadeScope'), {nx,ny,c}=shadeLineNC(R);
   const soft=chk('pinRound'), outline=chk('outlineOn');
   const lightStroke=(!outline&&soft)?` stroke="${fg}" stroke-width="${(R*0.08).toFixed(2)}" stroke-linejoin="round"`:'';
   const edgeOut=outline&&val('outlineMode')==='edge';
-  let out=outlineUnderlay(d,N);                          // "Around the shape" border, behind the fills
-  for(let k=0;k<N;k++){
+  let out=outlineUnderlay(d,K);                          // "Around the shape" border, behind the fills
+  for(let k=0;k<K;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th), rot=+(k*360/N).toFixed(1);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);              // piece k in global frame
     // whole-motif: one fixed line for all pieces; per-piece: the line rotates with the piece
@@ -564,8 +566,8 @@ function motifPin(R,fg){
 // darker shade, offset along the direction) and a FRONT layer (the flat faces). The tile
 // draws every back first, then every face, so a block never covers a neighbour's face —
 // no gradients, no shading lines, just two flat shades of the base colour.
-function motif3DLayers(R){
-  const d=piecePathD(R), N=Math.max(1,num('pinN')||4);
+function motif3DLayers(R,solo){
+  const d=piecePathD(R), N=Math.max(1,num('pinN')||4), K=solo?1:N;
   const S=num('cell'), poly=piecePolygon(R);
   let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
   let dep=(num('depth3d')||0)/100*R; dep=Math.min(dep, Math.max(2, S*0.5-Rmax)); // stay in cell
@@ -573,7 +575,7 @@ function motif3DLayers(R){
   const bev=(num('bevel')||0)/100;                 // lit chamfer strip along the top edge
   const P=(...pts)=>`<path d="M ${pts.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
   let bodyPaths='', bevPaths='', face='';
-  for(let k=0;k<N;k++){
+  for(let k=0;k<K;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);          // piece in global frame
     const back=g.map(([x,y])=>[x+ex,y+ey]);
@@ -589,7 +591,7 @@ function motif3DLayers(R){
   // read as an outline (worst with a strong highlight); the block already bolds the pieces.
   // A real outline (edge style) still strokes the faces when it's on.
   const fstroke=chk('outlineOn')?strokeAttr(R,'MOTIF_TOP'):'';
-  return {body, face:`${outlineUnderlay(d,N)}<g fill="MOTIF_TOP"${fstroke}>${face}</g>`};
+  return {body, face:`${outlineUnderlay(d,K)}<g fill="MOTIF_TOP"${fstroke}>${face}</g>`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -815,14 +817,17 @@ function renderEd(){
   let m;
   if(depth3){ const L3=motif3DLayers(R); m=L3.body+L3.face; }
   else m=motifPin(R,'MOTIF_FG');
-  // the inter-motif accent dots read here too, so the Dots colour / shape / size / on-off all
-  // reflect in the editor. Their true cell-corner spot is off this single-motif view, so they
-  // sit in the gaps around the motif (correct direction) — drawn by the pattern's own generator.
-  const acc=accentMarkup('ACCENT_FG'); let dots='';
-  if(acc){ const pos=chk('quinconce')?[[1.25,0],[-1.25,0],[0,1.25],[0,-1.25]]:[[1.1,1.1],[-1.1,1.1],[1.1,-1.1],[-1.1,-1.1]];
-    for(const [dx,dy] of pos) dots+=`<g transform="translate(${dx} ${dy}) scale(${(1/R).toFixed(6)})">${acc}</g>`;
-  }
-  s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${m}</g>${dots}`,colors());
+  // ghost copies sit a little in the background — only the master piece is directly editable.
+  // Exception: a whole-motif shade line cuts every piece where it stands, so with "Per motif"
+  // scope every piece is the live subject and shows full-strength.
+  const allLive=chk('shadeLine')&&!chk('shadeScope');
+  let inner;
+  if(allLive||N<2) inner=m;
+  else if(depth3){ const M3=motif3DLayers(R,true);
+    // master's block below the ghost faces (pattern order: backs, then faces), its face on top
+    inner=`${M3.body}<g opacity=".55">${m}</g>${M3.face}`; }
+  else inner=`<g opacity=".55">${m}</g>${motifPin(R,'MOTIF_FG',true)}`;
+  s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${inner}</g>`,colors());
   if(chk('shadeLine')){
     // the split itself is drawn by motifPin above — just add the draggable light/shadow line
     const L=SHADELINE||DEFAULT_SLINE;
