@@ -832,7 +832,16 @@ function renderEd(){
   else if(depth3){ const M3=motif3DLayers(R,true);
     // master's block below the ghost faces (pattern order: backs, then faces), its face on top
     inner=`${M3.body}<g opacity=".55">${m}</g>${M3.face}`; }
-  else inner=`<g opacity=".55">${m}</g>${motifPin(R,'MOTIF_FG',true)}`;
+  else{
+    // flat: the motif EXACTLY as the pattern layers it (outline underlay behind every fill),
+    // then each ghost is veiled toward the background — grown to swallow its share of the
+    // outline ring — so the master keeps its full "around the shape" border, crisp
+    const grow=chk('outlineOn')?(val('outlineMode')==='edge'?(num('outlineW')||2):2*(num('outlineW')||2))
+              :(chk('pinRound')?R*0.08:0);
+    const d=piecePathD(R); let veil='';
+    for(let k=1;k<N;k++) veil+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})" fill="${bg}"${grow?` stroke="${bg}" stroke-width="${grow.toFixed(2)}" stroke-linejoin="miter" stroke-miterlimit="9"`:''} opacity=".45"/>`;
+    inner=m+veil;
+  }
   s+=fill(`<g transform="scale(${(1/R).toFixed(6)})">${inner}</g>`,colors());
   if(chk('shadeLine')){
     // the split itself is drawn by motifPin above — just add the draggable light/shadow line
