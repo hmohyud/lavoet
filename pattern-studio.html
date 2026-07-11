@@ -90,9 +90,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #preview svg{display:block;width:100%;height:100%}
 #shapeEd{flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
 .ed-body{flex:1;min-height:0;display:flex;flex-direction:column}
-.ed-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:9px 14px;background:none;border:none;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);cursor:pointer}
-.ed-toggle:hover{color:var(--brass)}
-.ed-toggle-chev{transition:transform .15s;font-size:12px}
+.ed-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:5px 10px 5px 14px;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+/* a window-style minimise button, not an accordion chevron */
+.ed-min{flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--hair);color:var(--ink);font:600 15px/1 var(--sans);cursor:pointer;padding:0}
+.ed-min:hover{border-color:var(--brass);color:var(--brass)}
 /* draggable divider between the editor and the pattern — resize the split to taste */
 #split{flex:none;height:9px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;background:color-mix(in srgb,var(--ink) 3%,transparent)}
 #split span{width:44px;height:3px;border-radius:2px;background:var(--hair);pointer-events:none}
@@ -102,7 +103,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #stage:not(.editing) #split{display:none}
 #stage:not(.editing) .ed-body{display:none}
 #stage:not(.editing) .ed-toggle{border-bottom:none}
-#stage:not(.editing) .ed-toggle-chev{transform:rotate(-90deg)}
 .ed-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;flex-wrap:wrap;border-bottom:1px solid var(--hair)}
 .ed-hint{font-size:10.5px;color:var(--sepia)}
 .ed-btns{display:flex;gap:6px;flex-wrap:wrap}
@@ -329,9 +329,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <button type="button" id="vwPat" aria-pressed="false">▦ Pattern</button>
   </div>
   <div id="shapeEd">
-    <button type="button" id="edToggle" class="ed-toggle" aria-expanded="true" aria-controls="edBody">
-      <span>Fine-tune shape</span><span class="ed-toggle-chev" aria-hidden="true">▾</span>
-    </button>
+    <div class="ed-toggle">
+      <span>Fine-tune shape</span>
+      <button type="button" id="edToggle" class="ed-min" aria-expanded="true" aria-controls="edBody" title="Minimise" aria-label="Minimise the shape editor">–</button>
+    </div>
     <div class="ed-body" id="edBody">
       <div class="ed-bar">
         <span class="ed-hint">Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.</span>
@@ -774,13 +775,18 @@ function buildTile(){
 
 /* ---------- preview ---------- */
 const preview=$('preview');
-let raf=0;
+const RENDER_GAP=50;   // ms between live refreshes while dragging (leading+trailing throttle)
+let raf=0, lastRun=0;
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
 function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')){ const s=$(el.dataset.syncs); if(el.type==='checkbox') el.checked=s.checked; else el.value=s.value; } }
 function render(){
+  // throttle, not debounce: a drag renders every RENDER_GAP ms (live pattern), plus a
+  // trailing pass after the last event; an isolated change still renders immediately
   clearTimeout(raf);
+  const wait=Math.max(0,lastRun+RENDER_GAP-performance.now());
   raf=setTimeout(()=>{
+    lastRun=performance.now();
     renderEd();          // the editor follows every render path — it can never lag the pattern
     syncOutlineColor(); updateMirrors(); syncHeaderToggles();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
@@ -791,8 +797,7 @@ function render(){
     $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
     $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the logo.`;
-    saveHash();
-  },30);
+  },wait);
 }
 new ResizeObserver(render).observe(preview);
 
@@ -935,11 +940,17 @@ $('edReset').addEventListener('click',()=>{
 // the fine-tune editor shows by default; edToggle minimizes it to just its title bar
 function setEditor(open){
   $('stage').classList.toggle('editing',open);
-  $('edToggle').setAttribute('aria-expanded',open?'true':'false');
+  const b=$('edToggle');
+  b.setAttribute('aria-expanded',open?'true':'false');
+  b.textContent=open?'–':'+';
+  b.title=open?'Minimise':'Restore';
+  b.setAttribute('aria-label',(open?'Minimise':'Restore')+' the shape editor');
   try{ localStorage.setItem('lavoet-ed-open',open?'1':'0'); }catch(e){}
   if(open){
     if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; }
-    EDSNAP=SHAPE.pts.map(p=>p.slice());   // editor "Reset" baselines to the shape as you opened it
+    // "Reset" keeps its true baseline (the trunk, or a loaded config) — re-opening
+    // the editor mid-session must not quietly re-baseline it to the current tweaks
+    if(!EDSNAP) EDSNAP=SHAPE.pts.map(p=>p.slice());
     renderEd();
   }
   render();
@@ -1177,9 +1188,8 @@ $('cfgFile').addEventListener('change',async()=>{
     cfg=pngReadConfig(new Uint8Array(await f.arrayBuffer()));
   }
   if(!cfg){ alert('No Lavoët settings found in that file — use a swatch or tile downloaded from this studio.'); return; }
-  restoring=true;
   applyParams(new URLSearchParams(cfg));
-  restoring=false;
+  EDSNAP=SHAPE.pts.map(p=>p.slice());   // editor "Reset" returns to the loaded config's shape
   renderEd(); render();
 });
 
@@ -1216,7 +1226,6 @@ $('dlPng').addEventListener('click',async()=>{
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
   'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d'];
-let restoring=true, hashT=0;
 function paramsString(){
   const p=new URLSearchParams();
   for(const id of HASH_IDS) p.set(id,val(id));
@@ -1224,15 +1233,6 @@ function paramsString(){
   if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
   if(SHADELINE) p.set('sline',SHADELINE.map(q=>q.join(':')).join(';'));
   return p.toString();
-}
-function saveHash(){
-  if(restoring) return;
-  clearTimeout(hashT);
-  hashT=setTimeout(()=>{ /* throttled: Safari/Firefox rate-limit replaceState */
-    const h='#'+paramsString();
-    if(h===location.hash) return;
-    try{ history.replaceState(null,'',h); }catch(e){}
-  },350);
 }
 function applyParams(p){
   // the dots list became a toggle: any old accent value except 'none' means dots on
@@ -1261,18 +1261,9 @@ function applyParams(p){
   } else SHADELINE=null;
   setSlots(val('mqSlots'));
 }
-function loadHash(){
-  if(location.hash.length<2) return;
-  let p; try{ p=new URLSearchParams(location.hash.slice(1)); }catch(e){ return; }
-  applyParams(p);
-}
-window.addEventListener('hashchange',()=>{
-  restoring=true; loadHash(); restoring=false; render();
-});
-restoring=true;
-if(location.hash.length<2) applyTrunkMotif(); /* first visit: the real 1930s canvas */
-else loadHash();
-restoring=false;
+/* settings live in exported files (Load config…), not the URL — scrub any legacy hash */
+if(location.hash) try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+applyTrunkMotif(); /* every visit opens on the real 1930s canvas */
 setSlots(val('mqSlots'));
 syncRows();
 render();
