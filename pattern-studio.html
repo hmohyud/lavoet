@@ -947,13 +947,9 @@ $('edDel').addEventListener('click',()=>{
   if(!SHAPE||SHAPE.pts.length<=3) return;
   SHAPE.pts.splice(EDSEL,1); EDSEL=Math.max(0,EDSEL-1); renderEd(); render();
 });
-let EDSNAP=null;
 $('edReset').addEventListener('click',()=>{
-  /* back to what the editor opened with, and to four pieces */
-  if(EDSNAP) SHAPE={pts:EDSNAP.map(p=>p.slice())}; else SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())};
-  $('pinN').value=4;
-  const o=document.querySelector('output[for="pinN"]'); if(o) o.value=4;
-  EDSEL=0; renderEd(); render();
+  /* full reset — identical to "Original trunk motif": shape, sliders, colours, outline, all of it */
+  applyTrunkMotif(); renderEd(); render();
 });
 // the fine-tune editor shows by default; edToggle minimizes it to just its title bar
 function setEditor(open){
@@ -966,9 +962,6 @@ function setEditor(open){
   try{ localStorage.setItem('lavoet-ed-open',open?'1':'0'); }catch(e){}
   if(open){
     if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; }
-    // "Reset" keeps its true baseline (the trunk, or a loaded config) — re-opening
-    // the editor mid-session must not quietly re-baseline it to the current tweaks
-    if(!EDSNAP) EDSNAP=SHAPE.pts.map(p=>p.slice());
     renderEd();
   }
   render();
@@ -1033,7 +1026,6 @@ function applyTrunkMotif(){
   setOut('pinTwist',0); setOut('pinTwistO',0);       // the original trunk shows UN-warped
   $('cBg').value='#543424'; $('cFg').value='#a8823f'; $('cAc').value='#a8823f';
   olAuto=true; updateMirrors();                      // outline colour re-derives from the trunk gold
-  EDSNAP=SHAPE.pts.map(p=>p.slice());                // editor "Reset" now baselines to the trunk, not a stale shape
 }
 $('edTrunk').addEventListener('click',()=>{ applyTrunkMotif(); renderEd(); render(); });
 
@@ -1211,7 +1203,6 @@ $('cfgFile').addEventListener('change',async()=>{
   }
   if(!cfg){ alert('No Lavoët settings found in that file — use a swatch or tile downloaded from this studio.'); return; }
   applyParams(new URLSearchParams(cfg));
-  EDSNAP=SHAPE.pts.map(p=>p.slice());   // editor "Reset" returns to the loaded config's shape
   renderEd(); render();
 });
 
