@@ -78,6 +78,22 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .png-row{display:grid;grid-template-columns:1fr 64px;gap:8px}
 .hint{font-size:10.5px;line-height:1.5;color:var(--sepia);margin-top:10px}
 .sig{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--sepia);margin-top:18px;text-align:center}
+/* saved designs: manual saves and, set apart, the rolling autosaves */
+.saves{margin-top:14px;display:flex;flex-direction:column;gap:16px}
+.saves-h{font:500 9.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--brassD);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.saves-h::after{content:"";flex:1;height:1px;background:var(--hair)}
+.saves-empty{font-size:11px;font-style:italic;color:var(--sepia)}
+.save-item{display:flex;align-items:center;gap:8px;padding:8px 6px 8px 11px;border:1px solid var(--hair);margin-bottom:6px;cursor:pointer;background:none;transition:border-color .12s}
+.save-item:last-child{margin-bottom:0}
+.save-item:hover{border-color:var(--brass)}
+.save-item .nm{flex:1;min-width:0;text-align:left;font:500 12px var(--sans);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.save-item .ts{flex:none;font:400 9.5px var(--sans);letter-spacing:.05em;color:var(--sepia)}
+.save-item .del{flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--hair);background:none;color:var(--sepia);font:400 15px/1 var(--sans);cursor:pointer;border-radius:2px}
+.save-item .del:hover{border-color:var(--red);color:var(--red)}
+/* autosaves read as an automatic safety net, not deliberate saves */
+.save-item.auto{border-style:dashed;background:color-mix(in srgb,var(--brass) 6%,transparent)}
+.save-item.auto .nm{font-weight:400;font-style:italic;color:var(--sepia)}
+.save-tag{flex:none;font:600 8px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--brass);border:1px solid color-mix(in srgb,var(--brass) 45%,transparent);padding:2px 5px;border-radius:2px}
 #mqOpts{transition:opacity .2s}
 [hidden]{display:none!important}
 /* ---------- stage ---------- */
@@ -302,6 +318,15 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <label class="chk"><input type="checkbox" id="logo3d">3D logo (matches the motif relief)</label>
         <label class="chk"><input type="checkbox" id="dotsInLogo">Dots in the logo area</label>
       </div>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Saved designs</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Your work is kept in this browser automatically — close the tab and reopen to pick up exactly where you left off (only Reset goes back to the original trunk motif). “Save current design” pins a named copy you can return to any time. Autosaves keep the last three versions as a safety net; they’re the dashed ones.</p>
+      <div class="btns"><button type="button" id="saveNew">Save current design</button></div>
+      <div id="savesList" class="saves"></div>
     </div>
   </section>
 
@@ -777,7 +802,7 @@ function buildTile(){
 /* ---------- preview ---------- */
 const preview=$('preview');
 const RENDER_GAP=50;   // ms between live refreshes while dragging (leading+trailing throttle)
-let raf=0, lastRun=0;
+let raf=0, lastRun=0, autoT=0;
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
 function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')){ const s=$(el.dataset.syncs); if(el.type==='checkbox') el.checked=s.checked; else el.value=s.value; } }
@@ -798,6 +823,8 @@ function render(){
     $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
     $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the logo.`;
+    persistSession();    // remember exactly where the user is, so a close/reopen resumes here
+    armAutosave();       // and fold a settled snapshot into the rolling 3-deep autosave history
   },wait);
 }
 new ResizeObserver(render).observe(preview);
@@ -1274,11 +1301,77 @@ function applyParams(p){
   } else SHADELINE=null;
   setSlots(val('mqSlots'));
 }
-/* settings live in exported files (Load config…), not the URL — scrub any legacy hash */
+/* ---------- local saves: working session + named saves + rolling autosaves ---------- */
+const SESS_KEY='lavoet-ps-session', SAVES_KEY='lavoet-ps-saves', AUTOS_KEY='lavoet-ps-autos';
+function loadJSON(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } }
+function saveJSON(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function persistSession(){ try{ localStorage.setItem(SESS_KEY,paramsString()); }catch(e){} }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function relTime(ts){
+  const s=Math.max(0,(Date.now()-ts)/1000);
+  if(s<45) return 'just now';
+  if(s<3600) return Math.round(s/60)+' min ago';
+  if(s<86400) return Math.round(s/3600)+' h ago';
+  return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+function armAutosave(){                                 // a settled snapshot, ~2.5s after edits stop
+  clearTimeout(autoT);
+  autoT=setTimeout(()=>{
+    const cfg=paramsString(), arr=loadJSON(AUTOS_KEY);
+    if(arr[0]&&arr[0].cfg===cfg) return;                // nothing changed since the last snapshot
+    arr.unshift({cfg,ts:Date.now()});
+    saveJSON(AUTOS_KEY,arr.slice(0,3));                 // keep only the three most recent
+    renderSaves();
+  },2500);
+}
+function applyCfg(cfg){ applyParams(new URLSearchParams(cfg)); renderEd(); render(); }
+function renderSaves(){
+  const box=$('savesList'); if(!box) return;
+  const saves=loadJSON(SAVES_KEY), autos=loadJSON(AUTOS_KEY);
+  let h='<div><div class="saves-h">Your saves</div>';
+  if(!saves.length) h+='<p class="saves-empty">None yet — “Save current design” keeps a named copy here.</p>';
+  else for(const s of saves)
+    h+=`<div class="save-item" data-load="m:${s.id}"><span class="nm">${escapeHtml(s.name)}</span><span class="ts">${relTime(s.ts)}</span><button type="button" class="del" data-del="m:${s.id}" title="Delete" aria-label="Delete ${escapeHtml(s.name)}">×</button></div>`;
+  h+='</div>';
+  if(autos.length){
+    h+='<div><div class="saves-h">Autosaves</div>';
+    autos.forEach((a,i)=>{ h+=`<div class="save-item auto" data-load="a:${i}"><span class="save-tag">Auto</span><span class="nm">${relTime(a.ts)}</span><button type="button" class="del" data-del="a:${i}" title="Discard" aria-label="Discard autosave">×</button></div>`; });
+    h+='</div>';
+  }
+  box.innerHTML=h;
+}
+$('saveNew').addEventListener('click',()=>{
+  const saves=loadJSON(SAVES_KEY);
+  const name=(prompt('Name this design',`Design ${saves.length+1}`)||'').trim();
+  if(!name) return;
+  saves.unshift({id:'s'+Date.now().toString(36),name,cfg:paramsString(),ts:Date.now()});
+  saveJSON(SAVES_KEY,saves.slice(0,50));
+  renderSaves();
+});
+$('savesList').addEventListener('click',e=>{
+  const del=e.target.closest('[data-del]');
+  if(del){
+    const [t,k]=del.dataset.del.split(':');
+    if(t==='m'){ if(!confirm('Delete this saved design?')) return; saveJSON(SAVES_KEY,loadJSON(SAVES_KEY).filter(s=>s.id!==k)); }
+    else { const arr=loadJSON(AUTOS_KEY); arr.splice(+k,1); saveJSON(AUTOS_KEY,arr); }
+    renderSaves(); return;
+  }
+  const row=e.target.closest('[data-load]');
+  if(row){
+    const [t,k]=row.dataset.load.split(':');
+    const src=t==='m'?loadJSON(SAVES_KEY).find(s=>s.id===k):loadJSON(AUTOS_KEY)[+k];
+    if(src) applyCfg(src.cfg);
+  }
+});
+
+/* state persists locally now, not in the URL — scrub any legacy hash */
 if(location.hash) try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-applyTrunkMotif(); /* every visit opens on the real 1930s canvas */
+/* pick up where you left off; only Reset returns to the original trunk motif */
+let sess=null; try{ sess=localStorage.getItem(SESS_KEY); }catch(e){}
+if(sess) applyParams(new URLSearchParams(sess)); else applyTrunkMotif();
 setSlots(val('mqSlots'));
 syncRows();
+renderSaves();
 render();
 /* the fine-tune editor is shown by default (remembered across visits) */
 (function initEditor(){
