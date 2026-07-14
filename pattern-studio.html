@@ -51,6 +51,7 @@ main{flex:1;display:flex;min-height:0}
 .acc-info::after{content:"";position:absolute;top:-6px;right:22px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
 .acc-info b{color:var(--brass)}
 .view-seg{display:none}                              /* phone-only: focus the editor or the pattern */
+.seg-lbl{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin:2px 0 6px}
 .seg{display:flex;border:1px solid var(--ink);width:100%}
 .seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
 .seg button:last-child{border-right:none}
@@ -321,7 +322,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="acc-head"><span class="acc-title">Logo</span><label class="acc-sw" title="Logo on/off"><input type="checkbox" id="swLogo"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch, replacing one motif or a block of four so the pattern stays even. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
-      <div class="seg" role="group" aria-label="Centre logo">
+      <label class="seg-lbl">Size — how many motifs it fills</label>
+      <div class="seg" role="group" aria-label="Logo size">
         <button type="button" data-slots="0" aria-pressed="false">Off</button>
         <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
         <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
@@ -335,8 +337,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
             <option value="text">LAVOËT only</option>
           </select>
         </div>
-        <div class="row"><label for="mqSize">Logo size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
-        <div class="row"><label for="mqShift">Shift left / right</label><input type="range" id="mqShift" min="-100" max="100" value="0"><output for="mqShift">0</output></div>
+        <div class="row"><label for="mqSize">Fine size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <label class="chk"><input type="checkbox" id="logo3d">3D logo (matches the motif relief)</label>
         <label class="chk"><input type="checkbox" id="dotsInLogo">Dots in the logo area</label>
       </div>
@@ -730,7 +731,7 @@ function motifSystem(){
    backs first, then accents, then faces, so occlusion is right and it repeats seamlessly */
 function tileBody(sys){ const n=Math.ceil(sys.T/sys.S); const r=sys.stampRange(-1,n+1,-1,n+1,0,0,null); return r.back+r.accL+r.face; }
 /* horizontal nudge for the emblem, in px — moves the emblem and its cleared slot together */
-function mqShiftX(){ return (num('mqShift')||0)/100*num('cell'); }
+function mqShiftX(){ return 0; }   // left/right shift control removed — emblem stays centred
 /* the slot config that drives the phase — the live one, or the last non-zero one when the
    logo is off, so toggling the logo never re-phases (and never falls into the wrong branch).
    lastSlots is declared lower down but only read here at render time. */
@@ -1325,7 +1326,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqShift','mqSlots'];
+  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d'];
 function paramsString(){
   const p=new URLSearchParams();
