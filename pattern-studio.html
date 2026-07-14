@@ -114,7 +114,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rst:hover{background:color-mix(in srgb,var(--red) 8%,transparent)}
 .rst-fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);z-index:0;transition:width .18s ease}
 .rst.holding{background:color-mix(in srgb,var(--red) 42%,var(--paper))}
-.rst.holding .rst-fill{width:100%;transition:width .9s linear}
+.rst.holding .rst-fill{width:100%;transition:width .6s linear}
 .rst.done{background:var(--red)}
 .rst-label{position:relative;z-index:1}
 .rst.holding .rst-label,.rst.done .rst-label{color:var(--paper)}
@@ -634,7 +634,10 @@ function motif3DLayers(R,solo){
   const a=(num('angle3d')||55)*Math.PI/180, ex=Math.cos(a)*dep, ey=Math.sin(a)*dep;
   const bev=(num('bevel')||0)/100;                 // lit chamfer strip along the top edge
   const P=(...pts)=>`<path d="M ${pts.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z"/>`;
-  let bodyPaths='', bevPaths='', face='';
+  // a shade line, if drawn, ALSO splits the raised top: its shadow half drops to the block's
+  // dark tone, so the relief reads as lit from the drawn direction (3D + shading now coexist)
+  const shade=chk('shadeLine'), per=chk('shadeScope'), sl=shade?shadeLineNC(R):null;
+  let bodyPaths='', bevPaths='', face='', faceDark='';
   for(let k=0;k<K;k++){
     const th=k*2*Math.PI/N, ct=Math.cos(th), st=Math.sin(th);
     const g=poly.map(([x,y])=>[x*ct-y*st, x*st+y*ct]);          // piece in global frame
@@ -645,13 +648,18 @@ function motif3DLayers(R,solo){
         bevPaths+=P(A,B,MB,MA); bodyPaths+=P(MA,MB,TB,TA); }         // lit rim near the face, dark below
       else bodyPaths+=P(A,B,TB,TA); }
     face+=`<path d="${d}" transform="rotate(${+(k*360/N).toFixed(1)})"/>`;
+    if(shade){                                                       // shadow half of this top face
+      const lnx=per?sl.nx*ct-sl.ny*st:sl.nx, lny=per?sl.nx*st+sl.ny*ct:sl.ny;
+      const dk=clipHalf(g,lnx,lny,sl.c);
+      if(dk.length>2) faceDark+=`<path d="M ${dk.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')} Z" fill="MOTIF_SIDE"/>`;
+    }
   }
   const body=`<g fill="MOTIF_SIDE">${bodyPaths}</g>`+(bevPaths?`<g fill="MOTIF_BEV">${bevPaths}</g>`:'');
   // no "Bolder pieces" fatten on 3D faces: its lit-tone stroke rode over the dark block and
   // read as an outline (worst with a strong highlight); the block already bolds the pieces.
   // A real outline (edge style) still strokes the faces when it's on.
   const fstroke=chk('outlineOn')?strokeAttr(R,'MOTIF_TOP'):'';
-  return {body, face:`${outlineUnderlay(d,K)}<g fill="MOTIF_TOP"${fstroke}>${face}</g>`};
+  return {body, face:`${outlineUnderlay(d,K)}<g fill="MOTIF_TOP"${fstroke}>${face}</g>${faceDark}`};
 }
 function motifMarkup(fg){
   return motifPin(num('cell')*num('scale')/200,fg);
@@ -689,7 +697,7 @@ function motifSystem(){
   const S=num('cell'), q=chk('quinconce'), alt=chk('mirrorAlt'), tw=num('twist'), T=tileSize();
   const R=num('cell')*num('scale')/200;
   const acc=accentMarkup('ACCENT_FG');
-  const depth3=(num('depth3d')||0)>0 && !chk('shadeLine');
+  const depth3=(num('depth3d')||0)>0;   // 3D and the shade line now coexist (the top face splits)
   // how far the motif's ink reaches from its centre (incl. 3D block + outline) — used to
   // clear a disk large enough that no partial motif is left poking out beside the logo
   const poly=piecePolygon(R); let Rmax=0; for(const p of poly){ const r=Math.hypot(p[0],p[1]); if(r>Rmax) Rmax=r; }
@@ -835,7 +843,7 @@ function buildTile(){
 /* ---------- preview ---------- */
 const preview=$('preview');
 const RENDER_GAP=50;   // ms between live refreshes while dragging (leading+trailing throttle)
-let raf=0, lastRun=0, autoT=0;
+let raf=0, lastRun=0, autoT=0, TRUNK_CFG='';   // TRUNK_CFG = the pristine trunk state, never worth autosaving
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
 function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')){ const s=$(el.dataset.syncs); if(el.type==='checkbox') el.checked=s.checked; else el.value=s.value; } }
@@ -880,7 +888,7 @@ function renderEd(){
   // scaled into editor units — so 3D depth/highlight/bevel, shading, soft corners and both
   // outline styles all match the pattern with zero discrepancy
   const R=num('cell')*num('scale')/200||1;
-  const depth3=(num('depth3d')||0)>0 && !chk('shadeLine');
+  const depth3=(num('depth3d')||0)>0;   // editor mirrors the pattern: 3D + shade line coexist
   let m;
   if(depth3){ const L3=motif3DLayers(R); m=L3.body+L3.face; }
   else m=motifPin(R,'MOTIF_FG');
@@ -1009,7 +1017,7 @@ $('edDel').addEventListener('click',()=>{
 });
 /* the one global reset — press and hold to wipe back to the original trunk motif */
 (function initReset(){
-  const btn=$('resetAll'), lbl=btn.querySelector('.rst-label'), HOLD=900;
+  const btn=$('resetAll'), lbl=btn.querySelector('.rst-label'), HOLD=600;
   let timer=0, holding=false;
   function fire(){
     holding=false; btn.classList.remove('holding'); btn.classList.add('done'); lbl.textContent='Reset ✓';
@@ -1106,6 +1114,8 @@ function applyTrunkMotif(){
   setOut('pinTwist',0); setOut('pinTwistO',0);       // the original trunk shows UN-warped
   $('cBg').value='#543424'; $('cFg').value='#a8823f'; $('cAc').value='#a8823f';
   olAuto=true; updateMirrors();                      // outline colour re-derives from the trunk gold
+  syncOutlineColor();                                 // pre-derive cOl (render() would, and would otherwise
+  TRUNK_CFG=paramsString();                           // shift the snapshot) so autosave can skip this state
 }
 
 /* ---------- interactions ---------- */
@@ -1376,6 +1386,7 @@ function armAutosave(){                                 // a settled snapshot, ~
   clearTimeout(autoT);
   autoT=setTimeout(()=>{
     const cfg=paramsString(), arr=loadJSON(AUTOS_KEY);
+    if(cfg===TRUNK_CFG) return;                         // the pristine trunk motif isn't worth an autosave
     if(arr[0]&&arr[0].cfg===cfg) return;                // nothing changed since the last snapshot
     arr.unshift({cfg,thumb:thumbSVG(),ts:Date.now()});
     saveJSON(AUTOS_KEY,arr.slice(0,3));                 // keep only the three most recent
@@ -1458,9 +1469,11 @@ $('savesList').addEventListener('click',e=>{
 
 /* state persists locally now, not in the URL — scrub any legacy hash */
 if(location.hash) try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-/* pick up where you left off; only Reset returns to the original trunk motif */
+/* establish the trunk baseline first (captures TRUNK_CFG for the autosave skip), then pick up
+   where you left off — only Reset returns to the trunk */
+applyTrunkMotif();
 let sess=null; try{ sess=localStorage.getItem(SESS_KEY); }catch(e){}
-if(sess) applyParams(new URLSearchParams(sess)); else applyTrunkMotif();
+if(sess) applyParams(new URLSearchParams(sess));
 setSlots(val('mqSlots'));
 syncRows();
 renderSaves();
