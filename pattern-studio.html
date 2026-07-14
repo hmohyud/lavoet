@@ -22,7 +22,8 @@ html,body{height:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13px;display:flex;flex-direction:column}
 main{flex:1;display:flex;min-height:0}
 /* ---------- panel ---------- */
-#panel{width:300px;flex:none;overflow-y:auto;border-right:1px solid var(--hair);padding:6px 20px 28px;scrollbar-width:thin}
+#panel{width:300px;flex:none;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--hair);padding:6px 20px 28px;scrollbar-width:thin}
+#panel>.acc{flex:none}
 .sec{padding:16px 0 18px;border-bottom:1px solid var(--hair)}
 .sec:last-child{border-bottom:none}
 .sec h2{font-size:10.5px;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--brassD);margin-bottom:12px}
@@ -94,6 +95,19 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .save-item.auto{border-style:dashed;background:color-mix(in srgb,var(--brass) 6%,transparent)}
 .save-item.auto .nm{font-weight:400;font-style:italic;color:var(--sepia)}
 .save-tag{flex:none;font:600 8px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--brass);border:1px solid color-mix(in srgb,var(--brass) 45%,transparent);padding:2px 5px;border-radius:2px}
+/* the global reset sits at the foot of the panel, apart from the accordions; it uses the danger
+   colour and a deliberate press-and-hold so a whole design can't be wiped by a stray click */
+#resetBar{position:sticky;bottom:0;margin-top:auto;background:var(--paper);padding:14px 0 6px;border-top:1px solid var(--hair)}
+.rst{position:relative;width:100%;overflow:hidden;border:1.5px solid var(--red);background:none;color:var(--red);font:600 11.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;padding:15px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+.rst:hover{background:color-mix(in srgb,var(--red) 8%,transparent)}
+.rst-fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);z-index:0;transition:width .18s ease}
+.rst.holding{background:color-mix(in srgb,var(--red) 42%,var(--paper))}
+.rst.holding .rst-fill{width:100%;transition:width .9s linear}
+.rst.done{background:var(--red)}
+.rst-label{position:relative;z-index:1}
+.rst.holding .rst-label,.rst.done .rst-label{color:var(--paper)}
+.rst-note{margin:7px 0 0;text-align:center;font-size:9.5px;letter-spacing:.04em;color:var(--sepia)}
+@media(max-width:760px){ #resetBar{position:static} .rst{padding:16px 10px} }
 #mqOpts{transition:opacity .2s}
 [hidden]{display:none!important}
 /* ---------- stage ---------- */
@@ -212,9 +226,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="row"><label for="pinTwistO">Outer twist</label><input type="range" id="pinTwistO" min="-45" max="45" value="0"><output for="pinTwistO">0</output></div>
       <div class="row"><label for="twist">Rotate</label><input type="range" id="twist" min="-90" max="90" value="0"><output for="twist">0</output></div>
       <label class="chk" title="Thicken each piece a touch with a same-tone edge (corners stay as sharp/round as you set them)"><input type="checkbox" id="pinRound" checked>Bolder pieces</label>
-      <div class="btns" style="margin-top:12px">
-        <button type="button" id="edTrunk">Original trunk motif</button>
-      </div>
     </div>
   </section>
 
@@ -346,6 +357,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     </div>
   </section>
 
+  <div id="resetBar">
+    <button type="button" id="resetAll" class="rst" aria-label="Hold to reset everything to the original trunk motif">
+      <span class="rst-fill" aria-hidden="true"></span>
+      <span class="rst-label">Hold to reset</span>
+    </button>
+    <p class="rst-note">Returns everything to the original trunk motif</p>
+  </div>
+
 </aside>
 
 <section id="stage">
@@ -385,7 +404,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
             </select>
             <button type="button" id="edShadeHelp" class="ed-shade-q" aria-label="What is the shade line?">?</button>
           </span>
-          <button type="button" id="edReset">Reset</button>
         </div>
       </div>
       <svg id="edSvg" viewBox="-1.45 -1.45 2.9 2.9" aria-label="Shape editor"></svg>
@@ -974,10 +992,30 @@ $('edDel').addEventListener('click',()=>{
   if(!SHAPE||SHAPE.pts.length<=3) return;
   SHAPE.pts.splice(EDSEL,1); EDSEL=Math.max(0,EDSEL-1); renderEd(); render();
 });
-$('edReset').addEventListener('click',()=>{
-  /* full reset — identical to "Original trunk motif": shape, sliders, colours, outline, all of it */
-  applyTrunkMotif(); renderEd(); render();
-});
+/* the one global reset — press and hold to wipe back to the original trunk motif */
+(function initReset(){
+  const btn=$('resetAll'), lbl=btn.querySelector('.rst-label'), HOLD=900;
+  let timer=0, holding=false;
+  function fire(){
+    holding=false; btn.classList.remove('holding'); btn.classList.add('done'); lbl.textContent='Reset ✓';
+    applyTrunkMotif(); renderEd(); render();
+    setTimeout(()=>{ btn.classList.remove('done'); lbl.textContent='Hold to reset'; },600);
+  }
+  function start(e){
+    if(holding||btn.classList.contains('done')) return;
+    holding=true; if(e.pointerId!=null){ try{ btn.setPointerCapture(e.pointerId); }catch(_){} }
+    btn.classList.add('holding'); lbl.textContent='Keep holding…';
+    timer=setTimeout(fire,HOLD);
+  }
+  function stop(){ if(!holding) return; holding=false; clearTimeout(timer); btn.classList.remove('holding'); lbl.textContent='Hold to reset'; }
+  btn.addEventListener('pointerdown',start);
+  btn.addEventListener('pointerup',stop);
+  btn.addEventListener('pointercancel',stop);
+  btn.addEventListener('pointermove',e=>{ if(!holding) return; const r=btn.getBoundingClientRect();
+    if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) stop(); });   // drag off to cancel
+  btn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault();
+    if(!holding&&!btn.classList.contains('done')&&confirm('Reset everything to the original trunk motif?')) fire(); } });
+})();
 // the fine-tune editor shows by default; edToggle minimizes it to just its title bar
 function setEditor(open){
   $('stage').classList.toggle('editing',open);
@@ -1054,7 +1092,6 @@ function applyTrunkMotif(){
   $('cBg').value='#543424'; $('cFg').value='#a8823f'; $('cAc').value='#a8823f';
   olAuto=true; updateMirrors();                      // outline colour re-derives from the trunk gold
 }
-$('edTrunk').addEventListener('click',()=>{ applyTrunkMotif(); renderEd(); render(); });
 
 /* ---------- interactions ---------- */
 let lastSlots='4', last3d=30;                          // remembered "on" values for the header switches
