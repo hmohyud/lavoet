@@ -110,14 +110,13 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 /* the global reset sits at the foot of the panel, apart from the accordions; it uses the danger
    colour and a deliberate press-and-hold so a whole design can't be wiped by a stray click */
 #resetBar{position:sticky;bottom:0;margin-top:auto;background:var(--paper);padding:14px 0 6px;border-top:1px solid var(--hair)}
-.rst{position:relative;width:100%;overflow:hidden;border:1.5px solid var(--red);background:none;color:var(--red);font:600 11.5px var(--sans);letter-spacing:.2em;text-transform:uppercase;padding:15px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
-.rst:hover{background:color-mix(in srgb,var(--red) 8%,transparent)}
-.rst-fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--red);z-index:0;transition:width .18s ease}
-.rst.holding{background:color-mix(in srgb,var(--red) 42%,var(--paper))}
+/* SOLID red so it can't blend into the ivory page; a darker-red fill sweeps across as you hold */
+.rst{position:relative;width:100%;overflow:hidden;border:1px solid color-mix(in srgb,var(--red) 55%,#000);background:var(--red);color:var(--paper);font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase;padding:15px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;box-shadow:0 2px 9px color-mix(in srgb,var(--red) 34%,transparent)}
+.rst:hover{background:color-mix(in srgb,var(--red) 88%,#000)}
+.rst-fill{position:absolute;inset:0 auto 0 0;width:0;background:color-mix(in srgb,var(--red) 48%,#000);z-index:0;transition:width .18s ease}
 .rst.holding .rst-fill{width:100%;transition:width .6s linear}
-.rst.done{background:var(--red)}
-.rst-label{position:relative;z-index:1}
-.rst.holding .rst-label,.rst.done .rst-label{color:var(--paper)}
+.rst.done{background:color-mix(in srgb,var(--red) 48%,#000)}
+.rst-label{position:relative;z-index:1;color:var(--paper)}
 .rst-note{margin:7px 0 0;text-align:center;font-size:9.5px;letter-spacing:.04em;color:var(--sepia)}
 @media(max-width:760px){ #resetBar{position:static} .rst{padding:16px 10px} }
 #mqOpts{transition:opacity .2s}
