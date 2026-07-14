@@ -855,7 +855,7 @@ function render(){
   raf=setTimeout(()=>{
     lastRun=performance.now();
     renderEd();          // the editor follows every render path — it can never lag the pattern
-    syncOutlineColor(); updateMirrors(); syncHeaderToggles();
+    syncOutlineColor(); updateMirrors(); syncHeaderToggles(); syncRows();
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
     // cover, don't letterbox — a short strip (e.g. phone while editing) crops instead of shrinking
@@ -1124,11 +1124,35 @@ function setSlots(v){
   $('mqSlots').value=v;
   if(v!=='0') lastSlots=v;
   for(const b of document.querySelectorAll('[data-slots]')) b.setAttribute('aria-pressed',b.dataset.slots===v);
-  $('mqOpts').style.opacity=v==='0'?.35:1;
   const s=$('swLogo'); if(s) s.checked=v!=='0';
+  syncRows();                                          // grey the logo options when the logo is off
 }
 for(const b of document.querySelectorAll('[data-slots]')) b.addEventListener('click',()=>{ setSlots(b.dataset.slots); render(); });
-function syncRows(){ $('outlineRow').classList.toggle('opt-off',!chk('outlineOn')); }
+/* grey out any sub-control whose effect is nullified because its parent is off */
+function syncRows(){
+  const outOn=chk('outlineOn'), dotsOn=chk('accentOn'), logoOn=val('mqSlots')!=='0';
+  const d3=(num('depth3d')||0)>0, shLine=chk('shadeLine');
+  const wrap=id=>{ const el=$(id); return el?el.closest('.row,.row-sel,.chk,.col'):null; };
+  const off=(el,cond)=>{ if(el) el.classList.toggle('opt-off',cond); };
+  // Outline off → its style, weight and colour do nothing
+  off($('outlineRow'), !outOn);
+  off(wrap('cOl'), !outOn);                       // the Outline swatch over in Colours
+  // Dots off → shape, size and colour do nothing
+  off(wrap('accentStyle'), !dotsOn);
+  off(wrap('accentSize'), !dotsOn);
+  off(wrap('cAcB'), !dotsOn);
+  off(wrap('cAc'), !dotsOn);                      // the Dots swatch over in Colours
+  off(wrap('dotsInLogoB'), !dotsOn||!logoOn);     // needs dots AND a logo to matter
+  // Logo off → every logo option does nothing
+  off($('mqOpts'), !logoOn);
+  off(wrap('dotsInLogo'), logoOn&&!dotsOn);       // (only add-grey when the logo itself is on)
+  off(wrap('logo3d'), logoOn&&!d3);               // the 3D logo needs 3D relief on
+  // 3D depth 0 → direction, highlight, bevel do nothing; side-shade still feeds a shade line
+  off(wrap('angle3d'), !d3);
+  off(wrap('highlight'), !d3);
+  off(wrap('bevel'), !d3);
+  off(wrap('shade3d'), !d3 && !shLine);
+}
 // keep the header switches in step with the values they stand for
 function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')||0)>0; const b=$('swLogo'); if(b) b.checked=val('mqSlots')!=='0'; }
 /* bound to BOTH input and change: native colour pickers (the Windows dialog especially)
@@ -1136,14 +1160,13 @@ function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')
 document.querySelectorAll('input,select').forEach(el=>['input','change'].forEach(evt=>el.addEventListener(evt,()=>{
   if(el.type==='range'){ const o=document.querySelector(`output[for="${el.id}"]`); if(o) o.value=el.value; }
   if(el.dataset.syncs){ const t=$(el.dataset.syncs); if(el.type==='checkbox') t.checked=el.checked; else { t.value=el.value; if(t.id==='cOl') olAuto=false; } }
-  if(el.id==='outlineOn') syncRows();
   if(el.id==='sw3d'){ if(el.checked){ setOut('depth3d',last3d>0?last3d:30); } else { if((num('depth3d')||0)>0) last3d=num('depth3d'); setOut('depth3d',0); } }
   if(el.id==='swLogo'){ setSlots(el.checked?(lastSlots==='0'?'4':lastSlots):'0'); }
   if(el.id==='depth3d'&&(num('depth3d')||0)>0) last3d=num('depth3d');
   if(el.id==='edRoundAmt'&&SHAPE) SHAPE.pts[EDSEL][2]=+(+el.value/50).toFixed(2);   // slider 0–100 → roundness 0–2 (50 = medium)
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
-  renderEd(); render();
+  syncRows(); renderEd(); render();
 })));
 /* close every help bubble — section "?" popovers and the shade-line one */
 function hideAllHelp(){ for(const i of document.querySelectorAll('.acc-info,.help-bubble')) i.hidden=true; }
