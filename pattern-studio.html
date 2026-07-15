@@ -416,7 +416,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Saved designs</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Your work is kept in this browser automatically — close the tab and reopen to pick up exactly where you left off (only Reset goes back to the original trunk motif). “Save current design” pins a copy, named with the moment (click the ✎ to rename). Hover a thumbnail to see that design enlarged. Autosaves keep the last three versions as a safety net; they’re the dashed ones.</p>
+      <p class="acc-info" hidden>Your work is kept in this browser automatically — close the tab and reopen to pick up exactly where you left off (only Reset goes back to the original trunk motif). “Save current design” pins a copy, named with the moment (click the ✎ to rename). Hover a thumbnail to see that design enlarged. Autosaves keep the last three versions as a safety net; they’re the dashed ones. They’re taken once your edits settle, at most every 30 seconds, so they mark real stages of the work rather than every tweak.</p>
       <div class="btns"><button type="button" id="saveNew">Save current design</button></div>
       <p class="saves-note">Saved locally in this browser — nothing leaves your device.</p>
       <div id="savesList" class="saves"></div>
@@ -1326,7 +1326,7 @@ function buildTile(){
 /* ---------- preview ---------- */
 const preview=$('preview');
 const RENDER_GAP=50;   // ms between live refreshes while dragging (leading+trailing throttle)
-let raf=0, lastRun=0, autoT=0, TRUNK_CFG='';   // TRUNK_CFG = the pristine trunk state, never worth autosaving
+let raf=0, lastRun=0, autoT=0, autoAt=0, TRUNK_CFG='';   // TRUNK_CFG = the pristine trunk state, never worth autosaving
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
 function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')){ const s=$(el.dataset.syncs); if(el.type==='checkbox') el.checked=s.checked; else el.value=s.value; } }
@@ -2052,16 +2052,19 @@ function thumbTag(svg,load){
   return `<img class="save-thumb" data-load="${load}" title="Load this design — hover to enlarge" alt="" src="data:image/svg+xml,${encodeURIComponent(svg)}">`;
 }
 function stampName(ts){ return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
-function armAutosave(){                                 // a settled snapshot, ~2.5s after edits stop
+const AUTO_SETTLE=2500, AUTO_GAP=30000;                 // wait for edits to settle; never snapshot more often than this
+function armAutosave(){                                 // a settled snapshot, ~2.5s after edits stop but ≥30s apart
   clearTimeout(autoT);
+  const wait=Math.max(AUTO_SETTLE,AUTO_GAP-(Date.now()-autoAt));   // hold off until the gap has elapsed
   autoT=setTimeout(()=>{
     const cfg=paramsString(), arr=loadJSON(AUTOS_KEY);
     if(cfg===TRUNK_CFG) return;                         // the pristine trunk motif isn't worth an autosave
     if(arr[0]&&arr[0].cfg===cfg) return;                // nothing changed since the last snapshot
-    arr.unshift({cfg,thumb:thumbSVG(),ts:Date.now()});
+    autoAt=Date.now();
+    arr.unshift({cfg,thumb:thumbSVG(),ts:autoAt});
     saveJSON(AUTOS_KEY,arr.slice(0,3));                 // keep only the three most recent
     renderSaves();
-  },2500);
+  },wait);
 }
 function applyCfg(cfg){ applyParams(new URLSearchParams(cfg)); renderEd(); render(); }
 function renderSaves(){
