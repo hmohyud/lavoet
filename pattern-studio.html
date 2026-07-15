@@ -46,6 +46,15 @@ main{flex:1;display:flex;min-height:0}
 .acc-body{padding:0 0 18px}
 .acc.closed .acc-body{display:none}
 .opt-off{opacity:.4;pointer-events:none}   /* a sub-option whose parent toggle is off: greyed, not hidden */
+/* picture-pattern gallery: saved uploads, tap to use, × to remove */
+.img-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-top:12px}
+.img-gallery:empty{display:none}
+.gitem{position:relative;aspect-ratio:1;border:1px solid var(--hair);cursor:pointer;overflow:hidden;padding:0;background:none}
+.gitem img{width:100%;height:100%;object-fit:cover;display:block}
+.gitem.active{outline:2px solid var(--brass);outline-offset:-1px}
+.gitem .gx{position:absolute;top:2px;right:2px;width:19px;height:19px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font:600 12px/1 var(--sans);cursor:pointer;padding:0}
+.gitem .gx:hover{background:#8C3B31}
+#stage.img-mode .ed-btns{display:none}     /* picture mode: the editor pane is the crop picker */
 /* the "?" help now pops a speech bubble anchored to the header, so it works even when the section is collapsed */
 .acc-info{position:absolute;top:calc(100% - 7px);right:4px;z-index:40;width:max-content;max-width:calc(100% - 8px);margin:0;padding:10px 13px;background:var(--ink);color:var(--paper);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:400 11px/1.55 var(--sans);letter-spacing:normal;text-transform:none;cursor:default}
 .acc-info::after{content:"";position:absolute;top:-6px;right:22px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
@@ -242,6 +251,26 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
+    <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif. Upload a photo, then in Fine-tune drag the square to choose the part that repeats (drag its corner handle to resize). <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies. Your pictures stay saved here — remove one with its ×.</p>
+      <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
+      <input type="file" id="imgFile" accept="image/*" hidden>
+      <div id="imgGallery" class="img-gallery"></div>
+      <div class="row-sel"><label for="imgSym">Repeat style</label>
+        <select id="imgSym">
+          <option value="mirror" selected>Mirror</option>
+          <option value="kaleido">Kaleidoscope</option>
+          <option value="spin">Pinwheel</option>
+        </select>
+      </div>
+      <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
+      <div class="row"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
+      <p class="hint" id="imgHint">No picture yet — upload one to start.</p>
+    </div>
+  </section>
+
+  <section class="acc">
     <div class="acc-head"><span class="acc-title">Colours</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>The core palette — the background and the motif colour. Dot and outline colours also appear in their own sections. Pick a preset below or set your own.</p>
@@ -365,6 +394,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <button type="button" id="cfgLoad">Load config…</button>
         <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
       </div>
+      <label class="chk" title="Leave the settings (and any picture) out of the file to keep it small — a thin file can't be re-loaded with 'Load config…'"><input type="checkbox" id="thinExport">Thin export (no embedded settings)</label>
       <p class="hint" id="tileInfo"></p>
       <p class="sig" lang="fr">La maison continue — les motifs aussi.</p>
     </div>
@@ -790,8 +820,87 @@ function marque3D(b){
   return def+stack+`<use href="#mqi" xlink:href="#mqi" color="MOTIF_TOP"/>`;
 }
 
+/* ---------- picture patterns: a seamless tile cut from an uploaded photo ---------- */
+let IMGS=[];                                     // saved pictures [{id,name,data}]
+let IMG=null;                                    // the active picture {id,name,data,el}
+let IMGSEL={x:0.5,y:0.5,s:0.5};                  // picked square: centre + side, normalised to the image
+let EDIMG0=null;                                 // drag baseline for the crop picker
+function imgActive(){ return chk('imgOn') && !!(IMG&&IMG.el&&IMG.el.complete&&IMG.el.naturalWidth); }
+function imgRegion(){                            // the picked square in source pixels, clamped inside
+  const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, m=Math.min(iw,ih);
+  const P=Math.max(8,Math.min(m,IMGSEL.s*m));
+  const sx=Math.max(0,Math.min(iw-P,IMGSEL.x*iw-P/2)), sy=Math.max(0,Math.min(ih-P,IMGSEL.y*ih-P/2));
+  return {sx,sy,P,iw,ih,m};
+}
+function buildImgTile(){                         // one seamless tile on a canvas
+  const u=Math.max(20,num('imgScale')||120), T=2*u, {sx,sy,P}=imgRegion();
+  const unit=document.createElement('canvas'); unit.width=unit.height=u;
+  const uc=unit.getContext('2d'); uc.imageSmoothingQuality='high';
+  uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u);
+  if(val('imgSym')==='kaleido'){                 // fold the unit across its diagonal (mirror on y=x)
+    uc.save(); uc.beginPath(); uc.moveTo(-1,-1); uc.lineTo(u+1,u+1); uc.lineTo(-1,u+1); uc.closePath(); uc.clip();
+    uc.setTransform(0,1,1,0,0,0);
+    uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u); uc.restore();
+  }
+  const t=document.createElement('canvas'); t.width=t.height=T;
+  const c=t.getContext('2d'); c.imageSmoothingQuality='high';
+  if(val('imgSym')==='spin'){                    // four copies spun about the tile centre (quilt look)
+    for(let k=0;k<4;k++){ c.save(); c.translate(u,u); c.rotate(k*Math.PI/2); c.drawImage(unit,-u,-u,u,u); c.restore(); }
+  }else{                                         // mirror | kaleido: reflect the unit both ways — always seamless
+    c.drawImage(unit,0,0);
+    c.save(); c.translate(T,0); c.scale(-1,1); c.drawImage(unit,0,0); c.restore();
+    c.save(); c.translate(0,T); c.scale(1,-1); c.drawImage(unit,0,0); c.restore();
+    c.save(); c.translate(T,T); c.scale(-1,-1); c.drawImage(unit,0,0); c.restore();
+  }
+  return t;
+}
+function buildImgSwatch(W,H){
+  const t=buildImgTile(), T=t.width, d=t.toDataURL('image/png');
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs><pattern id="fld" width="${T}" height="${T}" patternUnits="userSpaceOnUse"><image href="${d}" xlink:href="${d}" width="${T}" height="${T}"/></pattern></defs><rect width="${W}" height="${H}" fill="url(#fld)"/></svg>`;
+}
+function saveIMGS(){ try{ localStorage.setItem('lavoet-images',JSON.stringify(IMGS)); }catch(e){ alert('Could not keep this picture for next time (browser storage is full) — it still works for this visit.'); } }
+function setActiveImg(rec){
+  IMG=rec?{...rec,el:(()=>{ const el=new Image(); el.onload=()=>{ renderEd(); render(); }; el.src=rec.data; return el; })()}:null;
+  drawGallery();
+}
+function drawGallery(){
+  const g=$('imgGallery'); if(!g) return;
+  g.innerHTML=IMGS.map(r=>`<div class="gitem${IMG&&IMG.id===r.id?' active':''}" data-id="${r.id}"><img src="${r.data}" alt=""><button type="button" class="gx" data-x="${r.id}" aria-label="Remove picture">×</button></div>`).join('');
+  $('imgHint').textContent=IMGS.length?'Tap a picture to use it; in Fine-tune, drag the square to pick the part that repeats.':'No picture yet — upload one to start.';
+}
+function addImg(rec){
+  const dup=IMGS.find(r=>r.data===rec.data); if(dup) rec=dup; else IMGS.push(rec);
+  saveIMGS(); $('imgOn').checked=true; IMGSEL={x:.5,y:.5,s:.5}; setActiveImg(rec); renderEd(); render();
+}
+$('imgUpload').addEventListener('click',()=>$('imgFile').click());
+$('imgFile').addEventListener('change',()=>{
+  const f=$('imgFile').files[0]; $('imgFile').value='';
+  if(!f) return;
+  const url=URL.createObjectURL(f), im=new Image();
+  im.onload=()=>{
+    URL.revokeObjectURL(url);
+    const k=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));   // keep uploads storable
+    const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(im.naturalWidth*k)); cv.height=Math.max(1,Math.round(im.naturalHeight*k));
+    const cx=cv.getContext('2d'); cx.imageSmoothingQuality='high'; cx.drawImage(im,0,0,cv.width,cv.height);
+    addImg({id:'i'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36),name:f.name,data:cv.toDataURL('image/jpeg',0.85)});
+  };
+  im.onerror=()=>{ URL.revokeObjectURL(url); alert('That file could not be read as a picture.'); };
+  im.src=url;
+});
+$('imgGallery').addEventListener('click',e=>{
+  const x=e.target.closest('[data-x]');
+  if(x){ const id=x.dataset.x; IMGS=IMGS.filter(r=>r.id!==id);
+    if(IMG&&IMG.id===id){ IMG=null; $('imgOn').checked=false; }
+    saveIMGS(); drawGallery(); renderEd(); render(); return; }
+  const it=e.target.closest('.gitem'); if(!it) return;
+  const rec=IMGS.find(r=>r.id===it.dataset.id); if(!rec) return;
+  $('imgOn').checked=true; setActiveImg(rec); renderEd(); render();
+});
+(function initIMGS(){ try{ IMGS=JSON.parse(localStorage.getItem('lavoet-images')||'[]')||[]; }catch(e){ IMGS=[]; } drawGallery(); })();
+
 /* ---------- documents ---------- */
 function tileSize(){
+  if(imgActive()) return 2*Math.max(20,num('imgScale')||120);
   const S=num('cell');
   return (!chk('quinconce')&&chk('mirrorAlt'))?2*S:S;
 }
@@ -811,6 +920,7 @@ function fill(motifs,c){
 }
 
 function buildSwatch(W,H,{marque=true,style=''}={}){
+  if(imgActive()) return buildImgSwatch(W,H);
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
   const sys=motifSystem();
   // ALWAYS phase the lattice to the logo slot (using the remembered slot config) so toggling
@@ -836,6 +946,10 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
   return fill(svg,c);
 }
 function buildTile(){
+  if(imgActive()){
+    const t=buildImgTile(), T=t.width, d=t.toDataURL('image/png');
+    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${T} ${T}" width="${T}" height="${T}"><image href="${d}" xlink:href="${d}" width="${T}" height="${T}"/></svg>`;
+  }
   const c=colors(), sys=motifSystem();
   return fill(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${sys.T} ${sys.T}" width="${sys.T}" height="${sys.T}"><defs>${sys.defs}</defs><rect width="${sys.T}" height="${sys.T}" fill="${c.bg}"/>${tileBody(sys)}</svg>`,c);
 }
@@ -856,6 +970,12 @@ function render(){
     lastRun=performance.now();
     renderEd();          // the editor follows every render path — it can never lag the pattern
     syncOutlineColor(); updateMirrors(); syncHeaderToggles(); syncRows();
+    // picture mode: the field comes from the uploaded photo — grey the motif-only sections
+    const im=imgActive();
+    $('stage').classList.toggle('img-mode',im);
+    document.querySelectorAll('.motif-only').forEach(el=>el.classList.toggle('opt-off',im));
+    const eh=document.querySelector('.ed-hint');
+    if(eh) eh.textContent=im?'Drag the square to choose what repeats; drag its corner handle to resize.':'Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.';
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
     // cover, don't letterbox — a short strip (e.g. phone while editing) crops instead of shrinking
@@ -875,6 +995,20 @@ let EDSEL=0, EDDRAG=false;
 function setShapeMode(){ /* the shape is always custom now — kept as a no-op for its callers */ }
 function renderEd(){
   if(!SHAPE||!$('stage').classList.contains('editing')) return;   // skip while minimized
+  if(imgActive()){                                  // picture mode: the pane is the crop picker
+    const F=v=>v.toFixed(3);
+    const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, f=2.7/Math.max(iw,ih);
+    const w=iw*f, h=ih*f, x0=-w/2, y0=-h/2;
+    const {sx,sy,P}=imgRegion();
+    const rx=x0+sx*f, ry=y0+sy*f, rs=P*f;
+    let si=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${val('cBg')}"/>`;
+    si+=`<image href="${IMG.data}" x="${F(x0)}" y="${F(y0)}" width="${F(w)}" height="${F(h)}" preserveAspectRatio="none"/>`;
+    si+=`<path d="M ${F(x0)} ${F(y0)} h ${F(w)} v ${F(h)} h ${F(-w)} Z M ${F(rx)} ${F(ry)} h ${F(rs)} v ${F(rs)} h ${F(-rs)} Z" fill="#000" opacity=".42" fill-rule="evenodd"/>`;
+    si+=`<rect data-img="1" x="${F(rx)}" y="${F(ry)}" width="${F(rs)}" height="${F(rs)}" fill="transparent" stroke="#F4EFE4" stroke-width=".02" stroke-dasharray=".05 .04"/>`;
+    si+=`<rect data-imgsz="1" x="${F(rx+rs-0.07)}" y="${F(ry+rs-0.07)}" width=".14" height=".14" fill="#F4EFE4" fill-opacity=".85" stroke="#2B2620" stroke-width=".015"/>`;
+    $('edSvg').innerHTML=si;
+    return;
+  }
   syncOutlineColor();                               // auto outline tone may lag render()'s pass
   const WP=shapeWarpedPts();                        // display points — base pts through the live twist
   const fg=val('cFg'), bg=val('cBg');
@@ -953,6 +1087,13 @@ function edPos(ev){
 }
 let EDLINE=0;
 $('edSvg').addEventListener('pointerdown',ev=>{
+  if(imgActive()){                                   // picture mode: move the crop square, or resize by its corner
+    const [x,y]=edPos(ev);
+    EDDRAG=ev.target.closest('[data-imgsz]')?'imgsz':'img';
+    EDIMG0={x,y,sel:{...IMGSEL}};
+    try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){}
+    return;
+  }
   const tl=ev.target.closest('[data-line]');
   if(tl){ EDLINE=+tl.dataset.line; EDDRAG='line'; try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){} return; }
   const t=ev.target.closest('[data-ix]');
@@ -962,6 +1103,23 @@ $('edSvg').addEventListener('pointerdown',ev=>{
 $('edSvg').addEventListener('pointermove',ev=>{
   if(!EDDRAG) return;
   const [x,y]=edPos(ev);
+  if(EDDRAG==='img'||EDDRAG==='imgsz'){
+    if(!imgActive()||!EDIMG0){ EDDRAG=false; return; }
+    const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, f=2.7/Math.max(iw,ih), m=Math.min(iw,ih);
+    if(EDDRAG==='img'){
+      IMGSEL.x=EDIMG0.sel.x+(x-EDIMG0.x)/(iw*f);
+      IMGSEL.y=EDIMG0.sel.y+(y-EDIMG0.y)/(ih*f);
+      const hx=IMGSEL.s*m/2/iw, hy=IMGSEL.s*m/2/ih;   // keep the square inside the picture
+      IMGSEL.x=Math.max(hx,Math.min(1-hx,IMGSEL.x));
+      IMGSEL.y=Math.max(hy,Math.min(1-hy,IMGSEL.y));
+    }else{
+      const cx=(IMGSEL.x-0.5)*iw*f, cy=(IMGSEL.y-0.5)*ih*f;   // region centre in display units
+      const d=Math.max(Math.abs(x-cx),Math.abs(y-cy))*2;
+      IMGSEL.s=Math.max(0.08,Math.min(1,d/f/m));
+      setOut('imgSize',Math.round(IMGSEL.s*100));
+    }
+    renderEd(); render(); return;
+  }
   if(EDDRAG==='line'){
     if(!SHADELINE) SHADELINE=DEFAULT_SLINE.map(p=>p.slice());
     SHADELINE[EDLINE]=[+x.toFixed(3),+y.toFixed(3)]; renderEd(); render(); return;
@@ -1101,6 +1259,7 @@ function resetDefaults(){
   }
   for(const id of HASH_CHK){ const el=$(id); if(el) el.checked=el.defaultChecked; }
   SHADELINE=null; olAuto=true;                       // drop any dragged shade line; re-arm auto outline colour
+  IMGSEL={x:0.5,y:0.5,s:0.5};                        // recentre the picture crop (gallery itself is kept)
   // mqSlots is type=hidden, so its .value setter writes the content attribute and corrupts
   // defaultValue — force the logo default ('4') explicitly and sync the segmented buttons
   syncRows(); setSlots('4'); updateMirrors();
@@ -1164,6 +1323,7 @@ document.querySelectorAll('input,select').forEach(el=>['input','change'].forEach
   if(el.id==='swLogo'){ setSlots(el.checked?(lastSlots==='0'?'4':lastSlots):'0'); }
   if(el.id==='depth3d'&&(num('depth3d')||0)>0) last3d=num('depth3d');
   if(el.id==='edRoundAmt'&&SHAPE) SHAPE.pts[EDSEL][2]=+(+el.value/50).toFixed(2);   // slider 0–100 → roundness 0–2 (50 = medium)
+  if(el.id==='imgSize') IMGSEL.s=Math.max(0.08,+el.value/100);                       // picked-area size follows the slider
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   syncRows(); renderEd(); render();
@@ -1179,8 +1339,10 @@ function saveAccState(){
 }
 (function initAcc(){
   let saved=null; try{ saved=JSON.parse(localStorage.getItem(ACC_KEY)||'null'); }catch(e){}
+  const MOTIF_ONLY=['Shape','Colours','Outline','Dots','3D & shading','Layout','Logo'];
   for(const acc of document.querySelectorAll('.acc')){
     const key=acc.querySelector('.acc-title').textContent;
+    if(MOTIF_ONLY.includes(key)) acc.querySelector('.acc-body').classList.add('motif-only');   // greyed in picture mode
     const open=saved?!!saved[key]:false;          // default: all closed
     acc.classList.toggle('closed',!open);
     acc.querySelector('.acc-head').addEventListener('click',e=>{
@@ -1249,7 +1411,7 @@ async function embedFont(){
 function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
-function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
+function marqueTextOn(){ return !imgActive()&&val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
 
 /* ---------- settings ride inside every download ---------- */
 const CRC_T=(()=>{ const t=new Uint32Array(256);
@@ -1260,14 +1422,22 @@ function crc32(bytes){
   for(const b of bytes) c=CRC_T[(c^b)&0xFF]^(c>>>8);
   return (c^0xFFFFFFFF)>>>0;
 }
+/* everything needed to recreate the design — including the picture itself in picture mode */
+function exportConfig(){
+  let cfg=paramsString();
+  if(imgActive()&&IMG) cfg+='&imgdata='+encodeURIComponent(IMG.data);
+  return cfg;
+}
 function svgWithConfig(svg){
-  return svg.replace('</svg>',`<!--lavoet-config:${paramsString()}--></svg>`);
+  if(chk('thinExport')) return svg;                 // thin export: no embedded settings
+  return svg.replace('</svg>',`<!--lavoet-config:${exportConfig()}--></svg>`);
 }
 async function pngWithConfig(blob){
   /* tuck the full settings string into a PNG tEXt chunk after IHDR */
+  if(chk('thinExport')) return blob;                // thin export: no embedded settings
   try{
     const buf=new Uint8Array(await blob.arrayBuffer());
-    const key='lavoet-config', cfg=paramsString(), data=[];
+    const key='lavoet-config', cfg=exportConfig(), data=[];
     for(const ch of key) data.push(ch.charCodeAt(0));
     data.push(0);
     for(const ch of cfg) data.push(ch.charCodeAt(0)&0xFF);
@@ -1349,14 +1519,15 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots'];
-const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d'];
+  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots','imgSym','imgSize','imgScale'];
+const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn'];
 function paramsString(){
   const p=new URLSearchParams();
   for(const id of HASH_IDS) p.set(id,val(id));
   for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
   if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
   if(SHADELINE) p.set('sline',SHADELINE.map(q=>q.join(':')).join(';'));
+  if(IMG){ p.set('imgid',IMG.id); p.set('imgsel',[IMGSEL.x,IMGSEL.y,IMGSEL.s].map(v=>+v.toFixed(3)).join(':')); }
   return p.toString();
 }
 function applyParams(p){
@@ -1384,6 +1555,21 @@ function applyParams(p){
     const pts=p.get('sline').split(';').map(s=>s.split(':').map(Number));
     if(pts.length===2&&pts.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&Math.abs(v)<=2))) SHADELINE=pts;
   } else SHADELINE=null;
+  if(p.has('imgsel')){
+    const q=p.get('imgsel').split(':').map(Number);
+    if(q.length===3&&q.every(Number.isFinite)&&q[2]>=0.05&&q[2]<=1)
+      IMGSEL={x:Math.max(0,Math.min(1,q[0])), y:Math.max(0,Math.min(1,q[1])), s:q[2]};
+  }
+  if(p.has('imgdata')&&/^data:image\//.test(p.get('imgdata'))){
+    // a picture travelling inside an exported file — bring it into the gallery and use it
+    const d=p.get('imgdata');
+    let rec=IMGS.find(r=>r.data===d);
+    if(!rec){ rec={id:p.get('imgid')||('i'+Date.now().toString(36)),name:'imported',data:d}; IMGS.push(rec); saveIMGS(); }
+    setActiveImg(rec);
+  } else if(p.has('imgid')){
+    const rec=IMGS.find(r=>r.id===p.get('imgid'));
+    if(rec) setActiveImg(rec); else if(chk('imgOn')) $('imgOn').checked=false;   // picture gone from this browser
+  }
   setSlots(val('mqSlots'));
 }
 /* ---------- local saves: working session + named saves + rolling autosaves ---------- */
