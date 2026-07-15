@@ -259,7 +259,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. Pick the <b>shape that tiles</b> (Triangle, Square or Hexagon), then a style. <b>Triangle</b> repeats your exact triangle with its spun twin on a slanted grid, or a Stretched variant that fills a square tile. <b>Square</b>: Mirror folds like paper, Kaleidoscope adds a diagonal fold, Pinwheel spins four copies. <b>Hexagon</b> nests honeycombs — mirrored (fully seamless) or spun. In Fine-tune, drag the square or the triangle dots to choose what repeats. Uploads stay saved here — remove one with its ×.</p>
+      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. Pick the <b>shape that tiles</b> (Triangle, Square or Hexagon), then how the picture fits it. <b>Tessellate</b> repeats the picture exactly, piece by piece — so the picker is the true shape (dots stay free only for triangles, since any triangle tessellates). <b>Stretch</b> lets you drag the dots freely and pulls what's inside them to fill the shape. Hexagons offer <b>Full</b> (a whole hexagon of the photo, tessellated) or <b>Slice</b> (one wedge stretched and repeated kaleidoscope-style). Uploads stay saved here — remove one with its ×.</p>
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div id="imgGallery" class="img-gallery"></div>
@@ -269,17 +269,26 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <button type="button" data-shape="square" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="1"/></svg>Square</button>
         <button type="button" data-shape="hex" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L19.8 7.5 V16.5 L12 21 L4.2 16.5 V7.5 Z"/></svg>Hexagon</button>
       </div>
-      <div class="row-sel"><label for="imgVar">Style</label>
+      <div class="seg" id="fitSeg" role="group" aria-label="How the picture fits the shape" style="margin-top:8px">
+        <button type="button" data-fit="tess" aria-pressed="true" title="Repeat the picture exactly, piece by piece — no distortion">Tessellate</button>
+        <button type="button" data-fit="stretch" aria-pressed="false" title="Drag the dots freely; what's inside is stretched to fill the shape">Stretch</button>
+      </div>
+      <div class="row-sel" id="imgVarRow"><label for="imgVar">Style</label>
         <select id="imgVar"></select>
       </div>
       <select id="imgSym" hidden aria-hidden="true">
-        <option value="tri" selected>Triangle — patterned fit</option>
+        <option value="tri" selected>Triangle — tessellated</option>
         <option value="tristretch">Triangle — stretched</option>
         <option value="mirror">Mirror</option>
         <option value="kaleido">Kaleidoscope</option>
         <option value="spin">Pinwheel</option>
-        <option value="hex">Honeycomb</option>
-        <option value="hexm">Honey kaleidoscope</option>
+        <option value="hex">Slice — spun</option>
+        <option value="hexm">Slice — mirrored</option>
+        <option value="hexfull">Full hexagon</option>
+      </select>
+      <select id="imgFit" hidden aria-hidden="true">
+        <option value="tess" selected>Tessellate</option>
+        <option value="stretch">Stretch</option>
       </select>
       <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
       <div class="row"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
@@ -866,18 +875,22 @@ function imgRegion(){                            // the picked square in source 
   return {sx,sy,P,iw,ih,m};
 }
 /* draw a source-image triangle onto a destination triangle (affine warp), clipped to it */
-function warpTri(ctx,imgEl,S,D,clipPad){
+/* the affine map taking source triangle S onto destination triangle D — [a,b,c,d,e,f] or null */
+function triAffine(S,D){
   const u1=[S[1][0]-S[0][0],S[1][1]-S[0][1]], u2=[S[2][0]-S[0][0],S[2][1]-S[0][1]];
   const det=u1[0]*u2[1]-u2[0]*u1[1];
-  if(Math.abs(det)<1e-6) return;                  // degenerate (collinear) — skip
+  if(Math.abs(det)<1e-6) return null;             // degenerate (collinear)
   const v1=[D[1][0]-D[0][0],D[1][1]-D[0][1]], v2=[D[2][0]-D[0][0],D[2][1]-D[0][1]];
   const a=( v1[0]*u2[1]-v2[0]*u1[1])/det, c=(-v1[0]*u2[0]+v2[0]*u1[0])/det;
   const b=( v1[1]*u2[1]-v2[1]*u1[1])/det, d=(-v1[1]*u2[0]+v2[1]*u1[0])/det;
-  const e=D[0][0]-(a*S[0][0]+c*S[0][1]), f=D[0][1]-(b*S[0][0]+d*S[0][1]);
+  return [a,b,c,d, D[0][0]-(a*S[0][0]+c*S[0][1]), D[0][1]-(b*S[0][0]+d*S[0][1])];
+}
+function warpTri(ctx,imgEl,S,D,clipPad){
+  const L=triAffine(S,D); if(!L) return;
   ctx.save(); ctx.beginPath();
   ctx.moveTo(clipPad[0][0],clipPad[0][1]); ctx.lineTo(clipPad[1][0],clipPad[1][1]); ctx.lineTo(clipPad[2][0],clipPad[2][1]);
   ctx.closePath(); ctx.clip();
-  ctx.setTransform(a,b,c,d,e,f);
+  ctx.setTransform(L[0],L[1],L[2],L[3],L[4],L[5]);
   ctx.drawImage(imgEl,0,0); ctx.restore();
 }
 let IMGTDIMS=null;                               // last tile size, for the footer read-outs
@@ -928,6 +941,36 @@ function buildImgTileCore(){                     // one seamless tile on a canva
     }
     return t;
   }
+  if(val('imgSym')==='hexfull'){
+    // a WHOLE hexagon of the photo, tessellated honeycomb-style — exact, no stretching.
+    // The clip is padded slightly so hexagons overlap with real neighbouring photo pixels.
+    const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, m=Math.min(iw,ih);
+    const r0=Math.max(8,IMGSEL.s*m/2);
+    const cx0=Math.max(r0*0.87,Math.min(iw-r0*0.87,IMGSEL.x*iw));
+    const cy0=Math.max(r0,Math.min(ih-r0,IMGSEL.y*ih));
+    const TH=2*Math.round(u), s=TH/3, h0=Math.sqrt(3)/2*s, k=s/r0;
+    const idealW=Math.sqrt(3)*s, TW=Math.max(4,Math.round(idealW)), xs=TW/idealW;
+    const hx=document.createElement('canvas');
+    hx.width=Math.ceil(2*h0)+6; hx.height=2*Math.ceil(s)+6;
+    const hc=hx.getContext('2d'); hc.imageSmoothingQuality='high';
+    const hcx=hx.width/2, hcy=hx.height/2;
+    hc.save(); hc.beginPath();
+    for(let q=0;q<6;q++){ const a=(60*q-30)*Math.PI/180, R=s+1.5;
+      const px2=hcx+R*Math.cos(a), py=hcy+R*Math.sin(a);
+      if(q) hc.lineTo(px2,py); else hc.moveTo(px2,py); }
+    hc.closePath(); hc.clip();
+    hc.setTransform(k,0,0,k,hcx-cx0*k,hcy-cy0*k);
+    hc.drawImage(IMG.el,0,0); hc.restore();
+    const t=document.createElement('canvas'); t.width=TW; t.height=TH;
+    const c=t.getContext('2d'); c.imageSmoothingQuality='high';
+    const cs=hc.getImageData(hcx|0,hcy|0,1,1).data;
+    c.fillStyle=`rgb(${cs[0]},${cs[1]},${cs[2]})`; c.fillRect(0,0,TW,TH);
+    c.drawImage(hx,0,0,TW,TH);
+    for(const [x,y] of [[0,0],[TW,0],[TW/2,TH/2],[0,TH],[TW,TH]]){
+      c.save(); c.translate(x,y); c.scale(xs,1); c.drawImage(hx,-hcx,-hcy); c.restore();
+    }
+    return t;
+  }
   if(val('imgSym')==='tristretch'){
     // the stretched variant: the picked triangle is affine-fitted onto half a square tile
     // (content stretches to fit) and completed by its 180°-spun twin — a true rect tile
@@ -941,14 +984,20 @@ function buildImgTileCore(){                     // one seamless tile on a canva
     c.save(); c.translate(T2,T2); c.rotate(Math.PI); c.drawImage(tri,0,0); c.restore();
     return t;
   }
-  const T=T2, {sx,sy,P}=imgRegion();
+  // square modes. Tessellate samples a true square of the photo; Stretch pulls the picked
+  // 3-dot parallelogram (A,B,C + auto 4th corner) onto the square unit via one affine.
+  const T=T2;
   const unit=document.createElement('canvas'); unit.width=unit.height=u;
   const uc=unit.getContext('2d'); uc.imageSmoothingQuality='high';
-  uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u);
+  const L=val('imgFit')==='stretch'?triAffine(imgTriSrc(),[[0,0],[u,0],[0,u]]):null;
+  let sx=0,sy=0,P=1;
+  if(L){ uc.setTransform(L[0],L[1],L[2],L[3],L[4],L[5]); uc.drawImage(IMG.el,0,0); uc.setTransform(1,0,0,1,0,0); }
+  else { const r=imgRegion(); sx=r.sx; sy=r.sy; P=r.P; uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u); }
   if(val('imgSym')==='kaleido'){                 // fold the unit across its diagonal (mirror on y=x)
     uc.save(); uc.beginPath(); uc.moveTo(-1,-1); uc.lineTo(u+1,u+1); uc.lineTo(-1,u+1); uc.closePath(); uc.clip();
-    uc.setTransform(0,1,1,0,0,0);
-    uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u); uc.restore();
+    if(L){ uc.setTransform(L[1],L[0],L[3],L[2],L[5],L[4]); uc.drawImage(IMG.el,0,0); }   // transpose ∘ affine
+    else { uc.setTransform(0,1,1,0,0,0); uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u); }
+    uc.restore();
   }
   const t=document.createElement('canvas'); t.width=t.height=T;
   const c=t.getContext('2d'); c.imageSmoothingQuality='high';
@@ -981,10 +1030,21 @@ function triCell(){
   const M=[(T[1][0]+T[2][0])/2,(T[1][1]+T[2][1])/2];    // mid(B,C) — the twin's spin centre
   const pad=(D,e)=>{ const gx=(D[0][0]+D[1][0]+D[2][0])/3, gy=(D[0][1]+D[1][1]+D[2][1])/3;
     return D.map(([x,y])=>{ const dx=x-gx,dy=y-gy,l=Math.hypot(dx,dy)||1; return [x+dx/l*e,y+dy/l*e]; }); };
-  const clipTo=D=>{ const p=pad(D,1.5); c.beginPath(); c.moveTo(p[0][0],p[0][1]); c.lineTo(p[1][0],p[1][1]); c.lineTo(p[2][0],p[2][1]); c.closePath(); c.clip(); };
-  c.save(); clipTo(T); c.setTransform(k,0,0,k,-x0,-y0); c.drawImage(IMG.el,0,0); c.restore();
+  const clipTo=D=>{ const p=pad(D,2); c.beginPath(); c.moveTo(p[0][0],p[0][1]); c.lineTo(p[1][0],p[1][1]); c.lineTo(p[2][0],p[2][1]); c.closePath(); c.clip(); };
   const TT=T.map(p=>[2*M[0]-p[0],2*M[1]-p[1]]);
-  c.save(); clipTo(TT); c.setTransform(-k,0,0,-k,2*M[0]+x0,2*M[1]+y0); c.drawImage(IMG.el,0,0); c.restore();
+  // draw the home cell AND its eight lattice neighbours so the whole canvas is opaque —
+  // any sub-pixel seam between pattern stamps then shows neighbouring content, never a gap
+  // line between the strips
+  const hits=D=>{ let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+    for(const [x,y] of D){ x1=Math.min(x1,x); y1=Math.min(y1,y); x2=Math.max(x2,x); y2=Math.max(y2,y); }
+    return x2>-3&&y2>-3&&x1<cw+3&&y1<ch+3; };
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+    const ox=i*uw[0]+j*vw[0], oy=i*uw[1]+j*vw[1];
+    const Ts=T.map(p=>[p[0]+ox,p[1]+oy]);
+    if(hits(Ts)){ c.save(); clipTo(Ts); c.setTransform(k,0,0,k,-x0+ox,-y0+oy); c.drawImage(IMG.el,0,0); c.restore(); }
+    const TTs=TT.map(p=>[p[0]+ox,p[1]+oy]);
+    if(hits(TTs)){ c.save(); clipTo(TTs); c.setTransform(-k,0,0,-k,2*M[0]+x0+ox,2*M[1]+y0+oy); c.drawImage(IMG.el,0,0); c.restore(); }
+  }
   return {cv,uw,vw,x0,y0};
 }
 /* the pattern defs for triangle mode: a unit cell tiled on the exact oblique lattice */
@@ -1097,19 +1157,46 @@ function addImg(rec){
   saveIMGS(); $('imgOn').checked=true; IMGSEL={x:.5,y:.5,s:.5}; setOut('imgSize',50); setActiveImg(rec); renderEd(); render();
 }
 /* the repeat style is picked as SHAPE (drawn) + a style variant; #imgSym stays the stored value */
-const SHAPE_VARS={ tri:['tri','tristretch'], square:['mirror','kaleido','spin'], hex:['hexm','hex'] };
-const VAR_LABELS={ tri:'Patterned fit — exact, no stretching', tristretch:'Stretched — fills a square tile',
-  mirror:'Mirror', kaleido:'Kaleidoscope', spin:'Pinwheel', hexm:'Mirrored — fully seamless', hex:'Spun' };
-function shapeOfSym(s){ for(const k in SHAPE_VARS) if(SHAPE_VARS[k].includes(s)) return k; return 'tri'; }
+/* shape × fit → available styles. Tessellate = exact pieces (dots free only for triangles);
+   Stretch = free dots, content pulled to fill the shape. */
+const SHAPE_VARS={
+  tri:   {tess:['tri'],                       stretch:['tristretch']},
+  square:{tess:['mirror','kaleido','spin'],   stretch:['mirror','kaleido','spin']},
+  hex:   {tess:['hexfull'],                   stretch:['hexm','hex']},
+};
+const VAR_LABELS={ tri:'Triangle — tessellated', tristretch:'Triangle — stretched',
+  mirror:'Mirror', kaleido:'Kaleidoscope', spin:'Pinwheel',
+  hexm:'Slice — mirrored', hex:'Slice — spun', hexfull:'Full hexagon' };
+function shapeOfSym(s){ if(s==='tri'||s==='tristretch') return 'tri'; if(s==='hex'||s==='hexm'||s==='hexfull') return 'hex'; return 'square'; }
+function fitOf(){
+  const s=val('imgSym');
+  if(shapeOfSym(s)==='square') return val('imgFit')==='stretch'?'stretch':'tess';
+  return (s==='tristretch'||s==='hexm'||s==='hex')?'stretch':'tess';
+}
+/* dot-picked (3 free dots) vs shape-picked (square / hexagon region) — drives picker + slider */
+function imgDotsMode(){
+  const s=val('imgSym');
+  return ['tri','tristretch','hexm','hex'].includes(s)||(shapeOfSym(s)==='square'&&val('imgFit')==='stretch');
+}
 function syncImgSymUI(){
-  const sym=val('imgSym'), shp=shapeOfSym(sym);
+  const sym=val('imgSym'), shp=shapeOfSym(sym), fit=fitOf();
+  $('imgFit').value=fit;                            // keep the stored fit coherent for all shapes
   document.querySelectorAll('.shape-seg [data-shape]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.shape===shp?'true':'false'));
-  const sel=$('imgVar'), want=SHAPE_VARS[shp];
-  if(sel.dataset.shape!==shp){ sel.innerHTML=want.map(v=>`<option value="${v}">${VAR_LABELS[v]}</option>`).join(''); sel.dataset.shape=shp; }
+  document.querySelectorAll('#fitSeg [data-fit]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.fit===fit?'true':'false'));
+  const want=SHAPE_VARS[shp][fit], sel=$('imgVar'), key=shp+':'+fit;
+  if(sel.dataset.key!==key){ sel.innerHTML=want.map(v=>`<option value="${v}">${VAR_LABELS[v]}</option>`).join(''); sel.dataset.key=key; }
   sel.value=sym;
+  $('imgVarRow').style.display=want.length>1?'':'none';
 }
 document.querySelectorAll('.shape-seg [data-shape]').forEach(b=>b.addEventListener('click',()=>{
-  $('imgSym').value=SHAPE_VARS[b.dataset.shape][0];
+  const list=SHAPE_VARS[b.dataset.shape][fitOf()];
+  $('imgSym').value=list.includes(val('imgSym'))?val('imgSym'):list[0];
+  syncImgSymUI(); renderEd(); render();
+}));
+document.querySelectorAll('#fitSeg [data-fit]').forEach(b=>b.addEventListener('click',()=>{
+  $('imgFit').value=b.dataset.fit;
+  const list=SHAPE_VARS[shapeOfSym(val('imgSym'))][b.dataset.fit];
+  if(!list.includes(val('imgSym'))) $('imgSym').value=list[0];
   syncImgSymUI(); renderEd(); render();
 }));
 $('imgVar').addEventListener('change',()=>{ $('imgSym').value=$('imgVar').value; syncImgSymUI(); renderEd(); render(); });
@@ -1229,15 +1316,16 @@ function render(){
     $('stage').classList.toggle('img-mode',im);
     document.querySelectorAll('.motif-only').forEach(el=>el.classList.toggle('opt-off',im));
     syncImgSymUI();
-    const triSel=['tri','tristretch','hex','hexm'].includes(val('imgSym'));
+    const dots=imgDotsMode();
     const szRow=$('imgSize').closest('.row');        // dot-picked styles: the dots do the sizing
-    if(szRow) szRow.classList.toggle('opt-off',im&&triSel);
+    if(szRow) szRow.classList.toggle('opt-off',im&&dots);
     document.querySelectorAll('.mq-motif-only').forEach(el=>el.classList.toggle('opt-off',im));
     const bkRows=$('imgMqRows'); if(bkRows) bkRows.classList.toggle('opt-off',!im);
     const eh=document.querySelector('.ed-hint');
     if(eh) eh.textContent=im
-      ?(triSel?'Drag the three dots to shape the piece that repeats; drag inside it to move it.'
-              :'Drag the square to choose what repeats; drag its corner handle to resize.')
+      ?(dots?'Drag the three dots to shape the piece that repeats; drag inside it to move it.'
+        :val('imgSym')==='hexfull'?'Drag the hexagon to choose what repeats; drag its bottom handle to resize.'
+        :'Drag the square to choose what repeats; drag its corner handle to resize.')
       :'Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.';
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
@@ -1264,13 +1352,24 @@ function renderEd(){
     const w=iw*f, h=ih*f, x0=-w/2, y0=-h/2;
     let si=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${val('cBg')}"/>`;
     si+=`<image href="${IMG.data}" x="${F(x0)}" y="${F(y0)}" width="${F(w)}" height="${F(h)}" preserveAspectRatio="none"/>`;
-    if(['tri','tristretch','hex','hexm'].includes(val('imgSym'))){
-      // triangle picker: three draggable corner dots — any triangle tiles
+    if(imgDotsMode()){
+      // three draggable corner dots; square-stretch shows the full parallelogram they define
       const D=IMGTRI.map(p=>[x0+p[0]*iw*f, y0+p[1]*ih*f]);
-      const tp=D.map(p=>F(p[0])+' '+F(p[1]));
+      const poly=shapeOfSym(val('imgSym'))==='square'
+        ? [D[0],D[1],[D[1][0]+D[2][0]-D[0][0],D[1][1]+D[2][1]-D[0][1]],D[2]]   // A,B,B+C−A,C
+        : D;
+      const tp=poly.map(p=>F(p[0])+' '+F(p[1]));
       si+=`<path d="M ${F(x0)} ${F(y0)} h ${F(w)} v ${F(h)} h ${F(-w)} Z M ${tp.join(' L ')} Z" fill="#000" opacity=".42" fill-rule="evenodd"/>`;
       si+=`<path data-tribody="1" d="M ${tp.join(' L ')} Z" fill="transparent" stroke="#F4EFE4" stroke-width=".02" stroke-dasharray=".05 .04"/>`;
       D.forEach((p,i)=>{ si+=`<circle data-tri="${i}" cx="${F(p[0])}" cy="${F(p[1])}" r=".075" fill="#F4EFE4" fill-opacity=".3" stroke="#2B2620" stroke-width=".022"/>`; });
+    }else if(val('imgSym')==='hexfull'){
+      // a true hexagon of the photo: drag to move, bottom-vertex handle to resize
+      const m=Math.min(iw,ih), r=IMGSEL.s*m/2*f;
+      const cx=x0+IMGSEL.x*iw*f, cy=y0+IMGSEL.y*ih*f;
+      const hp=[]; for(let q=0;q<6;q++){ const a=(60*q-30)*Math.PI/180; hp.push(F(cx+r*Math.cos(a))+' '+F(cy+r*Math.sin(a))); }
+      si+=`<path d="M ${F(x0)} ${F(y0)} h ${F(w)} v ${F(h)} h ${F(-w)} Z M ${hp.join(' L ')} Z" fill="#000" opacity=".42" fill-rule="evenodd"/>`;
+      si+=`<path data-img="1" d="M ${hp.join(' L ')} Z" fill="transparent" stroke="#F4EFE4" stroke-width=".02" stroke-dasharray=".05 .04"/>`;
+      si+=`<rect data-imgsz="1" x="${F(cx-0.07)}" y="${F(cy+r-0.07)}" width=".14" height=".14" fill="#F4EFE4" fill-opacity=".85" stroke="#2B2620" stroke-width=".015"/>`;
     }else{
       const {sx,sy,P}=imgRegion();
       const rx=x0+sx*f, ry=y0+sy*f, rs=P*f;
@@ -1820,7 +1919,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots','imgSym','imgSize','imgScale','imgMqBack','cMqBack'];
+  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn'];
 function paramsString(){
   const p=new URLSearchParams();
