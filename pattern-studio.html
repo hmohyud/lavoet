@@ -2053,13 +2053,26 @@ function thumbTag(svg,load){
 }
 function stampName(ts){ return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
 const AUTO_SETTLE=2500, AUTO_GAP=30000;                 // wait for edits to settle; never snapshot more often than this
+// Two designs are "the same" when they DRAW the same, so compare configs with the keys that
+// don't reach the canvas stripped out. paramsString keeps the picture pick even in motif mode
+// (so flicking Picture pattern back on restores it), but with imgOn off it changes nothing you
+// can see — left in, merely previewing a gallery picture would make every later snapshot look
+// novel and defeat the dedupe below.
+function cfgKey(s){
+  const p=new URLSearchParams(s);
+  if(p.get('imgOn')!=='1') for(const k of ['imgid','imgsel','imgtri']) p.delete(k);
+  return p.toString();
+}
 function armAutosave(){                                 // a settled snapshot, ~2.5s after edits stop but ≥30s apart
   clearTimeout(autoT);
   const wait=Math.max(AUTO_SETTLE,AUTO_GAP-(Date.now()-autoAt));   // hold off until the gap has elapsed
   autoT=setTimeout(()=>{
-    const cfg=paramsString(), arr=loadJSON(AUTOS_KEY);
-    if(cfg===TRUNK_CFG) return;                         // the pristine trunk motif isn't worth an autosave
-    if(arr[0]&&arr[0].cfg===cfg) return;                // nothing changed since the last snapshot
+    const cfg=paramsString(), key=cfgKey(cfg), arr=loadJSON(AUTOS_KEY);
+    if(key===cfgKey(TRUNK_CFG)) return;                 // the pristine trunk motif isn't worth an autosave
+    // only snapshot a state that isn't kept anywhere already: with three slots, a repeat
+    // would evict a genuinely different stage of the work to save nothing new
+    if(arr.some(a=>cfgKey(a.cfg)===key)) return;        // already in the autosave history
+    if(loadJSON(SAVES_KEY).some(s=>cfgKey(s.cfg)===key)) return;  // already pinned as a save (or just loaded from one)
     autoAt=Date.now();
     arr.unshift({cfg,thumb:thumbSVG(),ts:autoAt});
     saveJSON(AUTOS_KEY,arr.slice(0,3));                 // keep only the three most recent
