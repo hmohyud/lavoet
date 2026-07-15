@@ -253,7 +253,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif. Upload a photo, then in Fine-tune drag the square to choose the part that repeats (drag its corner handle to resize). <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies. Your pictures stay saved here — remove one with its ×.</p>
+      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif. Upload a photo, then in Fine-tune drag the square to choose the part that repeats (drag its corner handle to resize). <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies, <b>Triangle</b> gives you three dots to drag — any triangle you make tiles with its own spun twin. Your pictures stay saved here — remove one with its ×.</p>
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div id="imgGallery" class="img-gallery"></div>
@@ -262,6 +262,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <option value="mirror" selected>Mirror</option>
           <option value="kaleido">Kaleidoscope</option>
           <option value="spin">Pinwheel</option>
+          <option value="tri">Triangle</option>
         </select>
       </div>
       <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
@@ -824,7 +825,9 @@ function marque3D(b){
 let IMGS=[];                                     // saved pictures [{id,name,data}]
 let IMG=null;                                    // the active picture {id,name,data,el}
 let IMGSEL={x:0.5,y:0.5,s:0.5};                  // picked square: centre + side, normalised to the image
+let IMGTRI=[[0.30,0.30],[0.75,0.35],[0.42,0.80]];// picked triangle: 3 corners, normalised to the image
 let EDIMG0=null;                                 // drag baseline for the crop picker
+let TRI_IX=0;                                    // which triangle dot is being dragged
 function imgActive(){ return chk('imgOn') && !!(IMG&&IMG.el&&IMG.el.complete&&IMG.el.naturalWidth); }
 function imgRegion(){                            // the picked square in source pixels, clamped inside
   const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, m=Math.min(iw,ih);
@@ -832,8 +835,39 @@ function imgRegion(){                            // the picked square in source 
   const sx=Math.max(0,Math.min(iw-P,IMGSEL.x*iw-P/2)), sy=Math.max(0,Math.min(ih-P,IMGSEL.y*ih-P/2));
   return {sx,sy,P,iw,ih,m};
 }
+/* draw a source-image triangle onto a destination triangle (affine warp), clipped to it */
+function warpTri(ctx,imgEl,S,D,clipPad){
+  const u1=[S[1][0]-S[0][0],S[1][1]-S[0][1]], u2=[S[2][0]-S[0][0],S[2][1]-S[0][1]];
+  const det=u1[0]*u2[1]-u2[0]*u1[1];
+  if(Math.abs(det)<1e-6) return;                  // degenerate (collinear) — skip
+  const v1=[D[1][0]-D[0][0],D[1][1]-D[0][1]], v2=[D[2][0]-D[0][0],D[2][1]-D[0][1]];
+  const a=( v1[0]*u2[1]-v2[0]*u1[1])/det, c=(-v1[0]*u2[0]+v2[0]*u1[0])/det;
+  const b=( v1[1]*u2[1]-v2[1]*u1[1])/det, d=(-v1[1]*u2[0]+v2[1]*u1[0])/det;
+  const e=D[0][0]-(a*S[0][0]+c*S[0][1]), f=D[0][1]-(b*S[0][0]+d*S[0][1]);
+  ctx.save(); ctx.beginPath();
+  ctx.moveTo(clipPad[0][0],clipPad[0][1]); ctx.lineTo(clipPad[1][0],clipPad[1][1]); ctx.lineTo(clipPad[2][0],clipPad[2][1]);
+  ctx.closePath(); ctx.clip();
+  ctx.setTransform(a,b,c,d,e,f);
+  ctx.drawImage(imgEl,0,0); ctx.restore();
+}
 function buildImgTile(){                         // one seamless tile on a canvas
-  const u=Math.max(20,num('imgScale')||120), T=2*u, {sx,sy,P}=imgRegion();
+  const u=Math.max(20,num('imgScale')||120), T2=2*u;
+  if(val('imgSym')==='tri'){
+    // any triangle + its 180°-spun twin makes a parallelogram, and parallelograms always tile —
+    // here the picked triangle is warped onto half the square tile, its twin fills the rest
+    const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight;
+    const S=IMGTRI.map(p=>[p[0]*iw,p[1]*ih]);
+    const tri=document.createElement('canvas'); tri.width=tri.height=T2;
+    const tc=tri.getContext('2d'); tc.imageSmoothingQuality='high';
+    // dest = lower-left half; clip pushed ~0.7px past the diagonal so the twin blends over it
+    warpTri(tc,IMG.el,S,[[0,0],[T2,0],[0,T2]],[[-1,-1],[T2+2,-1],[-1,T2+2]]);
+    const t=document.createElement('canvas'); t.width=t.height=T2;
+    const c=t.getContext('2d'); c.imageSmoothingQuality='high';
+    c.drawImage(tri,0,0);
+    c.save(); c.translate(T2,T2); c.rotate(Math.PI); c.drawImage(tri,0,0); c.restore();
+    return t;
+  }
+  const T=T2, {sx,sy,P}=imgRegion();
   const unit=document.createElement('canvas'); unit.width=unit.height=u;
   const uc=unit.getContext('2d'); uc.imageSmoothingQuality='high';
   uc.drawImage(IMG.el,sx,sy,P,P,0,0,u,u);
@@ -974,6 +1008,8 @@ function render(){
     const im=imgActive();
     $('stage').classList.toggle('img-mode',im);
     document.querySelectorAll('.motif-only').forEach(el=>el.classList.toggle('opt-off',im));
+    const szRow=$('imgSize').closest('.row');        // triangle mode: the dots do the sizing
+    if(szRow) szRow.classList.toggle('opt-off',im&&val('imgSym')==='tri');
     const eh=document.querySelector('.ed-hint');
     if(eh) eh.textContent=im?'Drag the square to choose what repeats; drag its corner handle to resize.':'Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.';
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
@@ -999,13 +1035,22 @@ function renderEd(){
     const F=v=>v.toFixed(3);
     const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, f=2.7/Math.max(iw,ih);
     const w=iw*f, h=ih*f, x0=-w/2, y0=-h/2;
-    const {sx,sy,P}=imgRegion();
-    const rx=x0+sx*f, ry=y0+sy*f, rs=P*f;
     let si=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${val('cBg')}"/>`;
     si+=`<image href="${IMG.data}" x="${F(x0)}" y="${F(y0)}" width="${F(w)}" height="${F(h)}" preserveAspectRatio="none"/>`;
-    si+=`<path d="M ${F(x0)} ${F(y0)} h ${F(w)} v ${F(h)} h ${F(-w)} Z M ${F(rx)} ${F(ry)} h ${F(rs)} v ${F(rs)} h ${F(-rs)} Z" fill="#000" opacity=".42" fill-rule="evenodd"/>`;
-    si+=`<rect data-img="1" x="${F(rx)}" y="${F(ry)}" width="${F(rs)}" height="${F(rs)}" fill="transparent" stroke="#F4EFE4" stroke-width=".02" stroke-dasharray=".05 .04"/>`;
-    si+=`<rect data-imgsz="1" x="${F(rx+rs-0.07)}" y="${F(ry+rs-0.07)}" width=".14" height=".14" fill="#F4EFE4" fill-opacity=".85" stroke="#2B2620" stroke-width=".015"/>`;
+    if(val('imgSym')==='tri'){
+      // triangle picker: three draggable corner dots — any triangle tiles
+      const D=IMGTRI.map(p=>[x0+p[0]*iw*f, y0+p[1]*ih*f]);
+      const tp=D.map(p=>F(p[0])+' '+F(p[1]));
+      si+=`<path d="M ${F(x0)} ${F(y0)} h ${F(w)} v ${F(h)} h ${F(-w)} Z M ${tp.join(' L ')} Z" fill="#000" opacity=".42" fill-rule="evenodd"/>`;
+      si+=`<path data-tribody="1" d="M ${tp.join(' L ')} Z" fill="transparent" stroke="#F4EFE4" stroke-width=".02" stroke-dasharray=".05 .04"/>`;
+      D.forEach((p,i)=>{ si+=`<circle data-tri="${i}" cx="${F(p[0])}" cy="${F(p[1])}" r=".075" fill="#F4EFE4" fill-opacity=".3" stroke="#2B2620" stroke-width=".022"/>`; });
+    }else{
+      const {sx,sy,P}=imgRegion();
+      const rx=x0+sx*f, ry=y0+sy*f, rs=P*f;
+      si+=`<path d="M ${F(x0)} ${F(y0)} h ${F(w)} v ${F(h)} h ${F(-w)} Z M ${F(rx)} ${F(ry)} h ${F(rs)} v ${F(rs)} h ${F(-rs)} Z" fill="#000" opacity=".42" fill-rule="evenodd"/>`;
+      si+=`<rect data-img="1" x="${F(rx)}" y="${F(ry)}" width="${F(rs)}" height="${F(rs)}" fill="transparent" stroke="#F4EFE4" stroke-width=".02" stroke-dasharray=".05 .04"/>`;
+      si+=`<rect data-imgsz="1" x="${F(rx+rs-0.07)}" y="${F(ry+rs-0.07)}" width=".14" height=".14" fill="#F4EFE4" fill-opacity=".85" stroke="#2B2620" stroke-width=".015"/>`;
+    }
     $('edSvg').innerHTML=si;
     return;
   }
@@ -1087,10 +1132,13 @@ function edPos(ev){
 }
 let EDLINE=0;
 $('edSvg').addEventListener('pointerdown',ev=>{
-  if(imgActive()){                                   // picture mode: move the crop square, or resize by its corner
+  if(imgActive()){                                   // picture mode: move/resize the crop, or drag triangle dots
     const [x,y]=edPos(ev);
-    EDDRAG=ev.target.closest('[data-imgsz]')?'imgsz':'img';
-    EDIMG0={x,y,sel:{...IMGSEL}};
+    const td=ev.target.closest('[data-tri]');
+    if(td){ TRI_IX=+td.dataset.tri; EDDRAG='tript'; }
+    else if(ev.target.closest('[data-tribody]')) EDDRAG='tribody';
+    else EDDRAG=ev.target.closest('[data-imgsz]')?'imgsz':'img';
+    EDIMG0={x,y,sel:{...IMGSEL},tri:IMGTRI.map(p=>p.slice())};
     try{ $('edSvg').setPointerCapture(ev.pointerId); }catch(e){}
     return;
   }
@@ -1103,6 +1151,22 @@ $('edSvg').addEventListener('pointerdown',ev=>{
 $('edSvg').addEventListener('pointermove',ev=>{
   if(!EDDRAG) return;
   const [x,y]=edPos(ev);
+  if(EDDRAG==='tript'||EDDRAG==='tribody'){
+    if(!imgActive()||!EDIMG0){ EDDRAG=false; return; }
+    const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, f=2.7/Math.max(iw,ih);
+    const cl=v=>Math.max(0,Math.min(1,v));
+    if(EDDRAG==='tript'){
+      IMGTRI[TRI_IX]=[cl((x+iw*f/2)/(iw*f)), cl((y+ih*f/2)/(ih*f))];
+    }else{
+      const dx=(x-EDIMG0.x)/(iw*f), dy=(y-EDIMG0.y)/(ih*f);
+      // move the whole triangle, held back so no corner leaves the picture
+      const bx=Math.max(...EDIMG0.tri.map(p=>-p[0])).valueOf(), tx=Math.min(...EDIMG0.tri.map(p=>1-p[0]));
+      const by=Math.max(...EDIMG0.tri.map(p=>-p[1])), ty=Math.min(...EDIMG0.tri.map(p=>1-p[1]));
+      const ax=Math.max(bx,Math.min(tx,dx)), ay=Math.max(by,Math.min(ty,dy));
+      IMGTRI=EDIMG0.tri.map(p=>[p[0]+ax,p[1]+ay]);
+    }
+    renderEd(); render(); return;
+  }
   if(EDDRAG==='img'||EDDRAG==='imgsz'){
     if(!imgActive()||!EDIMG0){ EDDRAG=false; return; }
     const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, f=2.7/Math.max(iw,ih), m=Math.min(iw,ih);
@@ -1260,6 +1324,7 @@ function resetDefaults(){
   for(const id of HASH_CHK){ const el=$(id); if(el) el.checked=el.defaultChecked; }
   SHADELINE=null; olAuto=true;                       // drop any dragged shade line; re-arm auto outline colour
   IMGSEL={x:0.5,y:0.5,s:0.5};                        // recentre the picture crop (gallery itself is kept)
+  IMGTRI=[[0.30,0.30],[0.75,0.35],[0.42,0.80]];      // …and the picked triangle
   // mqSlots is type=hidden, so its .value setter writes the content attribute and corrupts
   // defaultValue — force the logo default ('4') explicitly and sync the segmented buttons
   syncRows(); setSlots('4'); updateMirrors();
@@ -1527,7 +1592,11 @@ function paramsString(){
   for(const id of HASH_CHK) p.set(id,chk(id)?1:0);
   if(SHAPE) p.set('shape',SHAPE.pts.map(q=>q.join(':')).join(';'));
   if(SHADELINE) p.set('sline',SHADELINE.map(q=>q.join(':')).join(';'));
-  if(IMG){ p.set('imgid',IMG.id); p.set('imgsel',[IMGSEL.x,IMGSEL.y,IMGSEL.s].map(v=>+v.toFixed(3)).join(':')); }
+  if(IMG){
+    p.set('imgid',IMG.id);
+    p.set('imgsel',[IMGSEL.x,IMGSEL.y,IMGSEL.s].map(v=>+v.toFixed(3)).join(':'));
+    p.set('imgtri',IMGTRI.map(q=>q.map(v=>+v.toFixed(3)).join(':')).join(';'));
+  }
   return p.toString();
 }
 function applyParams(p){
@@ -1559,6 +1628,10 @@ function applyParams(p){
     const q=p.get('imgsel').split(':').map(Number);
     if(q.length===3&&q.every(Number.isFinite)&&q[2]>=0.05&&q[2]<=1)
       IMGSEL={x:Math.max(0,Math.min(1,q[0])), y:Math.max(0,Math.min(1,q[1])), s:q[2]};
+  }
+  if(p.has('imgtri')){
+    const t=p.get('imgtri').split(';').map(s=>s.split(':').map(Number));
+    if(t.length===3&&t.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&v>=0&&v<=1))) IMGTRI=t;
   }
   if(p.has('imgdata')&&/^data:image\//.test(p.get('imgdata'))){
     // a picture travelling inside an exported file — bring it into the gallery and use it
