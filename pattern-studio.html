@@ -253,16 +253,16 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. In Fine-tune, drag the square (or the triangle dots) to choose the part that repeats. <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies, <b>Triangle</b> tiles any triangle with its spun twin, <b>Honeycomb</b> nests spun hexagons, <b>Honey kaleidoscope</b> mirrors them into a fully seamless mandala. Uploads stay saved here — remove one with its ×.</p>
+      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. In Fine-tune, drag the square (or the triangle dots) to choose the part that repeats. <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies, <b>Triangle</b> repeats your exact triangle with its spun twin on a slanted grid — no stretching, <b>Honeycomb</b> nests spun hexagons, <b>Honey kaleidoscope</b> mirrors them into a fully seamless mandala. Uploads stay saved here — remove one with its ×.</p>
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div id="imgGallery" class="img-gallery"></div>
       <div class="row-sel"><label for="imgSym">Repeat style</label>
         <select id="imgSym">
-          <option value="mirror" selected>Mirror</option>
+          <option value="tri" selected>Triangle</option>
+          <option value="mirror">Mirror</option>
           <option value="kaleido">Kaleidoscope</option>
           <option value="spin">Pinwheel</option>
-          <option value="tri">Triangle</option>
           <option value="hex">Honeycomb</option>
           <option value="hexm">Honey kaleidoscope</option>
         </select>
@@ -914,20 +914,6 @@ function buildImgTileCore(){                     // one seamless tile on a canva
     }
     return t;
   }
-  if(val('imgSym')==='tri'){
-    // any triangle + its 180°-spun twin makes a parallelogram, and parallelograms always tile —
-    // here the picked triangle is warped onto half the square tile, its twin fills the rest
-    const S=imgTriSrc();
-    const tri=document.createElement('canvas'); tri.width=tri.height=T2;
-    const tc=tri.getContext('2d'); tc.imageSmoothingQuality='high';
-    // dest = lower-left half; clip pushed ~0.7px past the diagonal so the twin blends over it
-    warpTri(tc,IMG.el,S,[[0,0],[T2,0],[0,T2]],[[-1,-1],[T2+2,-1],[-1,T2+2]]);
-    const t=document.createElement('canvas'); t.width=t.height=T2;
-    const c=t.getContext('2d'); c.imageSmoothingQuality='high';
-    c.drawImage(tri,0,0);
-    c.save(); c.translate(T2,T2); c.rotate(Math.PI); c.drawImage(tri,0,0); c.restore();
-    return t;
-  }
   const T=T2, {sx,sy,P}=imgRegion();
   const unit=document.createElement('canvas'); unit.width=unit.height=u;
   const uc=unit.getContext('2d'); uc.imageSmoothingQuality='high';
@@ -949,6 +935,49 @@ function buildImgTileCore(){                     // one seamless tile on a canva
   }
   return t;
 }
+/* Triangle mode, undistorted: the picked triangle is used EXACTLY as it appears in the photo
+   (uniform scale only). Triangle + its 180°-spun twin form a parallelogram cell; the cell
+   repeats on its own slanted lattice (u = B−A, v = C−A), which SVG expresses exactly via a
+   patternTransform matrix — no stretching, no snapping. */
+function triCell(){
+  const S=imgTriSrc();
+  const u=[S[1][0]-S[0][0],S[1][1]-S[0][1]], v=[S[2][0]-S[0][0],S[2][1]-S[0][1]];
+  const L=Math.max(Math.hypot(u[0],u[1]),Math.hypot(v[0],v[1]))||1;
+  const k=(2*Math.max(20,num('imgScale')||120))/L;      // uniform scale — never stretches content
+  const uw=[u[0]*k,u[1]*k], vw=[v[0]*k,v[1]*k], A=[S[0][0]*k,S[0][1]*k];
+  const corners=[A,[A[0]+uw[0],A[1]+uw[1]],[A[0]+uw[0]+vw[0],A[1]+uw[1]+vw[1]],[A[0]+vw[0],A[1]+vw[1]]];
+  const x0=Math.min(...corners.map(p=>p[0]))-2, y0=Math.min(...corners.map(p=>p[1]))-2;
+  const cw=Math.ceil(Math.max(...corners.map(p=>p[0]))-x0)+2, ch=Math.ceil(Math.max(...corners.map(p=>p[1]))-y0)+2;
+  const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+  const c=cv.getContext('2d'); c.imageSmoothingQuality='high';
+  const T=S.map(p=>[p[0]*k-x0,p[1]*k-y0]);              // triangle in cell coords
+  const M=[(T[1][0]+T[2][0])/2,(T[1][1]+T[2][1])/2];    // mid(B,C) — the twin's spin centre
+  const pad=(D,e)=>{ const gx=(D[0][0]+D[1][0]+D[2][0])/3, gy=(D[0][1]+D[1][1]+D[2][1])/3;
+    return D.map(([x,y])=>{ const dx=x-gx,dy=y-gy,l=Math.hypot(dx,dy)||1; return [x+dx/l*e,y+dy/l*e]; }); };
+  const clipTo=D=>{ const p=pad(D,1.5); c.beginPath(); c.moveTo(p[0][0],p[0][1]); c.lineTo(p[1][0],p[1][1]); c.lineTo(p[2][0],p[2][1]); c.closePath(); c.clip(); };
+  c.save(); clipTo(T); c.setTransform(k,0,0,k,-x0,-y0); c.drawImage(IMG.el,0,0); c.restore();
+  const TT=T.map(p=>[2*M[0]-p[0],2*M[1]-p[1]]);
+  c.save(); clipTo(TT); c.setTransform(-k,0,0,-k,2*M[0]+x0,2*M[1]+y0); c.drawImage(IMG.el,0,0); c.restore();
+  return {cv,uw,vw,x0,y0};
+}
+/* the pattern defs for triangle mode: a unit cell tiled on the exact oblique lattice */
+function triPatternDefs(){
+  const {cv,uw,vw,x0,y0}=triCell();
+  const cw=cv.width, ch=cv.height, d=cv.toDataURL('image/png');
+  const aa=Math.hypot(uw[0],uw[1]), bb=Math.hypot(vw[0],vw[1]);
+  const P=[uw[0]/aa,uw[1]/aa,vw[0]/bb,vw[1]/bb];        // pattern (aa×bb) → world lattice
+  const det=P[0]*P[3]-P[2]*P[1];
+  const ia=P[3]/det, ib=-P[1]/det, ic=-P[2]/det, id=P[0]/det;
+  const F=n=>+n.toPrecision(8);
+  let stamps='';
+  for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){
+    const tx=x0+i*uw[0]+j*vw[0], ty=y0+i*uw[1]+j*vw[1];
+    stamps+=`<use href="#cel" xlink:href="#cel" transform="matrix(${F(ia)} ${F(ib)} ${F(ic)} ${F(id)} ${F(ia*tx+ic*ty)} ${F(ib*tx+id*ty)})"/>`;
+  }
+  IMGTDIMS={w:Math.round(aa),h:Math.round(bb)};
+  return `<g id="cel"><image href="${d}" xlink:href="${d}" width="${cw}" height="${ch}"/></g>`
+        +`<pattern id="fld" width="${F(aa)}" height="${F(bb)}" patternUnits="userSpaceOnUse" patternTransform="matrix(${F(P[0])} ${F(P[1])} ${F(P[2])} ${F(P[3])} 0 0)">${stamps}</pattern>`;
+}
 /* the marque geometry over a picture: centred, sized from the swatch (no lattice slots here) */
 function imgMarqueBox(W,H){
   const mode=val('mqMode'), E=Math.min(W,H)*0.30*(num('mqSize')||100)/100;
@@ -960,8 +989,12 @@ function imgMarqueBox(W,H){
 }
 function luma(hex){ const n=parseInt(hex.slice(1),16); return (0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255; }
 function buildImgSwatch(W,H,style=''){
-  const t=buildImgTile(), TW=t.width, TH=t.height, d=t.toDataURL('image/png');
-  let defs=`<pattern id="fld" width="${TW}" height="${TH}" patternUnits="userSpaceOnUse"><image href="${d}" xlink:href="${d}" width="${TW}" height="${TH}"/></pattern>`;
+  let defs;
+  if(val('imgSym')==='tri') defs=triPatternDefs();
+  else{
+    const t=buildImgTile(), TW=t.width, TH=t.height, d=t.toDataURL('image/png');
+    defs=`<pattern id="fld" width="${TW}" height="${TH}" patternUnits="userSpaceOnUse"><image href="${d}" xlink:href="${d}" width="${TW}" height="${TH}"/></pattern>`;
+  }
   let mq='';
   if(val('mqSlots')!=='0'){
     const b=imgMarqueBox(W,H), back=val('imgMqBack'), col=val('cMqBack');
@@ -1119,6 +1152,11 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
 }
 function buildTile(){
   if(imgActive()){
+    if(val('imgSym')==='tri'){
+      // a slanted lattice has no exact rectangular repeat — export a generous patch instead
+      const defs=triPatternDefs(), S=Math.ceil(2.4*Math.max(IMGTDIMS.w,IMGTDIMS.h));
+      return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${S} ${S}" width="${S}" height="${S}"><defs>${defs}</defs><rect width="${S}" height="${S}" fill="url(#fld)"/></svg>`;
+    }
     const t=buildImgTile(), TW=t.width, TH=t.height, d=t.toDataURL('image/png');
     return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${TW} ${TH}" width="${TW}" height="${TH}"><image href="${d}" xlink:href="${d}" width="${TW}" height="${TH}"/></svg>`;
   }
@@ -1821,9 +1859,17 @@ function thumbSVG(){   // a compact preview of the current design
     if(imgActive()){
       // picture mode: a small JPEG thumbnail (~10KB) — embedding the full tile PNG per save
       // would exhaust localStorage within a handful of saves
-      const t=buildImgTile(), c=document.createElement('canvas'); c.width=200; c.height=150;
-      const cc=c.getContext('2d'), k=Math.min(1,100/Math.max(t.width,t.height));
-      cc.save(); cc.scale(k,k); cc.fillStyle=cc.createPattern(t,'repeat'); cc.fillRect(0,0,200/k,150/k); cc.restore();
+      const c=document.createElement('canvas'); c.width=200; c.height=150;
+      const cc=c.getContext('2d');
+      if(val('imgSym')==='tri'){                   // slanted lattice: stamp the cells by hand
+        const {cv,uw,vw,x0,y0}=triCell();
+        const kk=Math.min(1,90/Math.max(Math.hypot(uw[0],uw[1]),Math.hypot(vw[0],vw[1])));
+        cc.scale(kk,kk); cc.translate(100/kk-(x0+cv.width/2),75/kk-(y0+cv.height/2));
+        for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++) cc.drawImage(cv,x0+i*uw[0]+j*vw[0],y0+i*uw[1]+j*vw[1]);
+      }else{
+        const t=buildImgTile(), k=Math.min(1,100/Math.max(t.width,t.height));
+        cc.save(); cc.scale(k,k); cc.fillStyle=cc.createPattern(t,'repeat'); cc.fillRect(0,0,200/k,150/k); cc.restore();
+      }
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150"><image href="${c.toDataURL('image/jpeg',0.6)}" width="200" height="150"/></svg>`;
     }
     return buildSwatch(200,150,{marque:false});
