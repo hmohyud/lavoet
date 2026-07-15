@@ -253,7 +253,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif. Upload a photo, then in Fine-tune drag the square to choose the part that repeats (drag its corner handle to resize). <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies, <b>Triangle</b> gives you three dots to drag — any triangle you make tiles with its own spun twin. Your pictures stay saved here — remove one with its ×.</p>
+      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. In Fine-tune, drag the square (or the triangle dots) to choose the part that repeats. <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies, <b>Triangle</b> tiles any triangle with its spun twin, <b>Honeycomb</b> nests spun hexagons, <b>Honey kaleidoscope</b> mirrors them into a fully seamless mandala. Uploads stay saved here — remove one with its ×.</p>
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div id="imgGallery" class="img-gallery"></div>
@@ -263,6 +263,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <option value="kaleido">Kaleidoscope</option>
           <option value="spin">Pinwheel</option>
           <option value="tri">Triangle</option>
+          <option value="hex">Honeycomb</option>
+          <option value="hexm">Honey kaleidoscope</option>
         </select>
       </div>
       <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
@@ -351,12 +353,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Logo</span><label class="acc-sw" title="Logo on/off"><input type="checkbox" id="swLogo"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch, replacing one motif or a block of four so the pattern stays even. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
-      <label class="seg-lbl">Size — how many motifs it fills</label>
-      <div class="seg" role="group" aria-label="Logo size">
-        <button type="button" data-slots="0" aria-pressed="false">Off</button>
-        <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
-        <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
+      <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch — on the motif pattern it replaces one motif or a block of four; on a picture pattern it sits on top, with a blurred patch or a solid colour behind it for legibility. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
+      <div class="mq-motif-only">
+        <label class="seg-lbl">Size — how many motifs it fills</label>
+        <div class="seg" role="group" aria-label="Logo size">
+          <button type="button" data-slots="0" aria-pressed="false">Off</button>
+          <button type="button" data-slots="1" aria-pressed="false">1 motif</button>
+          <button type="button" data-slots="4" aria-pressed="true">4 motifs</button>
+        </div>
       </div>
       <input type="hidden" id="mqSlots" value="4">
       <div id="mqOpts">
@@ -368,8 +372,20 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           </select>
         </div>
         <div class="row"><label for="mqSize">Fine size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
-        <label class="chk"><input type="checkbox" id="logo3d">3D logo (matches the motif relief)</label>
-        <label class="chk"><input type="checkbox" id="dotsInLogo">Dots in the logo area</label>
+        <div id="imgMqRows">
+          <div class="row-sel"><label for="imgMqBack">Behind it (pictures)</label>
+            <select id="imgMqBack">
+              <option value="blur" selected>Blurred patch</option>
+              <option value="colour">Solid colour</option>
+              <option value="none">Nothing</option>
+            </select>
+          </div>
+          <div class="cols"><div class="col"><label for="cMqBack">Logo / backing colour</label><input type="color" id="cMqBack" value="#F4EFE4"></div></div>
+        </div>
+        <div class="mq-motif-only">
+          <label class="chk"><input type="checkbox" id="logo3d">3D logo (matches the motif relief)</label>
+          <label class="chk"><input type="checkbox" id="dotsInLogo">Dots in the logo area</label>
+        </div>
       </div>
     </div>
   </section>
@@ -850,13 +866,58 @@ function warpTri(ctx,imgEl,S,D,clipPad){
   ctx.setTransform(a,b,c,d,e,f);
   ctx.drawImage(imgEl,0,0); ctx.restore();
 }
-function buildImgTile(){                         // one seamless tile on a canvas
+let IMGTDIMS=null;                               // last tile size, for the footer read-outs
+function buildImgTile(){ const t=buildImgTileCore(); IMGTDIMS={w:t.width,h:t.height}; return t; }
+/* the picked triangle in source px — if the dots were dragged collinear (zero area, which
+   would render nothing), quietly use a safe spread instead so the pattern never goes blank */
+function imgTriSrc(){
+  const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight;
+  const S=IMGTRI.map(p=>[p[0]*iw,p[1]*ih]);
+  const area=Math.abs((S[1][0]-S[0][0])*(S[2][1]-S[0][1])-(S[2][0]-S[0][0])*(S[1][1]-S[0][1]))/2;
+  return area>Math.min(iw,ih)?S:[[0.30*iw,0.30*ih],[0.75*iw,0.35*ih],[0.42*iw,0.80*ih]];
+}
+function buildImgTileCore(){                     // one seamless tile on a canvas
   const u=Math.max(20,num('imgScale')||120), T2=2*u;
+  if(val('imgSym')==='hex'||val('imgSym')==='hexm'){
+    // hexagons nest perfectly (honeycomb). Honeycomb spins six copies of the picked triangle
+    // around each hexagon (p6, quilt piecing); Honey kaleidoscope alternates mirrored copies
+    // (p6m) so every edge is a mirror — a fully seamless kaleidoscope.
+    const S=imgTriSrc();
+    const TH=2*Math.round(u), s=TH/3, h0=Math.sqrt(3)/2*s;
+    const idealW=Math.sqrt(3)*s, TW=Math.max(4,Math.round(idealW)), xs=TW/idealW;   // <1% squish → exact integer period
+    const pad=(D,e)=>{ const gx=(D[0][0]+D[1][0]+D[2][0])/3, gy=(D[0][1]+D[1][1]+D[2][1])/3;
+      return D.map(([x,y])=>{ const dx=x-gx,dy=y-gy,l=Math.hypot(dx,dy)||1; return [x+dx/l*e,y+dy/l*e]; }); };
+    const mir=val('imgSym')==='hexm';
+    const wc=document.createElement('canvas');                       // one wedge (or half-wedge)
+    wc.width=Math.ceil(h0)+4; wc.height=Math.ceil(mir?(s/2+3):(s+4));
+    const wctx=wc.getContext('2d'); wctx.imageSmoothingQuality='high';
+    const oy=mir?1.5:(s/2+2);                                        // wedge origin (hex centre) in wc
+    const D=mir?[[1.5,oy],[1.5+h0,oy],[1.5+h0,oy+s/2]]:[[1.5,oy],[1.5+h0,oy-s/2],[1.5+h0,oy+s/2]];
+    warpTri(wctx,IMG.el,S,D,pad(D,1.8));                              // generous overlap: no hairlines
+    const hx=document.createElement('canvas');                       // one full hexagon
+    hx.width=Math.ceil(2*h0)+6; hx.height=2*Math.ceil(s)+6;
+    const hc=hx.getContext('2d'); hc.imageSmoothingQuality='high';
+    const hcx=hx.width/2, hcy=hx.height/2;
+    for(let k=0;k<6;k++){
+      hc.save(); hc.translate(hcx,hcy); hc.rotate(k*Math.PI/3);
+      hc.drawImage(wc,-1.5,-oy);
+      if(mir){ hc.scale(1,-1); hc.drawImage(wc,-1.5,-oy); }
+      hc.restore();
+    }
+    const t=document.createElement('canvas'); t.width=TW; t.height=TH;
+    const c=t.getContext('2d'); c.imageSmoothingQuality='high';
+    const cs=hc.getImageData(hcx|0,hcy|0,1,1).data;      // solid prefill in a content tone, then
+    c.fillStyle=`rgb(${cs[0]},${cs[1]},${cs[2]})`; c.fillRect(0,0,TW,TH);
+    c.drawImage(hx,0,0,TW,TH);                    // content-matched underlay: a sub-pixel sliver shows image, not a hole
+    for(const [x,y] of [[0,0],[TW,0],[TW/2,TH/2],[0,TH],[TW,TH]]){
+      c.save(); c.translate(x,y); c.scale(xs,1); c.drawImage(hx,-hcx,-hcy); c.restore();
+    }
+    return t;
+  }
   if(val('imgSym')==='tri'){
     // any triangle + its 180°-spun twin makes a parallelogram, and parallelograms always tile —
     // here the picked triangle is warped onto half the square tile, its twin fills the rest
-    const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight;
-    const S=IMGTRI.map(p=>[p[0]*iw,p[1]*ih]);
+    const S=imgTriSrc();
     const tri=document.createElement('canvas'); tri.width=tri.height=T2;
     const tc=tri.getContext('2d'); tc.imageSmoothingQuality='high';
     // dest = lower-left half; clip pushed ~0.7px past the diagonal so the twin blends over it
@@ -888,23 +949,92 @@ function buildImgTile(){                         // one seamless tile on a canva
   }
   return t;
 }
-function buildImgSwatch(W,H){
-  const t=buildImgTile(), T=t.width, d=t.toDataURL('image/png');
-  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs><pattern id="fld" width="${T}" height="${T}" patternUnits="userSpaceOnUse"><image href="${d}" xlink:href="${d}" width="${T}" height="${T}"/></pattern></defs><rect width="${W}" height="${H}" fill="url(#fld)"/></svg>`;
+/* the marque geometry over a picture: centred, sized from the swatch (no lattice slots here) */
+function imgMarqueBox(W,H){
+  const mode=val('mqMode'), E=Math.min(W,H)*0.30*(num('mqSize')||100)/100;
+  const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
+  const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
+  const textW=F1*6.2, blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
+  const backR=Math.hypot(Math.max(figW,textW),blockH)/2+E*0.16;
+  return {E,mode,figH,figW,F1,F2,textW,blockH,cx:W/2,cy:H/2,backR};
 }
-function saveIMGS(){ try{ localStorage.setItem('lavoet-images',JSON.stringify(IMGS)); }catch(e){ alert('Could not keep this picture for next time (browser storage is full) — it still works for this visit.'); } }
+function luma(hex){ const n=parseInt(hex.slice(1),16); return (0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255; }
+function buildImgSwatch(W,H,style=''){
+  const t=buildImgTile(), TW=t.width, TH=t.height, d=t.toDataURL('image/png');
+  let defs=`<pattern id="fld" width="${TW}" height="${TH}" patternUnits="userSpaceOnUse"><image href="${d}" xlink:href="${d}" width="${TW}" height="${TH}"/></pattern>`;
+  let mq='';
+  if(val('mqSlots')!=='0'){
+    const b=imgMarqueBox(W,H), back=val('imgMqBack'), col=val('cMqBack');
+    const ink=back==='colour'?(luma(col)>0.55?'#2B2620':'#F4EFE4'):col;   // solid disk picks a contrasting ink
+    if(val('mqMode')!=='text') defs+=document.getElementById('bellboy').outerHTML;
+    if(back==='blur'){
+      defs+=`<filter id="mqb" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${(b.backR/9).toFixed(1)}"/></filter><clipPath id="mqc"><circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.backR.toFixed(1)}"/></clipPath>`;
+      mq+=`<g clip-path="url(#mqc)"><rect width="${W}" height="${H}" fill="url(#fld)" filter="url(#mqb)"/></g>`;
+    }else if(back==='colour'){
+      mq+=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.backR.toFixed(1)}" fill="${col}"/>`;
+    }
+    mq+=`<g color="${ink}" fill="${ink}">${marqueMarkup(b)}</g>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${defs}</defs><rect width="${W}" height="${H}" fill="url(#fld)"/>${mq}</svg>`;
+}
+function saveIMGS(quiet){ try{ localStorage.setItem('lavoet-images',JSON.stringify(IMGS.filter(r=>!r.builtin))); }catch(e){ if(!quiet) alert('Could not keep this picture for next time (browser storage is full) — it still works for this visit.'); } }
+/* three built-in pictures, generated deterministically (seeded) — always present, never removable */
+function seedRnd(s){ let a=s>>>0; return ()=>{ a=(a*1664525+1013904223)>>>0; return a/4294967296; }; }
+function builtinPics(){
+  const mk=(id,name,draw)=>{ const cv=document.createElement('canvas'); cv.width=900; cv.height=680;
+    draw(cv.getContext('2d'),900,680); return {id,name,data:cv.toDataURL('image/jpeg',0.85),builtin:true}; };
+  const TAU=Math.PI*2;
+  return [
+    mk('b-marbre','Marbre',(c,W,H)=>{                 // flowing marble in chocolate & brass
+      const r=seedRnd(7);
+      const g=c.createLinearGradient(0,0,W,H); g.addColorStop(0,'#4E3A26'); g.addColorStop(.55,'#7a5c2e'); g.addColorStop(1,'#2B2620');
+      c.fillStyle=g; c.fillRect(0,0,W,H);
+      for(let i=0;i<30;i++){ const x=r()*W,y=r()*H,s=40+r()*200;
+        c.strokeStyle=`hsla(${38+r()*16} ${45+r()*25}% ${28+r()*45}% / ${.25+r()*.5})`;
+        c.lineWidth=3+r()*22; c.beginPath(); c.moveTo(x,y);
+        c.bezierCurveTo(x+s*(r()-.5)*2,y+s*(r()-.5)*2,x+s*(r()-.5)*3,y+s*(r()-.5)*3,x+s*(r()-.5)*4,y+s*(r()-.5)*4);
+        c.stroke(); }
+      for(let i=0;i<9;i++){ c.fillStyle=`hsla(45 60% ${70+r()*20}% / ${.12+r()*.2})`;
+        c.beginPath(); c.arc(r()*W,r()*H,30+r()*110,0,TAU); c.fill(); }
+    }),
+    mk('b-jardin','Jardin',(c,W,H)=>{                 // leafy greens with cream blooms
+      const r=seedRnd(23);
+      const g=c.createLinearGradient(0,H,W,0); g.addColorStop(0,'#22392c'); g.addColorStop(.6,'#2F5240'); g.addColorStop(1,'#5d7a4a');
+      c.fillStyle=g; c.fillRect(0,0,W,H);
+      for(let i=0;i<60;i++){ const x=r()*W,y=r()*H,a=r()*TAU,L=30+r()*90;
+        c.save(); c.translate(x,y); c.rotate(a);
+        c.fillStyle=`hsla(${95+r()*40} ${30+r()*35}% ${25+r()*35}% /.8)`;
+        c.beginPath(); c.ellipse(0,0,L,L*(.28+r()*.2),0,0,TAU); c.fill(); c.restore(); }
+      for(let i=0;i<14;i++){ const x=r()*W,y=r()*H,s=8+r()*22;
+        c.fillStyle=`hsla(40 55% ${80+r()*12}% /.9)`;
+        for(let p=0;p<5;p++){ const a=p*TAU/5; c.beginPath(); c.ellipse(x+Math.cos(a)*s,y+Math.sin(a)*s,s*.9,s*.55,a,0,TAU); c.fill(); }
+        c.fillStyle='#C69A45'; c.beginPath(); c.arc(x,y,s*.45,0,TAU); c.fill(); }
+    }),
+    mk('b-deco','Déco',(c,W,H)=>{                     // art-deco fans & lozenges, brass on night
+      const r=seedRnd(41);
+      c.fillStyle='#2B2620'; c.fillRect(0,0,W,H);
+      for(let i=0;i<26;i++){ const x=r()*W,y=r()*H,s=26+r()*120,n=3+(r()*5|0);
+        c.strokeStyle=`hsla(${40+r()*10} ${45+r()*25}% ${45+r()*30}% /.85)`; c.lineWidth=2+r()*3;
+        for(let k=1;k<=n;k++){ c.beginPath(); c.arc(x,y,s*k/n,Math.PI,TAU); c.stroke(); } }
+      for(let i=0;i<12;i++){ const x=r()*W,y=r()*H,s=10+r()*36;
+        c.fillStyle=i%3?'#A98A4F':'#8C3B31';
+        c.beginPath(); c.moveTo(x,y-s); c.lineTo(x+s,y); c.lineTo(x,y+s); c.lineTo(x-s,y); c.closePath(); c.fill(); }
+    }),
+  ];
+}
 function setActiveImg(rec){
   IMG=rec?{...rec,el:(()=>{ const el=new Image(); el.onload=()=>{ renderEd(); render(); }; el.src=rec.data; return el; })()}:null;
   drawGallery();
 }
+function cleanImgId(id){ return String(id||'').replace(/[^\w-]/g,'').slice(0,40); }   // ids are markup-safe by construction
 function drawGallery(){
   const g=$('imgGallery'); if(!g) return;
-  g.innerHTML=IMGS.map(r=>`<div class="gitem${IMG&&IMG.id===r.id?' active':''}" data-id="${r.id}"><img src="${r.data}" alt=""><button type="button" class="gx" data-x="${r.id}" aria-label="Remove picture">×</button></div>`).join('');
-  $('imgHint').textContent=IMGS.length?'Tap a picture to use it; in Fine-tune, drag the square to pick the part that repeats.':'No picture yet — upload one to start.';
+  g.innerHTML=IMGS.map(r=>`<div class="gitem${IMG&&IMG.id===r.id?' active':''}" data-id="${escapeHtml(r.id)}"><img src="${escapeHtml(r.data)}" alt="">${r.builtin?'':`<button type="button" class="gx" data-x="${escapeHtml(r.id)}" aria-label="Remove picture">×</button>`}</div>`).join('');
+  $('imgHint').textContent='Tap a picture to use it; in Fine-tune, drag the square to pick the part that repeats.';
 }
 function addImg(rec){
   const dup=IMGS.find(r=>r.data===rec.data); if(dup) rec=dup; else IMGS.push(rec);
-  saveIMGS(); $('imgOn').checked=true; IMGSEL={x:.5,y:.5,s:.5}; setActiveImg(rec); renderEd(); render();
+  saveIMGS(); $('imgOn').checked=true; IMGSEL={x:.5,y:.5,s:.5}; setOut('imgSize',50); setActiveImg(rec); renderEd(); render();
 }
 $('imgUpload').addEventListener('click',()=>$('imgFile').click());
 $('imgFile').addEventListener('change',()=>{
@@ -923,14 +1053,22 @@ $('imgFile').addEventListener('change',()=>{
 });
 $('imgGallery').addEventListener('click',e=>{
   const x=e.target.closest('[data-x]');
-  if(x){ const id=x.dataset.x; IMGS=IMGS.filter(r=>r.id!==id);
+  if(x){ const id=x.dataset.x;
+    if(!confirm('Remove this picture? Saved designs that use it will fall back to the motif pattern.')) return;
+    IMGS=IMGS.filter(r=>r.id!==id);
     if(IMG&&IMG.id===id){ IMG=null; $('imgOn').checked=false; }
-    saveIMGS(); drawGallery(); renderEd(); render(); return; }
+    saveIMGS(true); drawGallery(); renderEd(); render(); return; }
   const it=e.target.closest('.gitem'); if(!it) return;
   const rec=IMGS.find(r=>r.id===it.dataset.id); if(!rec) return;
   $('imgOn').checked=true; setActiveImg(rec); renderEd(); render();
 });
-(function initIMGS(){ try{ IMGS=JSON.parse(localStorage.getItem('lavoet-images')||'[]')||[]; }catch(e){ IMGS=[]; } drawGallery(); })();
+(function initIMGS(){
+  let saved=[]; try{ const v=JSON.parse(localStorage.getItem('lavoet-images')||'[]'); if(Array.isArray(v)) saved=v; }catch(e){}
+  saved=saved.filter(r=>r&&typeof r.data==='string'&&/^data:image\//.test(r.data)&&!r.builtin)
+             .map(r=>({id:cleanImgId(r.id)||('i'+Date.now().toString(36)),name:String(r.name||''),data:r.data}));
+  IMGS=[...builtinPics(),...saved];                          // built-ins first, always present
+  drawGallery();
+})();
 
 /* ---------- documents ---------- */
 function tileSize(){
@@ -954,7 +1092,7 @@ function fill(motifs,c){
 }
 
 function buildSwatch(W,H,{marque=true,style=''}={}){
-  if(imgActive()) return buildImgSwatch(W,H);
+  if(imgActive()) return buildImgSwatch(W,H,style);
   const c=colors(), useMq=marque&&val('mqSlots')!=='0';
   const sys=motifSystem();
   // ALWAYS phase the lattice to the logo slot (using the remembered slot config) so toggling
@@ -981,8 +1119,8 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
 }
 function buildTile(){
   if(imgActive()){
-    const t=buildImgTile(), T=t.width, d=t.toDataURL('image/png');
-    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${T} ${T}" width="${T}" height="${T}"><image href="${d}" xlink:href="${d}" width="${T}" height="${T}"/></svg>`;
+    const t=buildImgTile(), TW=t.width, TH=t.height, d=t.toDataURL('image/png');
+    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${TW} ${TH}" width="${TW}" height="${TH}"><image href="${d}" xlink:href="${d}" width="${TW}" height="${TH}"/></svg>`;
   }
   const c=colors(), sys=motifSystem();
   return fill(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${sys.T} ${sys.T}" width="${sys.T}" height="${sys.T}"><defs>${sys.defs}</defs><rect width="${sys.T}" height="${sys.T}" fill="${c.bg}"/>${tileBody(sys)}</svg>`,c);
@@ -1008,18 +1146,24 @@ function render(){
     const im=imgActive();
     $('stage').classList.toggle('img-mode',im);
     document.querySelectorAll('.motif-only').forEach(el=>el.classList.toggle('opt-off',im));
-    const szRow=$('imgSize').closest('.row');        // triangle mode: the dots do the sizing
-    if(szRow) szRow.classList.toggle('opt-off',im&&val('imgSym')==='tri');
+    const triSel=['tri','hex','hexm'].includes(val('imgSym'));
+    const szRow=$('imgSize').closest('.row');        // dot-picked styles: the dots do the sizing
+    if(szRow) szRow.classList.toggle('opt-off',im&&triSel);
+    document.querySelectorAll('.mq-motif-only').forEach(el=>el.classList.toggle('opt-off',im));
+    const bkRows=$('imgMqRows'); if(bkRows) bkRows.classList.toggle('opt-off',!im);
     const eh=document.querySelector('.ed-hint');
-    if(eh) eh.textContent=im?'Drag the square to choose what repeats; drag its corner handle to resize.':'Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.';
+    if(eh) eh.textContent=im
+      ?(triSel?'Drag the three dots to shape the piece that repeats; drag inside it to move it.'
+              :'Drag the square to choose what repeats; drag its corner handle to resize.')
+      :'Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.';
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
     preview.innerHTML=buildSwatch(W,H);
     // cover, don't letterbox — a short strip (e.g. phone while editing) crops instead of shrinking
     const psvg=preview.querySelector('svg'); if(psvg) psvg.setAttribute('preserveAspectRatio','xMidYMid slice');
-    const T=tileSize();
-    $('footL').textContent=`Tile ${T} × ${T} px — repeats seamlessly`;
+    const T=tileSize(), tw=(im&&IMGTDIMS)?IMGTDIMS.w:T, th=(im&&IMGTDIMS)?IMGTDIMS.h:T;
+    $('footL').textContent=`Tile ${tw} × ${th} px — repeats seamlessly`;
     $('footR').textContent=`Swatch ${W} × ${H} px`;
-    $('tileInfo').textContent=`Current tile: ${T} × ${T} px. The tile never includes the logo.`;
+    $('tileInfo').textContent=`Current tile: ${tw} × ${th} px. The tile never includes the logo.`;
     persistSession();    // remember exactly where the user is, so a close/reopen resumes here
     armAutosave();       // and fold a settled snapshot into the rolling 3-deep autosave history
   },wait);
@@ -1037,7 +1181,7 @@ function renderEd(){
     const w=iw*f, h=ih*f, x0=-w/2, y0=-h/2;
     let si=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${val('cBg')}"/>`;
     si+=`<image href="${IMG.data}" x="${F(x0)}" y="${F(y0)}" width="${F(w)}" height="${F(h)}" preserveAspectRatio="none"/>`;
-    if(val('imgSym')==='tri'){
+    if(['tri','hex','hexm'].includes(val('imgSym'))){
       // triangle picker: three draggable corner dots — any triangle tiles
       const D=IMGTRI.map(p=>[x0+p[0]*iw*f, y0+p[1]*ih*f]);
       const tp=D.map(p=>F(p[0])+' '+F(p[1]));
@@ -1389,6 +1533,7 @@ document.querySelectorAll('input,select').forEach(el=>['input','change'].forEach
   if(el.id==='depth3d'&&(num('depth3d')||0)>0) last3d=num('depth3d');
   if(el.id==='edRoundAmt'&&SHAPE) SHAPE.pts[EDSEL][2]=+(+el.value/50).toFixed(2);   // slider 0–100 → roundness 0–2 (50 = medium)
   if(el.id==='imgSize') IMGSEL.s=Math.max(0.08,+el.value/100);                       // picked-area size follows the slider
+  if(el.id==='imgOn'&&el.checked&&!IMG&&IMGS.length) setActiveImg(IMGS[0]);          // switch on with nothing picked → first picture
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   syncRows(); renderEd(); render();
@@ -1404,10 +1549,13 @@ function saveAccState(){
 }
 (function initAcc(){
   let saved=null; try{ saved=JSON.parse(localStorage.getItem(ACC_KEY)||'null'); }catch(e){}
-  const MOTIF_ONLY=['Shape','Colours','Outline','Dots','3D & shading','Layout','Logo'];
+  const MOTIF_ONLY=['Shape','Colours','Outline','Dots','3D & shading','Layout'];   // Logo works on pictures too
   for(const acc of document.querySelectorAll('.acc')){
     const key=acc.querySelector('.acc-title').textContent;
-    if(MOTIF_ONLY.includes(key)) acc.querySelector('.acc-body').classList.add('motif-only');   // greyed in picture mode
+    if(MOTIF_ONLY.includes(key)){
+      acc.querySelector('.acc-body').classList.add('motif-only');   // greyed in picture mode
+      const sw=acc.querySelector('.acc-sw'); if(sw) sw.classList.add('motif-only');   // …their switches too
+    }
     const open=saved?!!saved[key]:false;          // default: all closed
     acc.classList.toggle('closed',!open);
     acc.querySelector('.acc-head').addEventListener('click',e=>{
@@ -1476,7 +1624,7 @@ async function embedFont(){
 function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
-function marqueTextOn(){ return !imgActive()&&val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
+function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
 
 /* ---------- settings ride inside every download ---------- */
 const CRC_T=(()=>{ const t=new Uint32Array(256);
@@ -1528,8 +1676,13 @@ function pngReadConfig(buf){
     const type=String.fromCharCode(buf[p+4],buf[p+5],buf[p+6],buf[p+7]);
     if(type==='tEXt'){
       const d=buf.subarray(p+8,p+8+len), z=d.indexOf(0);
-      if(z>0&&String.fromCharCode(...d.subarray(0,z))==='lavoet-config')
-        return String.fromCharCode(...d.subarray(z+1));
+      if(z>0&&String.fromCharCode(...d.subarray(0,z))==='lavoet-config'){
+        // decode in chunks — a picture-mode config can be hundreds of KB, far past the
+        // spread-argument limit (String.fromCharCode(...huge) throws RangeError)
+        let out=''; const v=d.subarray(z+1);
+        for(let i=0;i<v.length;i+=8192) out+=String.fromCharCode.apply(null,v.subarray(i,i+8192));
+        return out;
+      }
     }
     if(type==='IEND') break;
     p+=12+len;
@@ -1584,7 +1737,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots','imgSym','imgSize','imgScale'];
+  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots','imgSym','imgSize','imgScale','imgMqBack','cMqBack'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn'];
 function paramsString(){
   const p=new URLSearchParams();
@@ -1633,22 +1786,27 @@ function applyParams(p){
     const t=p.get('imgtri').split(';').map(s=>s.split(':').map(Number));
     if(t.length===3&&t.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&v>=0&&v<=1))) IMGTRI=t;
   }
+  if(!p.has('imgOn')) $('imgOn').checked=false;    // configs from before picture mode: motif design
   if(p.has('imgdata')&&/^data:image\//.test(p.get('imgdata'))){
     // a picture travelling inside an exported file — bring it into the gallery and use it
     const d=p.get('imgdata');
     let rec=IMGS.find(r=>r.data===d);
-    if(!rec){ rec={id:p.get('imgid')||('i'+Date.now().toString(36)),name:'imported',data:d}; IMGS.push(rec); saveIMGS(); }
+    if(!rec){ rec={id:cleanImgId(p.get('imgid'))||('i'+Date.now().toString(36)),name:'imported',data:d}; IMGS.push(rec); saveIMGS(); }
     setActiveImg(rec);
   } else if(p.has('imgid')){
     const rec=IMGS.find(r=>r.id===p.get('imgid'));
-    if(rec) setActiveImg(rec); else if(chk('imgOn')) $('imgOn').checked=false;   // picture gone from this browser
+    if(rec) setActiveImg(rec);
+    else { IMG=null; if(chk('imgOn')) $('imgOn').checked=false; drawGallery(); }   // picture gone from this browser — fall back cleanly
   }
   setSlots(val('mqSlots'));
 }
 /* ---------- local saves: working session + named saves + rolling autosaves ---------- */
 const SESS_KEY='lavoet-ps-session', SAVES_KEY='lavoet-ps-saves', AUTOS_KEY='lavoet-ps-autos';
 function loadJSON(k){ try{ return JSON.parse(localStorage.getItem(k)||'[]'); }catch(e){ return []; } }
-function saveJSON(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+let quotaWarned=false;
+function saveJSON(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){
+  if(!quotaWarned){ quotaWarned=true; alert('Browser storage is full — new saves and autosaves cannot be kept. Remove some saved designs or gallery pictures to make room.'); }
+} }
 function persistSession(){ try{ localStorage.setItem(SESS_KEY,paramsString()); }catch(e){} }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function relTime(ts){
@@ -1658,7 +1816,19 @@ function relTime(ts){
   if(s<86400) return Math.round(s/3600)+' h ago';
   return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
 }
-function thumbSVG(){ try{ return buildSwatch(200,150,{marque:false}); }catch(e){ return ''; } }   // a compact preview of the current design
+function thumbSVG(){   // a compact preview of the current design
+  try{
+    if(imgActive()){
+      // picture mode: a small JPEG thumbnail (~10KB) — embedding the full tile PNG per save
+      // would exhaust localStorage within a handful of saves
+      const t=buildImgTile(), c=document.createElement('canvas'); c.width=200; c.height=150;
+      const cc=c.getContext('2d'), k=Math.min(1,100/Math.max(t.width,t.height));
+      cc.save(); cc.scale(k,k); cc.fillStyle=cc.createPattern(t,'repeat'); cc.fillRect(0,0,200/k,150/k); cc.restore();
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150"><image href="${c.toDataURL('image/jpeg',0.6)}" width="200" height="150"/></svg>`;
+    }
+    return buildSwatch(200,150,{marque:false});
+  }catch(e){ return ''; }
+}
 function thumbTag(svg,load){
   if(!svg) return `<span class="save-thumb empty" data-load="${load}" title="Load this design"></span>`;
   return `<img class="save-thumb" data-load="${load}" title="Load this design — hover to enlarge" alt="" src="data:image/svg+xml,${encodeURIComponent(svg)}">`;
