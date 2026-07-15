@@ -55,6 +55,12 @@ main{flex:1;display:flex;min-height:0}
 .gitem .gx{position:absolute;top:2px;right:2px;width:19px;height:19px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font:600 12px/1 var(--sans);cursor:pointer;padding:0}
 .gitem .gx:hover{background:#8C3B31}
 #stage.img-mode .ed-btns{display:none}     /* picture mode: the editor pane is the crop picker */
+/* tiling-shape picker: the shape is drawn, not just named */
+.shape-seg{display:flex;border:1px solid var(--ink);width:100%;margin-top:6px}
+.shape-seg button{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 2px 7px;font:500 10.5px var(--sans);letter-spacing:.06em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
+.shape-seg button:last-child{border-right:none}
+.shape-seg svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+.shape-seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 /* the "?" help now pops a speech bubble anchored to the header, so it works even when the section is collapsed */
 .acc-info{position:absolute;top:calc(100% - 7px);right:4px;z-index:40;width:max-content;max-width:calc(100% - 8px);margin:0;padding:10px 13px;background:var(--ink);color:var(--paper);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:400 11px/1.55 var(--sans);letter-spacing:normal;text-transform:none;cursor:default}
 .acc-info::after{content:"";position:absolute;top:-6px;right:22px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
@@ -253,20 +259,28 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. In Fine-tune, drag the square (or the triangle dots) to choose the part that repeats. <b>Mirror</b> reflects it like folded paper, <b>Kaleidoscope</b> adds a diagonal fold, <b>Pinwheel</b> spins four copies, <b>Triangle</b> repeats your exact triangle with its spun twin on a slanted grid — no stretching, <b>Honeycomb</b> nests spun hexagons, <b>Honey kaleidoscope</b> mirrors them into a fully seamless mandala. Uploads stay saved here — remove one with its ×.</p>
+      <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. Pick the <b>shape that tiles</b> (Triangle, Square or Hexagon), then a style. <b>Triangle</b> repeats your exact triangle with its spun twin on a slanted grid, or a Stretched variant that fills a square tile. <b>Square</b>: Mirror folds like paper, Kaleidoscope adds a diagonal fold, Pinwheel spins four copies. <b>Hexagon</b> nests honeycombs — mirrored (fully seamless) or spun. In Fine-tune, drag the square or the triangle dots to choose what repeats. Uploads stay saved here — remove one with its ×.</p>
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div id="imgGallery" class="img-gallery"></div>
-      <div class="row-sel"><label for="imgSym">Repeat style</label>
-        <select id="imgSym">
-          <option value="tri" selected>Triangle</option>
-          <option value="mirror">Mirror</option>
-          <option value="kaleido">Kaleidoscope</option>
-          <option value="spin">Pinwheel</option>
-          <option value="hex">Honeycomb</option>
-          <option value="hexm">Honey kaleidoscope</option>
-        </select>
+      <label class="seg-lbl">Repeats with — the shape that tiles</label>
+      <div class="shape-seg" role="group" aria-label="Tiling shape">
+        <button type="button" data-shape="tri" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 H3 Z"/></svg>Triangle</button>
+        <button type="button" data-shape="square" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="1"/></svg>Square</button>
+        <button type="button" data-shape="hex" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L19.8 7.5 V16.5 L12 21 L4.2 16.5 V7.5 Z"/></svg>Hexagon</button>
       </div>
+      <div class="row-sel"><label for="imgVar">Style</label>
+        <select id="imgVar"></select>
+      </div>
+      <select id="imgSym" hidden aria-hidden="true">
+        <option value="tri" selected>Triangle — patterned fit</option>
+        <option value="tristretch">Triangle — stretched</option>
+        <option value="mirror">Mirror</option>
+        <option value="kaleido">Kaleidoscope</option>
+        <option value="spin">Pinwheel</option>
+        <option value="hex">Honeycomb</option>
+        <option value="hexm">Honey kaleidoscope</option>
+      </select>
       <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
       <div class="row"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
       <p class="hint" id="imgHint">No picture yet — upload one to start.</p>
@@ -914,6 +928,19 @@ function buildImgTileCore(){                     // one seamless tile on a canva
     }
     return t;
   }
+  if(val('imgSym')==='tristretch'){
+    // the stretched variant: the picked triangle is affine-fitted onto half a square tile
+    // (content stretches to fit) and completed by its 180°-spun twin — a true rect tile
+    const S=imgTriSrc();
+    const tri=document.createElement('canvas'); tri.width=tri.height=T2;
+    const tc=tri.getContext('2d'); tc.imageSmoothingQuality='high';
+    warpTri(tc,IMG.el,S,[[0,0],[T2,0],[0,T2]],[[-1,-1],[T2+2,-1],[-1,T2+2]]);
+    const t=document.createElement('canvas'); t.width=t.height=T2;
+    const c=t.getContext('2d'); c.imageSmoothingQuality='high';
+    c.drawImage(tri,0,0);
+    c.save(); c.translate(T2,T2); c.rotate(Math.PI); c.drawImage(tri,0,0); c.restore();
+    return t;
+  }
   const T=T2, {sx,sy,P}=imgRegion();
   const unit=document.createElement('canvas'); unit.width=unit.height=u;
   const uc=unit.getContext('2d'); uc.imageSmoothingQuality='high';
@@ -1069,6 +1096,23 @@ function addImg(rec){
   const dup=IMGS.find(r=>r.data===rec.data); if(dup) rec=dup; else IMGS.push(rec);
   saveIMGS(); $('imgOn').checked=true; IMGSEL={x:.5,y:.5,s:.5}; setOut('imgSize',50); setActiveImg(rec); renderEd(); render();
 }
+/* the repeat style is picked as SHAPE (drawn) + a style variant; #imgSym stays the stored value */
+const SHAPE_VARS={ tri:['tri','tristretch'], square:['mirror','kaleido','spin'], hex:['hexm','hex'] };
+const VAR_LABELS={ tri:'Patterned fit — exact, no stretching', tristretch:'Stretched — fills a square tile',
+  mirror:'Mirror', kaleido:'Kaleidoscope', spin:'Pinwheel', hexm:'Mirrored — fully seamless', hex:'Spun' };
+function shapeOfSym(s){ for(const k in SHAPE_VARS) if(SHAPE_VARS[k].includes(s)) return k; return 'tri'; }
+function syncImgSymUI(){
+  const sym=val('imgSym'), shp=shapeOfSym(sym);
+  document.querySelectorAll('.shape-seg [data-shape]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.shape===shp?'true':'false'));
+  const sel=$('imgVar'), want=SHAPE_VARS[shp];
+  if(sel.dataset.shape!==shp){ sel.innerHTML=want.map(v=>`<option value="${v}">${VAR_LABELS[v]}</option>`).join(''); sel.dataset.shape=shp; }
+  sel.value=sym;
+}
+document.querySelectorAll('.shape-seg [data-shape]').forEach(b=>b.addEventListener('click',()=>{
+  $('imgSym').value=SHAPE_VARS[b.dataset.shape][0];
+  syncImgSymUI(); renderEd(); render();
+}));
+$('imgVar').addEventListener('change',()=>{ $('imgSym').value=$('imgVar').value; syncImgSymUI(); renderEd(); render(); });
 $('imgUpload').addEventListener('click',()=>$('imgFile').click());
 $('imgFile').addEventListener('change',()=>{
   const f=$('imgFile').files[0]; $('imgFile').value='';
@@ -1184,7 +1228,8 @@ function render(){
     const im=imgActive();
     $('stage').classList.toggle('img-mode',im);
     document.querySelectorAll('.motif-only').forEach(el=>el.classList.toggle('opt-off',im));
-    const triSel=['tri','hex','hexm'].includes(val('imgSym'));
+    syncImgSymUI();
+    const triSel=['tri','tristretch','hex','hexm'].includes(val('imgSym'));
     const szRow=$('imgSize').closest('.row');        // dot-picked styles: the dots do the sizing
     if(szRow) szRow.classList.toggle('opt-off',im&&triSel);
     document.querySelectorAll('.mq-motif-only').forEach(el=>el.classList.toggle('opt-off',im));
@@ -1219,7 +1264,7 @@ function renderEd(){
     const w=iw*f, h=ih*f, x0=-w/2, y0=-h/2;
     let si=`<rect x="-1.45" y="-1.45" width="2.9" height="2.9" fill="${val('cBg')}"/>`;
     si+=`<image href="${IMG.data}" x="${F(x0)}" y="${F(y0)}" width="${F(w)}" height="${F(h)}" preserveAspectRatio="none"/>`;
-    if(['tri','hex','hexm'].includes(val('imgSym'))){
+    if(['tri','tristretch','hex','hexm'].includes(val('imgSym'))){
       // triangle picker: three draggable corner dots — any triangle tiles
       const D=IMGTRI.map(p=>[x0+p[0]*iw*f, y0+p[1]*ih*f]);
       const tp=D.map(p=>F(p[0])+' '+F(p[1]));
