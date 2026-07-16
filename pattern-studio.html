@@ -2280,6 +2280,9 @@ function pushHistory(){
 }
 function armHistory(){ clearTimeout(histT); histT=setTimeout(pushHistory,HIST_SETTLE); }
 function stepHistory(d){
+  // commit any edit still inside its 350ms settle window FIRST, so undo can't skip past it or
+  // discard it (pushHistory dedupes, so this is a no-op when nothing is pending)
+  clearTimeout(histT); pushHistory();
   const n=hi+d; if(n<0||n>=hist.length) return;
   hi=n; clearTimeout(histT);                          // the replay's own render re-arms; dedupe absorbs it
   applyParams(new URLSearchParams(hist[hi])); renderEd(); render();
