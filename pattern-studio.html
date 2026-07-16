@@ -153,6 +153,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 /* the global reset sits at the foot of the panel, apart from the accordions; it uses the danger
    colour and a deliberate press-and-hold so a whole design can't be wiped by a stray click */
 #resetBar{position:sticky;bottom:0;margin-top:auto;background:var(--paper);padding:14px 0 6px;border-top:1px solid var(--hair)}
+/* undo/redo sit just above the reset, grouping the "step back" controls together */
+.hist-row{display:flex;gap:8px;margin-bottom:10px}
+.hist-btn{flex:1;font:600 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:9px 8px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
+.hist-btn:hover:not(:disabled){border-color:var(--brass);color:var(--brass)}
+.hist-btn:disabled{opacity:.4;cursor:default}
+@media(max-width:760px){ .hist-btn{padding:13px 8px} }
 /* SOLID red so it can't blend into the ivory page; a darker-red fill sweeps across as you hold */
 .rst{position:relative;width:100%;overflow:hidden;border:1px solid color-mix(in srgb,var(--red) 55%,#000);background:var(--red);color:var(--paper);font:700 12px var(--sans);letter-spacing:.2em;text-transform:uppercase;padding:15px 10px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;box-shadow:0 2px 9px color-mix(in srgb,var(--red) 34%,transparent)}
 .rst:hover{background:color-mix(in srgb,var(--red) 88%,#000)}
@@ -473,6 +479,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <div id="resetBar">
+    <div class="hist-row" role="group" aria-label="Undo and redo">
+      <button type="button" id="undoBtn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ Undo</button>
+      <button type="button" id="redoBtn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷ Redo</button>
+    </div>
     <button type="button" id="resetAll" class="rst" aria-label="Hold to reset everything to the original trunk motif">
       <span class="rst-fill" aria-hidden="true"></span>
       <span class="rst-label">Hold to reset</span>
@@ -1366,6 +1376,7 @@ function buildTile(){
 const preview=$('preview');
 const RENDER_GAP=50;   // ms between live refreshes while dragging (leading+trailing throttle)
 let raf=0, lastRun=0, autoT=0, autoAt=0, TRUNK_CFG='';   // TRUNK_CFG = the pristine trunk state, never worth autosaving
+let hist=[], hi=-1, histT=0;                             // undo/redo: a linear stack of config snapshots + a cursor
 let olAuto=true;
 function syncOutlineColor(){ if(olAuto) $('cOl').value=shade(val('cFg'),-0.28); }
 function updateMirrors(){ for(const el of document.querySelectorAll('[data-syncs]')){ const s=$(el.dataset.syncs); if(el.type==='checkbox') el.checked=s.checked; else el.value=s.value; } }
@@ -1405,7 +1416,8 @@ function render(){
     $('footR').textContent=`Swatch ${W} × ${H} px`;
     $('tileInfo').textContent=`Current tile: ${tw} × ${th} px. The tile never includes the logo.`;
     persistSession();    // remember exactly where the user is, so a close/reopen resumes here
-    armAutosave();       // and fold a settled snapshot into the rolling 3-deep autosave history
+    armAutosave();       // and fold a settled snapshot into the rolling autosave history
+    armHistory();        // …and into the undo timeline (both coalesce a drag into one step)
   },wait);
 }
 new ResizeObserver(render).observe(preview);
@@ -2124,6 +2136,29 @@ function armAutosave(){                                 // a settled snapshot, ~
   },wait);
 }
 function applyCfg(cfg){ applyParams(new URLSearchParams(cfg)); renderEd(); render(); }
+/* ---------- undo / redo ----------
+   A linear timeline of paramsString() snapshots. Every settled render arms a push (so a drag
+   or slider scrub coalesces into ONE step, matching autosave). Undo/redo replay a snapshot and
+   the resulting render re-arms a push that dedupes against the current cursor — so stepping
+   never pollutes the timeline. Loading a save, randomising and Reset all flow through render(),
+   so they're undoable too, for free. */
+const HIST_MAX=120, HIST_SETTLE=350;
+function histButtons(){ const u=$('undoBtn'),r=$('redoBtn'); if(u) u.disabled=hi<=0; if(r) r.disabled=hi>=hist.length-1; }
+function histReset(cfg){ hist=[cfg]; hi=0; clearTimeout(histT); histButtons(); }   // start a fresh timeline (init)
+function pushHistory(){
+  const cfg=paramsString();
+  if(hi>=0&&cfgKey(hist[hi])===cfgKey(cfg)) return;   // nothing that DRAWS differently since the last step
+  hist=hist.slice(0,hi+1); hist.push(cfg);            // a new edit after undo prunes the redo branch
+  if(hist.length>HIST_MAX) hist.shift();
+  hi=hist.length-1; histButtons();
+}
+function armHistory(){ clearTimeout(histT); histT=setTimeout(pushHistory,HIST_SETTLE); }
+function stepHistory(d){
+  const n=hi+d; if(n<0||n>=hist.length) return;
+  hi=n; clearTimeout(histT);                          // the replay's own render re-arms; dedupe absorbs it
+  applyParams(new URLSearchParams(hist[hi])); renderEd(); render();
+  histButtons();
+}
 /* one markup builder per kind, used by BOTH the panel list and the browser overlay, so a row
    means the same thing (and routes the same way) wherever it is drawn. `i` is the index into
    the FULL autosave array — never into a displayed slice — since that is what the click
@@ -2243,6 +2278,17 @@ document.addEventListener('keydown',e=>{
   if(document.querySelector('.nm.editing')) return;    // a rename is open (focus elsewhere) — leave it be
   closeBrowser();
 });
+/* undo/redo: on-screen buttons + Ctrl/⌘-Z, Ctrl/⌘-Shift-Z or Ctrl/⌘-Y */
+$('undoBtn').addEventListener('click',()=>stepHistory(-1));
+$('redoBtn').addEventListener('click',()=>stepHistory(1));
+document.addEventListener('keydown',e=>{
+  if(!(e.ctrlKey||e.metaKey)||e.altKey) return;
+  const k=e.key.toLowerCase(); if(k!=='z'&&k!=='y') return;
+  const t=e.target;                                    // let a text field / rename own its native undo
+  if(t&&(t.isContentEditable||t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&/^(text|number|search|email|url|password)$/.test(t.type)))) return;
+  e.preventDefault();
+  stepHistory((k==='y'||e.shiftKey)?1:-1);
+});
 /* hover a thumbnail to see the design enlarged, so changes are easy to spot */
 (function initThumbPop(){
   const pop=$('thumbPop'), list=$('savesList'); if(!pop||!list) return;
@@ -2272,6 +2318,7 @@ if(sess) applyParams(new URLSearchParams(sess));
 setSlots(val('mqSlots'));
 syncRows();
 renderSaves();
+histReset(paramsString());   // the restored (or trunk) state is undo step 0
 render();
 /* the fine-tune editor is shown by default (remembered across visits) */
 (function initEditor(){
