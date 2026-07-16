@@ -128,8 +128,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rs-cell{padding:4px;border:1px solid var(--hair);background:none;cursor:pointer;transition:border-color .12s}
 .rs-cell:hover{border-color:var(--brass)}
 .rs-cell .save-thumb{width:100%;height:auto;aspect-ratio:4/3}
-.rs-again{flex:none;width:auto;padding:0 12px;font:500 10px var(--sans);letter-spacing:.14em}
+.rs-again{flex:none;height:28px;display:flex;align-items:center;gap:5px;padding:0 12px;border:1px solid var(--hair);background:none;color:var(--ink);font:500 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
 .rs-again:hover{border-color:var(--brass);color:var(--brass)}
+/* the Randomize split button: the main half rolls, the caret picks how many a roll deals */
+.rnd-split{position:relative;display:flex;gap:2px;margin-top:4px}
+.rnd-split #rndGo{flex:1}
+.rnd-caret{flex:none;width:46px;padding-left:0;padding-right:0}
+.rnd-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:45;background:var(--paper);border:1px solid var(--brassD);box-shadow:0 10px 28px rgba(43,38,32,.28)}
+.rnd-menu button{display:block;width:100%;text-align:left;padding:12px 13px;font:500 11px var(--sans);letter-spacing:.04em;background:none;border:none;border-bottom:1px solid var(--hair);color:var(--ink);cursor:pointer}
+.rnd-menu button:last-child{border-bottom:none}
+.rnd-menu button:hover{background:color-mix(in srgb,var(--brass) 12%,transparent)}
+.rnd-menu button[aria-pressed="true"]{font-weight:600;background:color-mix(in srgb,var(--brass) 7%,transparent)}
+.rnd-menu button[aria-pressed="true"]::before{content:"✓ "}
 .sv-panel{display:flex;flex-direction:column;width:100%;max-width:860px;max-height:100%;background:var(--paper);border:1px solid var(--brassD);box-shadow:0 18px 50px rgba(43,38,32,.42)}
 .sv-head{flex:none;display:flex;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--hair)}
 .sv-title{flex:1;font:500 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--brassD)}
@@ -316,7 +326,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Randomize</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Shuffle the design for ideas. The <b>Motif / Picture</b> switch decides what a shuffle produces: Motif shuffles the ticked parts below (each part's <b>⚙</b> opens its limits — bounds, drift, counts…); Picture makes picture patterns from the allowed pool. <b>Variation</b> sets how far things wander. <b>🎲 Randomize</b> rolls once; <b>×9</b> deals nine thumbnails to pick from. Every applied result is a single Undo. Hold the reset to put the settings back to their defaults.</p>
+      <p class="acc-info" hidden>Shuffle the design for ideas. The <b>Motif / Picture</b> switch decides what a shuffle produces: Motif shuffles the ticked parts below (each part's <b>⚙</b> opens its limits — bounds, drift, counts…); Picture makes picture patterns from the allowed pool. <b>Variation</b> sets how far things wander. <b>🎲 Randomize</b> rolls with the ▾-chosen mode — once, or a ×9/×16 sheet of thumbnails to pick from. Every applied result is a single Undo. Hold the reset to put the settings back to their defaults.</p>
       <div class="seg" id="rndModeSeg" role="group" aria-label="What a shuffle produces" style="margin-top:4px">
         <button type="button" data-rmode="motif" aria-pressed="true">Motif</button>
         <button type="button" data-rmode="picture" aria-pressed="false">Picture pattern</button>
@@ -336,9 +346,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div id="rndPicBody" class="rnd-opts" aria-label="Picture-pattern randomize settings" hidden></div>
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="100"><output for="rndAmt">100</output></div>
       <div class="rnd-lbls"><span>Subtle</span><span>Wild</span></div>
-      <div class="btns">
+      <div class="rnd-split">
         <button type="button" id="rndGo" class="rnd-go">🎲 Randomize</button>
-        <button type="button" id="rndNine" class="rnd-go" title="Deal nine shuffles as thumbnails and pick one">🎲 ×9 — pick from nine</button>
+        <button type="button" id="rndMore" class="rnd-go rnd-caret" aria-haspopup="true" aria-expanded="false" aria-label="Choose how many shuffles a roll deals">▾</button>
+        <div id="rndMenu" class="rnd-menu" hidden>
+          <button type="button" data-rolls="1">Roll once</button>
+          <button type="button" data-rolls="9">Deal ×9 — pick from nine</button>
+          <button type="button" data-rolls="16">Deal ×16 — pick from sixteen</button>
+        </div>
       </div>
       <button type="button" id="rndReset" class="rnd-rst" title="Hold to put every randomize setting — mode, groups, limits, picture pool, Variation — back to the defaults"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to reset randomize settings</span></button>
     </div>
@@ -622,7 +637,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
 <div id="rndSheet" hidden role="dialog" aria-modal="true" aria-label="Nine shuffles — pick one">
   <div class="sv-panel">
-    <div class="sv-head"><span class="sv-title">Nine ideas — pick one</span><button type="button" id="rsAgain" class="sv-close rs-again" title="Roll nine more">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
+    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
     <div class="rs-grid" id="rsGrid"></div>
   </div>
 </div>
@@ -1846,9 +1861,9 @@ function rndSel(id,t){ const el=$(id); if(el&&rchance(t,0.85)) el.value=rpick([.
 function rndChk(id,t,p){ if(rchance(t,0.6)) $(id).checked=rrand()<p; }
 function rndPalette(t,hue){
   const baseH=hexHue($('cFg').value)+(rrand()*2-1)*t*hue;         // wander from the current motif hue
-  $('cBg').value=hsl2hex(baseH+(rrand()*2-1)*18, 26+rrand()*26, 13+rrand()*13);   // a deep ground
-  $('cFg').value=hsl2hex(baseH+(rrand()*2-1)*t*40, 42+rrand()*30, 46+rrand()*16); // brighter motif
-  $('cAc').value=rchance(0.5)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), 40+rrand()*28, 50+rrand()*14);
+  $('cBg').value=hsl2hex(baseH+(rrand()*2-1)*14, 24+rrand()*24, 13+rrand()*12);   // a deep ground
+  $('cFg').value=hsl2hex(baseH+(rrand()*2-1)*t*30, 36+rrand()*26, 48+rrand()*15); // brighter motif — saturation held in a tasteful band
+  $('cAc').value=rchance(0.65)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), 38+rrand()*22, 50+rrand()*12);
   olAuto=true;                                       // let the outline colour re-derive from the new gold
 }
 /* SCATTER draws a fresh piece from an ARCHETYPE library rather than sprinkling dots at random —
@@ -1909,7 +1924,7 @@ function scatterPiece(loN,hiN){
     raw.sort((a,b)=>a[0]-b[0]);
     raw.forEach(([a,r],i)=>push(a,r, rp==='sharp'?0:rp==='round'?1.2+rrand()*0.6:rp==='alt'?(i%2?1.5:0):+(rrand()*2)));
   }
-  return pts;
+  return {pts,arch};
 }
 function rndShape(t,c){
   if(!SHAPE) return;
@@ -1918,7 +1933,7 @@ function rndShape(t,c){
     // fresh piece from the library; when count may change the archetype picks its own n in bounds
     const lo=c.count?Math.max(3,Math.min(c.cntMin,c.cntMax)):curN;
     const hi=c.count?Math.min(24,Math.max(c.cntMin,c.cntMax)):curN;
-    const tgt=scatterPiece(lo,hi);
+    const {pts:tgt,arch}=scatterPiece(lo,hi);
     while(SHAPE.pts.length<tgt.length){               // reconcile the dot count before lerping
       const i=Math.floor(rrand()*SHAPE.pts.length), a=SHAPE.pts[i], b=SHAPE.pts[(i+1)%SHAPE.pts.length];
       SHAPE.pts.splice(i+1,0,[+((a[0]+b[0])/2).toFixed(3),+((a[1]+b[1])/2).toFixed(3),1]);
@@ -1930,7 +1945,7 @@ function rndShape(t,c){
       +Math.max(-1.6,Math.min(1.6,p[1]+(tgt[i][1]-p[1])*t)).toFixed(3),
       c.round?+(p[2]+(tgt[i][2]-p[2])*t).toFixed(2):p[2],   // roundness follows the archetype's pattern
     ]);
-    return;
+    return arch;                                      // the sliders take their temper from the family
   }
   if(c.count&&rchance(t,0.6)){                       // change HOW MANY dots, inside the configured bounds
     const lo=Math.max(3,Math.min(c.cntMin,c.cntMax)), hi=Math.min(24,Math.max(c.cntMin,c.cntMax));
@@ -2117,13 +2132,19 @@ function randomize(){
   if(on('shape')){
     const t=tg('shape'), c=RNDCFG.shape;
     rndNum('scale',t,Math.min(c.szMin,c.szMax),Math.max(c.szMin,c.szMax));   // size stays inside its bounds — the blob filter
-    ['pinGap','pinHole','pinTwist','pinTwistO','twist'].forEach(id=>rndNum(id,t));
     if(c.pieces&&rchance(t,0.5)){
       const lo=Math.min(c.pMin,c.pMax), hi=Math.max(c.pMin,c.pMax);
       $('pinN').value=String(lo+Math.floor(rrand()*(hi-lo+1)));
       const o=document.querySelector('output[for="pinN"]'); if(o) o.value=$('pinN').value;
     }
-    rndShape(t,c);
+    // the archetype rolls FIRST and the structure sliders take its temper — full-range twists
+    // turned crisp geometry to mush, and extreme gaps shredded pieces into confetti
+    const arch=rndShape(t,c);
+    rndNum('pinGap',t,8,26);
+    rndNum('pinHole',t,6,44);
+    if((arch==='fret'||arch==='blade')&&rchance(t,0.85)){ setOut('pinTwist',0); setOut('pinTwistO',0); }   // sharp families stay unswirled
+    else { rndNum('pinTwist',t,-26,26); rndNum('pinTwistO',t,-20,20); }
+    rndNum('twist',t);                                // whole-motif rotation is free — it can't deform anything
   }
   if(on('colour')) rndPalette(tg('colour'),RNDCFG.colour.hue);
   if(on('outline')){ const t=tg('outline'); if(RNDCFG.outline.flip) rndChk('outlineOn',t,0.7); rndSel('outlineMode',t); rndNum('outlineW',t); }
@@ -2136,22 +2157,38 @@ function randomize(){
   if(on('logo')){ const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4'])); rndSel('mqMode',t); rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
   syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
 }
-$('rndGo').addEventListener('click',randomize);
-/* ---------- the ×9 contact sheet: nine rolls as thumbnails, pick one ----------
+/* the split button's mode: how many shuffles one press deals — 1 applies directly,
+   9/16 deal a contact sheet to pick from. A tool pref, remembered. */
+var RNDROLLS=(()=>{ try{ const n=+localStorage.getItem('lavoet-rnd-rolls'); return n===9||n===16?n:1; }catch(e){ return 1; } })();
+function syncRollUI(){
+  $('rndGo').textContent=RNDROLLS===1?'🎲 Randomize':`🎲 Randomize ×${RNDROLLS}`;
+  document.querySelectorAll('#rndMenu [data-rolls]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.rolls===RNDROLLS?'true':'false'));
+}
+$('rndGo').addEventListener('click',()=>{ RNDROLLS===1?randomize():rollSheet(RNDROLLS); });
+$('rndMore').addEventListener('click',e=>{ e.stopPropagation();
+  const open=$('rndMenu').hidden; $('rndMenu').hidden=!open; $('rndMore').setAttribute('aria-expanded',open?'true':'false'); });
+document.querySelectorAll('#rndMenu [data-rolls]').forEach(b=>b.addEventListener('click',()=>{
+  RNDROLLS=+b.dataset.rolls; try{ localStorage.setItem('lavoet-rnd-rolls',RNDROLLS); }catch(e){}
+  $('rndMenu').hidden=true; $('rndMore').setAttribute('aria-expanded','false'); syncRollUI();
+  RNDROLLS===1?randomize():rollSheet(RNDROLLS);        // choosing an option also performs it
+}));
+document.addEventListener('click',e=>{ if(!$('rndMenu').hidden&&!e.target.closest('.rnd-split')){ $('rndMenu').hidden=true; $('rndMore').setAttribute('aria-expanded','false'); } });
+/* ---------- the contact sheet: N rolls as thumbnails, pick one ----------
    Rolls mutate the live controls, so each is captured (cfg + thumb) and the ORIGINAL design is
    restored before the sheet shows — nothing changes until a pick, and a pick is one undo step.
    RND_ROLLING mutes history/autosave timers that could fire mid-generation in picture mode
    (image loads make those rolls async). */
-var RND_ROLLING=false, RNDSHOTS=[];
-async function rollNine(){
+var RND_ROLLING=false, RNDSHOTS=[], RS_LAST=9;
+async function rollSheet(n){
   if(RND_ROLLING) return;
   if(RNDMODE==='picture'&&!rndPicPool().length) return;   // consistent with the single-roll button
-  const btn=$('rndNine'); btn.disabled=true;
+  RS_LAST=n===16?16:9;
+  $('rndGo').disabled=true; $('rndMore').disabled=true;
   RND_ROLLING=true;
   const orig=paramsString();
   try{
     const shots=[];
-    for(let i=0;i<9;i++){
+    for(let i=0;i<RS_LAST;i++){
       randomize();
       if(RNDMODE==='picture'){                       // the picked image must be ready or the thumb is blank
         const t0=performance.now();
@@ -2162,16 +2199,18 @@ async function rollNine(){
       shots.push({cfg:paramsString(),th});
     }
     RNDSHOTS=shots;
+    $('rsTitle').textContent=(RS_LAST===16?'Sixteen':'Nine')+' ideas — pick one';
+    $('rsGrid').style.gridTemplateColumns=`repeat(${RS_LAST===16?4:3},1fr)`;
     $('rsGrid').innerHTML=shots.map((s,i)=>`<button type="button" class="rs-cell" data-rs="${i}" title="Apply this one">${s.th?`<img class="save-thumb" alt="Shuffle ${i+1}" src="data:image/svg+xml,${encodeURIComponent(s.th)}">`:'<span class="save-thumb empty"></span>'}</button>`).join('');
     $('rndSheet').hidden=false;
     $('rsClose').focus();
   }finally{
     applyParams(new URLSearchParams(orig)); renderEd(); render();   // the design is untouched until a pick
-    RND_ROLLING=false; btn.disabled=false;
+    RND_ROLLING=false; $('rndGo').disabled=false; $('rndMore').disabled=false;
   }
 }
-$('rndNine').addEventListener('click',rollNine);
-$('rsAgain').addEventListener('click',rollNine);
+$('rsAgain').addEventListener('click',()=>rollSheet(RS_LAST));
+syncRollUI();
 function closeRndSheet(){ $('rndSheet').hidden=true; }
 $('rsClose').addEventListener('click',closeRndSheet);
 $('rndSheet').addEventListener('click',e=>{ if(e.target===$('rndSheet')) closeRndSheet(); });
