@@ -159,6 +159,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rnd-lbls{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-top:-2px}
 .rnd-go{width:100%;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;padding:13px 10px;background:var(--ink);border:1px solid var(--ink);color:var(--paper);cursor:pointer}
 .rnd-go:hover{background:var(--brassD);border-color:var(--brassD)}
+/* starter gallery: click a ready-made design to load it */
+.starter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:6px}
+.starter-card{display:flex;flex-direction:column;gap:4px;padding:5px;border:1px solid var(--hair);background:none;cursor:pointer;color:var(--ink);transition:border-color .12s}
+.starter-card:hover{border-color:var(--brass)}
+.starter-card .save-thumb{width:100%;height:auto;aspect-ratio:4/3}
+.starter-nm{font:500 10px var(--sans);letter-spacing:.04em;text-align:center}
 /* undo/redo sit just above the reset, grouping the "step back" controls together */
 .hist-row{display:flex;gap:8px;margin-bottom:10px}
 .hist-btn{flex:1;font:600 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:9px 8px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
@@ -301,6 +307,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="45"><output for="rndAmt">45</output></div>
       <div class="rnd-lbls"><span>Subtle</span><span>Wild</span></div>
       <div class="btns"><button type="button" id="rndGo" class="rnd-go">🎲 Randomize</button></div>
+    </div>
+  </section>
+
+  <section class="acc">
+    <div class="acc-head"><span class="acc-title">Examples</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-body">
+      <p class="acc-info" hidden>Ready-made designs to start from. Click one to load it, then tweak anything — Undo brings your previous design back. For photo-based patterns, see the Picture pattern section.</p>
+      <div class="starter-grid" id="starterGrid"></div>
     </div>
   </section>
 
@@ -1831,6 +1845,36 @@ function randomize(){
 }
 $('rndGo').addEventListener('click',randomize);
 
+/* ---------- starter gallery ----------
+   A few ready-made designs to load and tweak. Each is a stored config; thumbnails are rendered
+   once at init (buildStarterThumbs runs while the state is still disposable — between the trunk
+   baseline and the session restore — so no live design is disturbed and no picture loads async).
+   Clicking a card loads it through applyCfg → render, so it's a single undo step. */
+const STARTERS=[
+{"name":"Trunk","desc":"The original trunk monogram — gold on deep brown.","cfg":"scale=52&pinN=4&twist=0&pinGap=16&pinHole=20&pinTwist=0&pinTwistO=0&depth3d=0&angle3d=55&shade3d=34&highlight=0&bevel=0&outlineMode=shape&outlineW=2&cell=104&accentStyle=losange&accentSize=9&cBg=%23543424&cFg=%23a8823f&cAc=%23a8823f&cOl=%23795e2d&mqMode=full&mqSize=100&mqSlots=4&imgSym=tri&imgFit=tess&imgSize=50&imgScale=120&imgMqBack=blur&cMqBack=%23f4efe4&pinRound=1&outlineOn=0&shadeLine=0&shadeScope=0&quinconce=1&mirrorAlt=0&accentOn=1&dotsInLogo=0&logo3d=0&imgOn=0&shape=-0.059%3A-0.955%3A1%3B0%3A-0.981%3A1%3B0.096%3A-0.955%3A1%3B0.434%3A-0.635%3A1%3B0.628%3A-0.494%3A1%3B0.649%3A-0.422%3A1%3B0.619%3A-0.337%3A1%3B0.458%3A-0.208%3A1%3B0.301%3A-0.16%3A1%3B0.188%3A-0.217%3A1%3B-0.086%3A-0.819%3A1%3B-0.093%3A-0.903%3A1"},
+{"name":"Rosette","desc":"A softer six-piece rosette.","cfg":"scale=52&pinN=6&twist=0&pinGap=9&pinHole=12&pinTwist=14&pinTwistO=0&depth3d=0&angle3d=55&shade3d=34&highlight=0&bevel=0&outlineMode=shape&outlineW=2&cell=104&accentStyle=losange&accentSize=9&cBg=%233a291d&cFg=%23b58a44&cAc=%23a8823f&cOl=%23795e2d&mqMode=full&mqSize=100&mqSlots=4&imgSym=tri&imgFit=tess&imgSize=50&imgScale=120&imgMqBack=blur&cMqBack=%23f4efe4&pinRound=1&outlineOn=0&shadeLine=0&shadeScope=0&quinconce=1&mirrorAlt=0&accentOn=1&dotsInLogo=0&logo3d=0&imgOn=0&shape=-0.059%3A-0.955%3A1.3%3B0%3A-0.981%3A1.3%3B0.096%3A-0.955%3A1.3%3B0.434%3A-0.635%3A1.3%3B0.628%3A-0.494%3A1.3%3B0.649%3A-0.422%3A1.3%3B0.619%3A-0.337%3A1.3%3B0.458%3A-0.208%3A1.3%3B0.301%3A-0.16%3A1.3%3B0.188%3A-0.217%3A1.3%3B-0.086%3A-0.819%3A1.3%3B-0.093%3A-0.903%3A1.3"},
+{"name":"Geometric","desc":"Straight, sharp and high-contrast.","cfg":"scale=56&pinN=4&twist=0&pinGap=22&pinHole=20&pinTwist=0&pinTwistO=0&depth3d=0&angle3d=55&shade3d=34&highlight=0&bevel=0&outlineMode=shape&outlineW=1&cell=104&accentStyle=losange&accentSize=9&cBg=%231d1a15&cFg=%23c9a24b&cAc=%23c9a24b&cOl=%23795e2d&mqMode=full&mqSize=100&mqSlots=4&imgSym=tri&imgFit=tess&imgSize=50&imgScale=120&imgMqBack=blur&cMqBack=%23f4efe4&pinRound=1&outlineOn=1&shadeLine=0&shadeScope=0&quinconce=1&mirrorAlt=0&accentOn=1&dotsInLogo=0&logo3d=0&imgOn=0&shape=-0.059%3A-0.955%3A0%3B0%3A-0.981%3A0%3B0.096%3A-0.955%3A0%3B0.434%3A-0.635%3A0%3B0.628%3A-0.494%3A0%3B0.649%3A-0.422%3A0%3B0.619%3A-0.337%3A0%3B0.458%3A-0.208%3A0%3B0.301%3A-0.16%3A0%3B0.188%3A-0.217%3A0%3B-0.086%3A-0.819%3A0%3B-0.093%3A-0.903%3A0"},
+{"name":"Relief","desc":"A raised, two-tone 3-D block.","cfg":"scale=52&pinN=4&twist=0&pinGap=16&pinHole=20&pinTwist=0&pinTwistO=0&depth3d=20&angle3d=55&shade3d=40&highlight=18&bevel=10&outlineMode=shape&outlineW=2&cell=104&accentStyle=losange&accentSize=9&cBg=%232a2018&cFg=%23a8823f&cAc=%23a8823f&cOl=%23795e2d&mqMode=full&mqSize=100&mqSlots=4&imgSym=tri&imgFit=tess&imgSize=50&imgScale=120&imgMqBack=blur&cMqBack=%23f4efe4&pinRound=1&outlineOn=0&shadeLine=0&shadeScope=0&quinconce=1&mirrorAlt=0&accentOn=1&dotsInLogo=0&logo3d=0&imgOn=0&shape=-0.059%3A-0.955%3A1%3B0%3A-0.981%3A1%3B0.096%3A-0.955%3A1%3B0.434%3A-0.635%3A1%3B0.628%3A-0.494%3A1%3B0.649%3A-0.422%3A1%3B0.619%3A-0.337%3A1%3B0.458%3A-0.208%3A1%3B0.301%3A-0.16%3A1%3B0.188%3A-0.217%3A1%3B-0.086%3A-0.819%3A1%3B-0.093%3A-0.903%3A1"},
+{"name":"Shaded","desc":"A lit form via a shade line.","cfg":"scale=52&pinN=4&twist=0&pinGap=16&pinHole=20&pinTwist=0&pinTwistO=0&depth3d=0&angle3d=55&shade3d=34&highlight=0&bevel=0&outlineMode=shape&outlineW=2&cell=104&accentStyle=losange&accentSize=9&cBg=%2322303a&cFg=%2383aab9&cAc=%2383aab9&cOl=%23795e2d&mqMode=full&mqSize=100&mqSlots=4&imgSym=tri&imgFit=tess&imgSize=50&imgScale=120&imgMqBack=blur&cMqBack=%23f4efe4&pinRound=1&outlineOn=0&shadeLine=1&shadeScope=0&quinconce=1&mirrorAlt=0&accentOn=1&dotsInLogo=0&logo3d=0&imgOn=0&shape=-0.059%3A-0.955%3A1%3B0%3A-0.981%3A1%3B0.096%3A-0.955%3A1%3B0.434%3A-0.635%3A1%3B0.628%3A-0.494%3A1%3B0.649%3A-0.422%3A1%3B0.619%3A-0.337%3A1%3B0.458%3A-0.208%3A1%3B0.301%3A-0.16%3A1%3B0.188%3A-0.217%3A1%3B-0.086%3A-0.819%3A1%3B-0.093%3A-0.903%3A1"},
+{"name":"Indigo","desc":"An indigo colourway with outline.","cfg":"scale=52&pinN=4&twist=0&pinGap=16&pinHole=20&pinTwist=30&pinTwistO=-10&depth3d=0&angle3d=55&shade3d=34&highlight=0&bevel=0&outlineMode=shape&outlineW=2&cell=104&accentStyle=losange&accentSize=9&cBg=%231f2140&cFg=%236e78c4&cAc=%23c8a24b&cOl=%23795e2d&mqMode=full&mqSize=100&mqSlots=4&imgSym=tri&imgFit=tess&imgSize=50&imgScale=120&imgMqBack=blur&cMqBack=%23f4efe4&pinRound=1&outlineOn=1&shadeLine=0&shadeScope=0&quinconce=1&mirrorAlt=0&accentOn=1&dotsInLogo=0&logo3d=0&imgOn=0&shape=-0.059%3A-0.955%3A0.7%3B0%3A-0.981%3A0.7%3B0.096%3A-0.955%3A0.7%3B0.434%3A-0.635%3A0.7%3B0.628%3A-0.494%3A0.7%3B0.649%3A-0.422%3A0.7%3B0.619%3A-0.337%3A0.7%3B0.458%3A-0.208%3A0.7%3B0.301%3A-0.16%3A0.7%3B0.188%3A-0.217%3A0.7%3B-0.086%3A-0.819%3A0.7%3B-0.093%3A-0.903%3A0.7"}
+];
+const STARTER_THUMB={};
+function buildStarterThumbs(){                       // called at init while state is disposable
+  for(const s of STARTERS){ try{ applyParams(new URLSearchParams(s.cfg)); STARTER_THUMB[s.name]=thumbSVG(); }catch(e){ STARTER_THUMB[s.name]=''; } }
+}
+function renderStarters(){
+  const box=$('starterGrid'); if(!box) return;
+  box.innerHTML=STARTERS.map((s,i)=>{
+    const th=STARTER_THUMB[s.name];
+    const img=th?`<img class="save-thumb" alt="" src="data:image/svg+xml,${encodeURIComponent(th)}">`:'<span class="save-thumb empty"></span>';
+    return `<button type="button" class="starter-card" data-starter="${i}" title="${escapeHtml(s.desc)}">${img}<span class="starter-nm">${escapeHtml(s.name)}</span></button>`;
+  }).join('');
+}
+$('starterGrid').addEventListener('click',e=>{
+  const c=e.target.closest('[data-starter]'); if(!c) return;
+  applyCfg(STARTERS[+c.dataset.starter].cfg);        // load it — undoable
+});
+
 /* ---------- interactions ---------- */
 let lastSlots='4', last3d=30;                          // remembered "on" values for the header switches
 function setSlots(v){
@@ -2395,11 +2439,14 @@ if(location.hash) try{ history.replaceState(null,'',location.pathname+location.s
 /* establish the trunk baseline first (captures TRUNK_CFG for the autosave skip), then pick up
    where you left off — only Reset returns to the trunk */
 applyTrunkMotif();
+buildStarterThumbs();         // capture example thumbnails while the state is still the trunk baseline
+applyTrunkMotif();            // …then restore that baseline before the session loads on top
 let sess=null; try{ sess=localStorage.getItem(SESS_KEY); }catch(e){}
 if(sess) applyParams(new URLSearchParams(sess));
 setSlots(val('mqSlots'));
 syncRows();
 renderSaves();
+renderStarters();            // draw the example cards from the cached thumbnails
 histReset(paramsString());   // the restored (or trunk) state is undo step 0
 render();
 /* the fine-tune editor is shown by default (remembered across visits) */
