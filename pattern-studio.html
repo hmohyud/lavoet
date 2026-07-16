@@ -355,7 +355,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <button type="button" data-rolls="16">Deal ×16 — pick from sixteen</button>
         </div>
       </div>
-      <button type="button" id="rndReset" class="rnd-rst" title="Hold to put every randomize setting — mode, groups, limits, picture pool, Variation — back to the defaults"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to reset randomize settings</span></button>
+      <button type="button" id="rndReset" class="rnd-rst" title="Hold to put every randomize setting — mode, groups, limits, picture pool, Variation — back to the defaults"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to reset randomize settings to defaults</span></button>
     </div>
   </section>
 
@@ -2234,7 +2234,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
     setRndMode('motif');
     if(RNDOPEN) drawRndPanel();                        // an open limits panel refreshes to the defaults
     drawRndPicture(); syncRows();
-    setTimeout(()=>{ lbl.textContent='Hold to reset randomize settings'; },900);
+    setTimeout(()=>{ lbl.textContent='Hold to reset randomize settings to defaults'; },900);
   }
   function start(e){
     if(holding) return;
@@ -2242,7 +2242,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
     btn.classList.add('holding'); lbl.textContent='Keep holding…';
     timer=setTimeout(fire,HOLD);
   }
-  function stop(){ if(!holding) return; holding=false; clearTimeout(timer); btn.classList.remove('holding'); lbl.textContent='Hold to reset randomize settings'; }
+  function stop(){ if(!holding) return; holding=false; clearTimeout(timer); btn.classList.remove('holding'); lbl.textContent='Hold to reset randomize settings to defaults'; }
   btn.addEventListener('pointerdown',start);
   btn.addEventListener('pointerup',stop);
   btn.addEventListener('pointercancel',stop);
