@@ -2263,15 +2263,19 @@ function armAutosave(){                                 // a settled snapshot, ~
 }
 function applyCfg(cfg){ applyParams(new URLSearchParams(cfg)); renderEd(); render(); }
 /* ---------- undo / redo ----------
-   A linear timeline of paramsString() snapshots. Every settled render arms a push (so a drag
-   or slider scrub coalesces into ONE step, matching autosave). Undo/redo replay a snapshot and
-   the resulting render re-arms a push that dedupes against the current cursor — so stepping
-   never pollutes the timeline. Loading a save, randomising and Reset all flow through render(),
-   so they're undoable too, for free. */
+   A linear timeline of paramsString() snapshots. A STEP IS THE WHOLE GESTURE: while a pointer
+   is held down (slider drag, dot drag) nothing commits — however long you pause mid-drag — and
+   releasing arms the commit. The settled-render timer handles edits with no release to wait
+   for (keyboard arrows on a slider, programmatic loads). Undo/redo replay a snapshot and the
+   resulting render re-arms a push that dedupes against the current cursor — so stepping never
+   pollutes the timeline. Loading a save, randomising and Reset all flow through render(), so
+   they're undoable too, for free. */
 const HIST_MAX=120, HIST_SETTLE=350;
+let PDOWN=false;                                      // a pointer is held — a gesture is in progress
 function histButtons(){ const u=$('undoBtn'),r=$('redoBtn'); if(u) u.disabled=hi<=0; if(r) r.disabled=hi>=hist.length-1; }
 function histReset(cfg){ hist=[cfg]; hi=0; clearTimeout(histT); histButtons(); }   // start a fresh timeline (init)
-function pushHistory(){
+function pushHistory(force){
+  if(PDOWN&&!force){ clearTimeout(histT); histT=setTimeout(pushHistory,HIST_SETTLE); return; }  // mid-gesture: wait for the release
   const cfg=paramsString();
   if(hi>=0&&cfgKey(hist[hi])===cfgKey(cfg)) return;   // nothing that DRAWS differently since the last step
   hist=hist.slice(0,hi+1); hist.push(cfg);            // a new edit after undo prunes the redo branch
@@ -2279,10 +2283,15 @@ function pushHistory(){
   hi=hist.length-1; histButtons();
 }
 function armHistory(){ clearTimeout(histT); histT=setTimeout(pushHistory,HIST_SETTLE); }
+addEventListener('pointerdown',()=>{ PDOWN=true; },true);
+const histUp=()=>{ if(PDOWN){ PDOWN=false; armHistory(); } };   // release ends the gesture → commit (after the trailing render)
+addEventListener('pointerup',histUp,true);
+addEventListener('pointercancel',histUp,true);       // touch handed to scrolling etc. still ends the gesture
+addEventListener('blur',()=>{ PDOWN=false; });        // released outside the window — never wedge the timeline
 function stepHistory(d){
-  // commit any edit still inside its 350ms settle window FIRST, so undo can't skip past it or
-  // discard it (pushHistory dedupes, so this is a no-op when nothing is pending)
-  clearTimeout(histT); pushHistory();
+  // commit any in-flight edit FIRST — forced past the gesture gate — so undo can't skip past
+  // it or discard it (pushHistory dedupes, so this is a no-op when nothing is pending)
+  clearTimeout(histT); pushHistory(true);
   const n=hi+d; if(n<0||n>=hist.length) return;
   hi=n; clearTimeout(histT);                          // the replay's own render re-arms; dedupe absorbs it
   applyParams(new URLSearchParams(hist[hi])); renderEd(); render();
