@@ -391,30 +391,30 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div id="imgGallery" class="img-gallery"></div>
       <label class="seg-lbl img-need-on">Repeats with — the shape that tiles</label>
       <div class="shape-seg img-need-on" role="group" aria-label="Tiling shape">
-        <button type="button" data-shape="tri" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 H3 Z"/></svg>Triangle</button>
+        <button type="button" data-shape="tri" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 H3 Z"/></svg>Triangle</button>
         <button type="button" data-shape="square" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="1"/></svg>Square</button>
-        <button type="button" data-shape="hex" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L19.8 7.5 V16.5 L12 21 L4.2 16.5 V7.5 Z"/></svg>Hexagon</button>
+        <button type="button" data-shape="hex" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L19.8 7.5 V16.5 L12 21 L4.2 16.5 V7.5 Z"/></svg>Hexagon</button>
       </div>
       <div class="seg img-need-on" id="fitSeg" role="group" aria-label="How the picture fits the shape" style="margin-top:8px">
-        <button type="button" data-fit="tess" aria-pressed="true" title="Repeat the picture exactly, piece by piece — no distortion">Tessellate</button>
-        <button type="button" data-fit="stretch" aria-pressed="false" title="Drag the dots freely; what's inside is stretched to fill the shape">Stretch</button>
+        <button type="button" data-fit="tess" aria-pressed="false" title="Repeat the picture exactly, piece by piece — no distortion">Tessellate</button>
+        <button type="button" data-fit="stretch" aria-pressed="true" title="Drag the dots freely; what's inside is stretched to fill the shape">Stretch</button>
       </div>
       <div class="row-sel img-need-on" id="imgVarRow"><label for="imgVar">Style</label>
         <select id="imgVar"></select>
       </div>
       <select id="imgSym" hidden aria-hidden="true">
-        <option value="tri" selected>Triangle — tessellated</option>
+        <option value="tri">Triangle — tessellated</option>
         <option value="tristretch">Triangle — stretched</option>
         <option value="mirror">Mirror</option>
         <option value="kaleido">Kaleidoscope</option>
         <option value="spin">Pinwheel</option>
         <option value="hex">Slice — spun</option>
-        <option value="hexm">Slice — mirrored</option>
+        <option value="hexm" selected>Slice — mirrored</option>
         <option value="hexfull">Full hexagon</option>
       </select>
       <select id="imgFit" hidden aria-hidden="true">
-        <option value="tess" selected>Tessellate</option>
-        <option value="stretch">Stretch</option>
+        <option value="tess">Tessellate</option>
+        <option value="stretch" selected>Stretch</option>
       </select>
       <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
       <div class="row img-need-on"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
