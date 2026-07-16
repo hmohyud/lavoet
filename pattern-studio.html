@@ -295,17 +295,17 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
       <input type="file" id="imgFile" accept="image/*" hidden>
       <div id="imgGallery" class="img-gallery"></div>
-      <label class="seg-lbl">Repeats with — the shape that tiles</label>
-      <div class="shape-seg" role="group" aria-label="Tiling shape">
+      <label class="seg-lbl img-need-on">Repeats with — the shape that tiles</label>
+      <div class="shape-seg img-need-on" role="group" aria-label="Tiling shape">
         <button type="button" data-shape="tri" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 L21 20 H3 Z"/></svg>Triangle</button>
         <button type="button" data-shape="square" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="15" height="15" rx="1"/></svg>Square</button>
         <button type="button" data-shape="hex" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L19.8 7.5 V16.5 L12 21 L4.2 16.5 V7.5 Z"/></svg>Hexagon</button>
       </div>
-      <div class="seg" id="fitSeg" role="group" aria-label="How the picture fits the shape" style="margin-top:8px">
+      <div class="seg img-need-on" id="fitSeg" role="group" aria-label="How the picture fits the shape" style="margin-top:8px">
         <button type="button" data-fit="tess" aria-pressed="true" title="Repeat the picture exactly, piece by piece — no distortion">Tessellate</button>
         <button type="button" data-fit="stretch" aria-pressed="false" title="Drag the dots freely; what's inside is stretched to fill the shape">Stretch</button>
       </div>
-      <div class="row-sel" id="imgVarRow"><label for="imgVar">Style</label>
+      <div class="row-sel img-need-on" id="imgVarRow"><label for="imgVar">Style</label>
         <select id="imgVar"></select>
       </div>
       <select id="imgSym" hidden aria-hidden="true">
@@ -323,7 +323,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <option value="stretch">Stretch</option>
       </select>
       <div class="row"><label for="imgSize">Picked area size</label><input type="range" id="imgSize" min="8" max="100" value="50"><output for="imgSize">50</output></div>
-      <div class="row"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
+      <div class="row img-need-on"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
       <p class="hint" id="imgHint">No picture yet — upload one to start.</p>
     </div>
   </section>
@@ -1384,8 +1384,10 @@ function render(){
     document.querySelectorAll('.motif-only').forEach(el=>el.classList.toggle('opt-off',im));
     syncImgSymUI();
     const dots=imgDotsMode();
-    const szRow=$('imgSize').closest('.row');        // dot-picked styles: the dots do the sizing
-    if(szRow) szRow.classList.toggle('opt-off',im&&dots);
+    const imgOnSw=chk('imgOn');                       // the feature switch: its shaping controls do nothing while off
+    document.querySelectorAll('.img-need-on').forEach(el=>el.classList.toggle('opt-off',!imgOnSw));
+    const szRow=$('imgSize').closest('.row');        // grey when the feature's off, or when a picture's dots do the sizing
+    if(szRow) szRow.classList.toggle('opt-off',!imgOnSw||(im&&dots));
     document.querySelectorAll('.mq-motif-only').forEach(el=>el.classList.toggle('opt-off',im));
     const bkRows=$('imgMqRows'); if(bkRows) bkRows.classList.toggle('opt-off',!im);
     const eh=document.querySelector('.ed-hint');
