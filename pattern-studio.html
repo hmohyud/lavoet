@@ -153,9 +153,21 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 /* the global reset sits at the foot of the panel, apart from the accordions; it uses the danger
    colour and a deliberate press-and-hold so a whole design can't be wiped by a stray click */
 #resetBar{position:sticky;bottom:0;margin-top:auto;background:var(--paper);padding:14px 0 6px;border-top:1px solid var(--hair)}
-/* randomize section: a compact grid of what-may-change toggles + a variation slider */
+/* randomize section: a compact grid of what-may-change toggles + a variation slider.
+   Each toggle carries a ⚙ that opens that group's LIMITS (what exactly may change, and
+   between which bounds) in one shared panel below the grid. */
 .rnd-groups{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin-top:4px}
-.rnd-groups .chk{margin-top:5px}
+.rnd-item{display:flex;align-items:center;gap:2px;min-width:0;margin-top:5px}
+.rnd-item .chk{margin-top:0;flex:1;min-width:0}
+.rnd-gear{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:3px;color:var(--sepia);font-size:13px;line-height:1;cursor:pointer;padding:0}
+.rnd-gear:hover{color:var(--brass)}
+.rnd-gear[aria-expanded="true"]{color:var(--paper);background:var(--brassD)}
+.rnd-opts{margin-top:10px;border:1px dashed var(--hair);padding:2px 12px 12px;background:color-mix(in srgb,var(--brass) 5%,transparent)}
+.rnd-opts .saves-h{margin:10px 0 0}
+.rnd-opts .chk{margin-top:9px}
+.rnd-pair{display:grid;grid-template-columns:1fr 56px 56px;gap:10px;align-items:center;margin-top:10px;min-height:30px}
+.rnd-pair label{font-size:11.5px;color:var(--ink)}
+.rnd-pair input[type=number]{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--hair);padding:6px 4px;width:100%;text-align:center}
 .rnd-lbls{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-top:-2px}
 .rnd-go{width:100%;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;padding:13px 10px;background:var(--ink);border:1px solid var(--ink);color:var(--paper);cursor:pointer}
 .rnd-go:hover{background:var(--brassD);border-color:var(--brassD)}
@@ -189,26 +201,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #shapeEd{flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
 .ed-body{flex:1;min-height:0;display:flex;flex-direction:column}
 .ed-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:5px 10px 5px 14px;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
-/* a window-style minimise button, not an accordion chevron */
-.ed-min{flex:none;margin-left:auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--hair);color:var(--ink);font:600 15px/1 var(--sans);cursor:pointer;padding:0}
-.ed-min:hover{border-color:var(--brass);color:var(--brass)}
-/* minimized: the bar IS the way back in — a brass-washed button with an explicit invitation,
-   not something that reads as a mere section title */
-.ed-open-hint{display:none;font:400 10px var(--sans);letter-spacing:.14em;color:var(--brassD)}
-#stage:not(.editing) .ed-open-hint{display:inline;margin-left:auto}
-#stage:not(.editing) .ed-min{margin-left:0}
-#stage:not(.editing) .ed-toggle{cursor:pointer;background:color-mix(in srgb,var(--brass) 10%,transparent)}
-#stage:not(.editing) .ed-toggle:hover{background:color-mix(in srgb,var(--brass) 18%,transparent)}
-#stage:not(.editing) .ed-toggle:hover .ed-min{border-color:var(--brass);color:var(--brass)}
 /* draggable divider between the editor and the pattern — resize the split to taste */
 #split{flex:none;height:9px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;background:color-mix(in srgb,var(--ink) 3%,transparent)}
 #split span{width:44px;height:3px;border-radius:2px;background:var(--hair);pointer-events:none}
 #split:hover span,#split.dragging span{background:var(--brass)}
-/* minimized: collapse the editor to just its title bar, give the preview the room */
-#stage:not(.editing) #shapeEd{flex:none;border-bottom:1px solid var(--hair);height:auto!important}
-#stage:not(.editing) #split{display:none}
-#stage:not(.editing) .ed-body{display:none}
-#stage:not(.editing) .ed-toggle{border-bottom:none}
 .ed-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;flex-wrap:wrap;border-bottom:1px solid var(--hair)}
 .ed-hint{font-size:10.5px;color:var(--sepia)}
 .ed-btns{display:flex;gap:6px;flex-wrap:wrap}
@@ -256,6 +252,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .btns button{padding:14px 10px}
   .col input[type=color]{height:46px}
   .foot-brand{display:none}                           /* phone: the footer keeps only the tile/swatch facts */
+  .rnd-gear{width:36px;height:36px;font-size:15px}    /* the randomize limit gears need a real tap target */
   #saveBrowser{padding:0}                             /* the browser goes full-screen on a phone */
   .sv-panel{max-width:none;height:100%}
   .sv-body{grid-template-columns:repeat(auto-fill,minmax(124px,1fr))}
@@ -294,16 +291,17 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Randomize</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Shuffle the design for ideas. Tick which parts may change, then set how far they wander with <b>Variation</b> — Subtle nudges the current look, Wild reaches across the whole range. Unticked parts stay exactly as they are, so you can lock a palette or a shape and explore around it. Every shuffle is a single Undo.</p>
+      <p class="acc-info" hidden>Shuffle the design for ideas. Tick which parts may change, then set how far they wander with <b>Variation</b> — Subtle nudges the current look, Wild reaches across the whole range. Unticked parts stay exactly as they are, so you can lock a palette or a shape and explore around it. Each part's <b>⚙</b> opens its own limits — what exactly may change and between which bounds (how far the shape dots drift, how many there may be, depth limits…). Every shuffle is a single Undo.</p>
       <div class="rnd-groups" role="group" aria-label="What may be randomized">
-        <label class="chk"><input type="checkbox" id="rnd_shape" checked>Shape &amp; form</label>
-        <label class="chk"><input type="checkbox" id="rnd_colour" checked>Colours</label>
-        <label class="chk"><input type="checkbox" id="rnd_outline" checked>Outline</label>
-        <label class="chk"><input type="checkbox" id="rnd_dots" checked>Dots</label>
-        <label class="chk"><input type="checkbox" id="rnd_relief">3D &amp; shading</label>
-        <label class="chk"><input type="checkbox" id="rnd_layout" checked>Layout</label>
-        <label class="chk"><input type="checkbox" id="rnd_logo">Logo</label>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_shape" checked>Shape &amp; form</label><button type="button" class="rnd-gear" data-gear="shape" title="Limits for Shape &amp; form" aria-label="Limits for Shape &amp; form randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_colour" checked>Colours</label><button type="button" class="rnd-gear" data-gear="colour" title="Limits for Colours" aria-label="Limits for Colours randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_outline" checked>Outline</label><button type="button" class="rnd-gear" data-gear="outline" title="Limits for Outline" aria-label="Limits for Outline randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_dots" checked>Dots</label><button type="button" class="rnd-gear" data-gear="dots" title="Limits for Dots" aria-label="Limits for Dots randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_relief">3D &amp; shading</label><button type="button" class="rnd-gear" data-gear="relief" title="Limits for 3D &amp; shading" aria-label="Limits for 3D &amp; shading randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_layout" checked>Layout</label><button type="button" class="rnd-gear" data-gear="layout" title="Limits for Layout" aria-label="Limits for Layout randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_logo">Logo</label><button type="button" class="rnd-gear" data-gear="logo" title="Limits for Logo" aria-label="Limits for Logo randomization" aria-expanded="false">⚙</button></span>
       </div>
+      <div id="rndOpts" class="rnd-opts" hidden></div>
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="45"><output for="rndAmt">45</output></div>
       <div class="rnd-lbls"><span>Subtle</span><span>Wild</span></div>
       <div class="btns"><button type="button" id="rndGo" class="rnd-go">🎲 Randomize</button></div>
@@ -539,8 +537,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <div id="shapeEd">
     <div class="ed-toggle">
       <span>✎ Fine-tune shape</span>
-      <span class="ed-open-hint" aria-hidden="true">Click to reopen the editor</span>
-      <button type="button" id="edToggle" class="ed-min" aria-expanded="true" aria-controls="edBody" title="Minimise" aria-label="Minimise the shape editor">–</button>
     </div>
     <div class="ed-body" id="edBody">
       <div class="ed-bar">
@@ -1707,26 +1703,7 @@ $('edDel').addEventListener('click',()=>{
   btn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault();
     if(!holding&&!btn.classList.contains('done')&&confirm('Reset everything to the original trunk motif?')) fire(); } });
 })();
-// the fine-tune editor shows by default; edToggle minimizes it to just its title bar
-function setEditor(open){
-  $('stage').classList.toggle('editing',open);
-  const b=$('edToggle');
-  b.setAttribute('aria-expanded',open?'true':'false');
-  b.textContent=open?'–':'+';
-  b.title=open?'Minimise':'Restore';
-  b.setAttribute('aria-label',(open?'Minimise':'Restore')+' the shape editor');
-  try{ localStorage.setItem('lavoet-ed-open',open?'1':'0'); }catch(e){}
-  if(open){
-    if(!SHAPE){ SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; EDSEL=0; }
-    renderEd();
-  }
-  render();
-}
-$('edToggle').addEventListener('click',()=>setEditor(!$('stage').classList.contains('editing')));
-/* minimized, the whole title bar reopens the editor (the button click is handled above) */
-document.querySelector('.ed-toggle').addEventListener('click',e=>{
-  if(!$('stage').classList.contains('editing')&&!e.target.closest('#edToggle')) setEditor(true);
-});
+/* the fine-tune editor is always open — a minimise control proved confusing without adding value */
 // desktop: drag the divider to re-apportion editor vs pattern (persisted; double-click resets)
 (function initSplit(){
   const sp=$('split'), st=$('stage'), ed=$('shapeEd');
@@ -1746,7 +1723,6 @@ document.querySelector('.ed-toggle').addEventListener('click',e=>{
 })();
 // phone focus: both views stay visible, the switcher decides which one is BIG (pat-focus class)
 function setFocus(pat){
-  if(!$('stage').classList.contains('editing')) setEditor(true);   // both views live on the phone
   $('stage').classList.toggle('pat-focus',pat);
   $('vwEd').setAttribute('aria-pressed',pat?'false':'true');
   $('vwPat').setAttribute('aria-pressed',pat?'true':'false');
@@ -1803,44 +1779,135 @@ function hsl2hex(h,s,l){ s/=100; l=Math.max(0,Math.min(100,l))/100; h=((h%360)+3
   const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
   const [r,g,b]=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];
   const f=v=>Math.round((v+m)*255).toString(16).padStart(2,'0'); return '#'+f(r)+f(g)+f(b); }
-function rndNum(id,t){                               // lerp a fraction t toward a random in-range value
+function rndNum(id,t,lo,hi){                         // lerp a fraction t toward a random point in [lo,hi]
   const el=$(id); if(!el) return;
   const min=+el.min, max=+el.max, cur=+el.value, step=+el.step||1;
-  let v=cur+(min+rrand()*(max-min)-cur)*t; v=Math.round(v/step)*step;
+  const a=lo==null?min:Math.max(min,lo), b=hi==null?max:Math.min(max,hi);
+  let v=cur+(a+rrand()*(Math.max(a,b)-a)-cur)*t; v=Math.round(v/step)*step;
   el.value=Math.max(min,Math.min(max,v));
   const o=document.querySelector(`output[for="${id}"]`); if(o) o.value=el.value;
 }
 function rndSel(id,t){ const el=$(id); if(el&&rchance(t,0.85)) el.value=rpick([...el.options].map(o=>o.value)); }
 function rndChk(id,t,p){ if(rchance(t,0.6)) $(id).checked=rrand()<p; }
-function rndPalette(t){
-  const baseH=hexHue($('cFg').value)+(rrand()*2-1)*t*160;         // wander from the current motif hue
+function rndPalette(t,hue){
+  const baseH=hexHue($('cFg').value)+(rrand()*2-1)*t*hue;         // wander from the current motif hue
   $('cBg').value=hsl2hex(baseH+(rrand()*2-1)*18, 26+rrand()*26, 13+rrand()*13);   // a deep ground
   $('cFg').value=hsl2hex(baseH+(rrand()*2-1)*t*40, 42+rrand()*30, 46+rrand()*16); // brighter motif
   $('cAc').value=rchance(0.5)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), 40+rrand()*28, 50+rrand()*14);
   olAuto=true;                                       // let the outline colour re-derive from the new gold
 }
-function rndShape(t){
+function rndShape(t,c){
   if(!SHAPE) return;
-  const j=t*0.09;                                    // a small dot jitter keeps it a coherent motif
+  if(c.count&&rchance(t,0.6)){                       // change HOW MANY dots, inside the configured bounds
+    const lo=Math.max(3,Math.min(c.cntMin,c.cntMax)), hi=Math.min(24,Math.max(c.cntMin,c.cntMax));
+    const target=lo+Math.floor(rrand()*(hi-lo+1));
+    while(SHAPE.pts.length<target){                  // grow at random midpoints — new dots sit ON the outline
+      const i=Math.floor(rrand()*SHAPE.pts.length), a=SHAPE.pts[i], b=SHAPE.pts[(i+1)%SHAPE.pts.length];
+      SHAPE.pts.splice(i+1,0,[+((a[0]+b[0])/2).toFixed(3),+((a[1]+b[1])/2).toFixed(3),1]);
+    }
+    while(SHAPE.pts.length>target) SHAPE.pts.splice(Math.floor(rrand()*SHAPE.pts.length),1);
+    EDSEL=Math.min(EDSEL,SHAPE.pts.length-1);
+  }
+  const j=c.pos?t*(c.drift/100):0;                   // dot drift, capped by the configured limit
   SHAPE.pts=SHAPE.pts.map(p=>{
     const nx=Math.max(-1.6,Math.min(1.6,p[0]+(rrand()*2-1)*j)), ny=Math.max(-1.6,Math.min(1.6,p[1]+(rrand()*2-1)*j));
-    return [nx,ny, rchance(t,0.5)?+(rrand()*2).toFixed(2):p[2]];
+    return [nx,ny, (c.round&&rchance(t,0.5))?+(rrand()*2).toFixed(2):p[2]];
   });
 }
-function randomize(){
-  const t=Math.max(0.05,(+$('rndAmt').value||45)/100);
-  const on=g=>{ const el=$('rnd_'+g); return el&&el.checked; };
-  if(on('shape')){
-    ['scale','pinGap','pinHole','pinTwist','pinTwistO','twist'].forEach(id=>rndNum(id,t));
-    if(rchance(t,0.5)){ $('pinN').value=String(2+Math.floor(rrand()*7)); const o=document.querySelector('output[for="pinN"]'); if(o) o.value=$('pinN').value; }
-    rndShape(t*0.8);
+/* per-group LIMITS — what each ticked group may touch and between which bounds; ⚙ edits them.
+   Tool preferences, not design state: persisted on their own key, never in a config/export. */
+const RND_DEF={
+  shape :{amt:100,pos:1,drift:8,round:1,count:1,cntMin:6,cntMax:14,pieces:1,pMin:2,pMax:8},
+  colour:{amt:100,hue:160},
+  outline:{amt:100,flip:1},
+  dots  :{amt:100,flip:1},
+  relief:{amt:100,dMin:0,dMax:60},
+  layout:{amt:100,flip:1},
+  logo  :{amt:100,slots:1},
+};
+let RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
+  try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
+    for(const g in c) for(const k in c[g]) if(s[g]&&typeof s[g][k]==='number'&&Number.isFinite(s[g][k])) c[g][k]=s[g][k];
+  }catch(e){}
+  return c; })();
+function saveRnd(){ try{ localStorage.setItem('lavoet-rnd',JSON.stringify(RNDCFG)); }catch(e){} }
+/* the ⚙ panels: rows are [chk,key,label] | [rng,key,label,min,max,unit] | [pair,loKey,hiKey,label,min,max];
+   greyed rows hang off the checkbox named in RND_DEPS */
+const RND_PANELS={
+  shape:{t:'Shape & form',rows:[
+    ['chk','pos','Move the dots'],
+    ['rng','drift','Dot drift — up to',1,30,'%'],
+    ['chk','round','Reshape corners (sharp ↔ rounded)'],
+    ['chk','count','Change how many dots'],
+    ['pair','cntMin','cntMax','Dots — between',3,24],
+    ['chk','pieces','Change how many pieces'],
+    ['pair','pMin','pMax','Pieces — between',2,8],
+  ]},
+  colour:{t:'Colours',rows:[ ['rng','hue','Hue wander — up to',0,180,'°'] ]},
+  outline:{t:'Outline',rows:[ ['chk','flip','May switch the outline on or off'] ]},
+  dots:{t:'Dots',rows:[ ['chk','flip','May switch the dots on or off'] ]},
+  relief:{t:'3D & shading',rows:[ ['pair','dMin','dMax','Depth — between',0,60] ]},
+  layout:{t:'Layout',rows:[ ['chk','flip','May flip the row offset / mirroring'] ]},
+  logo:{t:'Logo',rows:[ ['chk','slots','May add or remove the emblem'] ]},
+};
+const RND_DEPS={drift:'pos',cntMin:'count',pMin:'pieces'};
+let RNDOPEN=null;
+function drawRndPanel(){
+  const host=$('rndOpts');
+  if(!RNDOPEN){ host.hidden=true; host.innerHTML=''; return; }
+  const P=RND_PANELS[RNDOPEN], c=RNDCFG[RNDOPEN];
+  let h=`<div class="saves-h">${P.t} — limits</div>`;
+  for(const r of [...P.rows,['rng','amt','Strength within Variation',5,100,'%']]){
+    const off=RND_DEPS[r[1]]&&!c[RND_DEPS[r[1]]]?' opt-off':'';
+    if(r[0]==='chk') h+=`<label class="chk"><input type="checkbox" data-rk="${r[1]}"${c[r[1]]?' checked':''}>${r[2]}</label>`;
+    else if(r[0]==='rng') h+=`<div class="row${off}"><label>${r[2]}</label><input type="range" data-rk="${r[1]}" data-unit="${r[5]}" min="${r[3]}" max="${r[4]}" value="${c[r[1]]}"><output>${c[r[1]]}${r[5]}</output></div>`;
+    else h+=`<div class="rnd-pair${off}"><label>${r[3]}</label><input type="number" data-rk="${r[1]}" min="${r[4]}" max="${r[5]}" value="${c[r[1]]}" aria-label="${r[3]} — lower bound"><input type="number" data-rk="${r[2]}" min="${r[4]}" max="${r[5]}" value="${c[r[2]]}" aria-label="${r[3]} — upper bound"></div>`;
   }
-  if(on('colour')) rndPalette(t);
-  if(on('outline')){ rndChk('outlineOn',t,0.7); rndSel('outlineMode',t); rndNum('outlineW',t); }
-  if(on('dots')){ rndChk('accentOn',t,0.6); rndSel('accentStyle',t); rndNum('accentSize',t); }
-  if(on('relief')){ ['depth3d','angle3d','shade3d','highlight','bevel'].forEach(id=>rndNum(id,t)); if((num('depth3d')||0)>0) last3d=num('depth3d'); }
-  if(on('layout')){ rndNum('cell',t); rndChk('quinconce',t,0.6); rndChk('mirrorAlt',t,0.5); }
-  if(on('logo')){ if(rchance(t,0.5)) setSlots(rpick(['0','1','4'])); rndSel('mqMode',t); rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
+  host.innerHTML=h; host.hidden=false;
+}
+function toggleRndPanel(g){
+  RNDOPEN=RNDOPEN===g?null:g;
+  document.querySelectorAll('.rnd-gear').forEach(b=>b.setAttribute('aria-expanded',b.dataset.gear===RNDOPEN?'true':'false'));
+  drawRndPanel();
+}
+document.querySelectorAll('.rnd-gear').forEach(b=>b.addEventListener('click',()=>toggleRndPanel(b.dataset.gear)));
+$('rndOpts').addEventListener('input',e=>{           // checks + sliders commit live…
+  const k=e.target.dataset.rk; if(!k||!RNDOPEN) return;
+  const c=RNDCFG[RNDOPEN];
+  if(e.target.type==='checkbox'){ c[k]=e.target.checked?1:0; saveRnd(); drawRndPanel(); }
+  else if(e.target.type==='range'){ c[k]=+e.target.value; saveRnd();
+    const o=e.target.nextElementSibling; if(o) o.value=e.target.value+(e.target.dataset.unit||''); }
+});
+$('rndOpts').addEventListener('change',e=>{          // …numbers commit on leave, clamped (typing stays free)
+  const k=e.target.dataset.rk; if(!k||!RNDOPEN||e.target.type!=='number') return;
+  let v=Math.round(+e.target.value);
+  if(!Number.isFinite(v)) v=RNDCFG[RNDOPEN][k];
+  v=Math.max(+e.target.min,Math.min(+e.target.max,v));
+  e.target.value=v; RNDCFG[RNDOPEN][k]=v; saveRnd();
+});
+function randomize(){
+  const T=Math.max(0.05,(+$('rndAmt').value||45)/100);
+  const on=g=>{ const el=$('rnd_'+g); return el&&el.checked; };
+  const tg=g=>T*(RNDCFG[g].amt/100);                 // each group follows Variation at its own strength
+  if(on('shape')){
+    const t=tg('shape'), c=RNDCFG.shape;
+    ['scale','pinGap','pinHole','pinTwist','pinTwistO','twist'].forEach(id=>rndNum(id,t));
+    if(c.pieces&&rchance(t,0.5)){
+      const lo=Math.min(c.pMin,c.pMax), hi=Math.max(c.pMin,c.pMax);
+      $('pinN').value=String(lo+Math.floor(rrand()*(hi-lo+1)));
+      const o=document.querySelector('output[for="pinN"]'); if(o) o.value=$('pinN').value;
+    }
+    rndShape(t,c);
+  }
+  if(on('colour')) rndPalette(tg('colour'),RNDCFG.colour.hue);
+  if(on('outline')){ const t=tg('outline'); if(RNDCFG.outline.flip) rndChk('outlineOn',t,0.7); rndSel('outlineMode',t); rndNum('outlineW',t); }
+  if(on('dots')){ const t=tg('dots'); if(RNDCFG.dots.flip) rndChk('accentOn',t,0.6); rndSel('accentStyle',t); rndNum('accentSize',t); }
+  if(on('relief')){ const t=tg('relief'), c=RNDCFG.relief;
+    rndNum('depth3d',t,Math.min(c.dMin,c.dMax),Math.max(c.dMin,c.dMax));
+    ['angle3d','shade3d','highlight','bevel'].forEach(id=>rndNum(id,t));
+    if((num('depth3d')||0)>0) last3d=num('depth3d'); }
+  if(on('layout')){ const t=tg('layout'); rndNum('cell',t); if(RNDCFG.layout.flip){ rndChk('quinconce',t,0.6); rndChk('mirrorAlt',t,0.5); } }
+  if(on('logo')){ const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4'])); rndSel('mqMode',t); rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
   syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
 }
 $('rndGo').addEventListener('click',randomize);
@@ -1909,6 +1976,9 @@ function syncRows(){
   off(wrap('highlight'), !d3);
   off(wrap('bevel'), !d3);
   off(wrap('shade3d'), !d3 && !shLine);
+  // an unticked randomize group won't be shuffled — its limits ⚙ (and open panel) grey with it
+  document.querySelectorAll('.rnd-gear').forEach(b=>{ const g=$('rnd_'+b.dataset.gear); off(b,!(g&&g.checked)); });
+  if(typeof RNDOPEN!=='undefined'&&RNDOPEN) off($('rndOpts'),!chk('rnd_'+RNDOPEN));
 }
 // keep the header switches in step with the values they stand for
 function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')||0)>0; const b=$('swLogo'); if(b) b.checked=val('mqSlots')!=='0'; }
@@ -2461,10 +2531,10 @@ renderSaves();
 renderStarters();            // draw the example cards from the cached thumbnails
 histReset(paramsString());   // the restored (or trunk) state is undo step 0
 render();
-/* the fine-tune editor is shown by default (remembered across visits) */
+/* the fine-tune editor is always open */
 (function initEditor(){
-  let o=true; try{ const s=localStorage.getItem('lavoet-ed-open'); if(s!==null) o=s==='1'; }catch(e){}
-  setEditor(o);
+  $('stage').classList.add('editing');
+  renderEd();
   if(matchMedia('(max-width:760px)').matches){          // phone: both views live, restore which is big
     let f='ed'; try{ f=localStorage.getItem('lavoet-focus')||'ed'; }catch(e){}
     setFocus(f==='pat');
