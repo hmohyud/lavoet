@@ -304,7 +304,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_shape" checked>Shape &amp; form</label><button type="button" class="rnd-gear" data-gear="shape" title="Limits for Shape &amp; form" aria-label="Limits for Shape &amp; form randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_colour" checked>Colours</label><button type="button" class="rnd-gear" data-gear="colour" title="Limits for Colours" aria-label="Limits for Colours randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_outline" checked>Outline</label><button type="button" class="rnd-gear" data-gear="outline" title="Limits for Outline" aria-label="Limits for Outline randomization" aria-expanded="false">⚙</button></span>
-        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_dots" checked>Dots</label><button type="button" class="rnd-gear" data-gear="dots" title="Limits for Dots" aria-label="Limits for Dots randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_dots">Dots</label><button type="button" class="rnd-gear" data-gear="dots" title="Limits for Dots" aria-label="Limits for Dots randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_relief">3D &amp; shading</label><button type="button" class="rnd-gear" data-gear="relief" title="Limits for 3D &amp; shading" aria-label="Limits for 3D &amp; shading randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_layout" checked>Layout</label><button type="button" class="rnd-gear" data-gear="layout" title="Limits for Layout" aria-label="Limits for Layout randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_logo">Logo</label><button type="button" class="rnd-gear" data-gear="logo" title="Limits for Logo" aria-label="Limits for Logo randomization" aria-expanded="false">⚙</button></span>
@@ -1575,14 +1575,21 @@ function setPieces(n){
   const o=document.querySelector('output[for="pinN"]'); if(o) o.value=n;
   renderEd(); render();
 }
+/* Drag perf: measuring the canvas on EVERY pointermove forced a synchronous re-layout of the
+   tree the previous move's innerHTML write had just invalidated — a classic thrash loop that
+   made dot-dragging sluggish. The rect can't change mid-drag, so it's measured once per
+   gesture; and redraws coalesce to one per animation frame instead of one per pointer event. */
+let EDRECT=null, EDRAF=0;
+function edFrame(){ if(!EDRAF) EDRAF=requestAnimationFrame(()=>{ EDRAF=0; renderEd(); render(); }); }
 function edPos(ev){
-  const r=$('edSvg').getBoundingClientRect(), vb=2.9, sc=Math.min(r.width,r.height)/vb;
+  const r=EDRECT||(EDRECT=$('edSvg').getBoundingClientRect()), vb=2.9, sc=Math.min(r.width,r.height)/vb;
   const x0=r.left+(r.width-vb*sc)/2, y0=r.top+(r.height-vb*sc)/2;
   const cl=v=>Math.max(-1.42,Math.min(1.42,v));
   return [cl((ev.clientX-x0)/sc-vb/2), cl((ev.clientY-y0)/sc-vb/2)];
 }
 let EDLINE=0;
 $('edSvg').addEventListener('pointerdown',ev=>{
+  EDRECT=$('edSvg').getBoundingClientRect();           // one fresh measure per gesture
   if(imgActive()){                                   // picture mode: move/resize the crop, or drag triangle dots
     const [x,y]=edPos(ev);
     const td=ev.target.closest('[data-tri]');
@@ -1616,7 +1623,7 @@ $('edSvg').addEventListener('pointermove',ev=>{
       const ax=Math.max(bx,Math.min(tx,dx)), ay=Math.max(by,Math.min(ty,dy));
       IMGTRI=EDIMG0.tri.map(p=>[p[0]+ax,p[1]+ay]);
     }
-    renderEd(); render(); return;
+    edFrame(); return;
   }
   if(EDDRAG==='img'||EDDRAG==='imgsz'){
     if(!imgActive()||!EDIMG0){ EDDRAG=false; return; }
@@ -1633,18 +1640,21 @@ $('edSvg').addEventListener('pointermove',ev=>{
       IMGSEL.s=Math.max(0.08,Math.min(1,d/f/m));
       setOut('imgSize',Math.round(IMGSEL.s*100));
     }
-    renderEd(); render(); return;
+    edFrame(); return;
   }
   if(EDDRAG==='line'){
     if(!SHADELINE) SHADELINE=DEFAULT_SLINE.map(p=>p.slice());
-    SHADELINE[EDLINE]=[+x.toFixed(3),+y.toFixed(3)]; renderEd(); render(); return;
+    SHADELINE[EDLINE]=[+x.toFixed(3),+y.toFixed(3)]; edFrame(); return;
   }
   if(!SHAPE) return;
   const b=shapeUnmodify(x,y);                        // pointer is a modified/display coord → store the base point
   SHAPE.pts[EDSEL][0]=+b[0].toFixed(3); SHAPE.pts[EDSEL][1]=+b[1].toFixed(3);
-  renderEd(); render();
+  edFrame();
 });
-$('edSvg').addEventListener('pointerup',()=>{ EDDRAG=false; });
+$('edSvg').addEventListener('pointerup',()=>{
+  EDDRAG=false; EDRECT=null;
+  if(EDRAF){ cancelAnimationFrame(EDRAF); EDRAF=0; renderEd(); render(); }   // the last position always lands
+});
 $('edShadeInfo').addEventListener('click',e=>e.stopPropagation());
 $('edShadeHelp').addEventListener('click',e=>{
   e.stopPropagation();
@@ -1826,7 +1836,7 @@ function rndShape(t,c){
 /* per-group LIMITS — what each ticked group may touch and between which bounds; ⚙ edits them.
    Tool preferences, not design state: persisted on their own key, never in a config/export. */
 const RND_DEF={
-  shape :{amt:100,pos:1,drift:8,round:1,count:1,cntMin:6,cntMax:14,pieces:1,pMin:2,pMax:8},
+  shape :{amt:100,pos:1,drift:30,round:1,count:1,cntMin:6,cntMax:14,pieces:1,pMin:3,pMax:4,szMin:35,szMax:70},
   colour:{amt:100,hue:160},
   outline:{amt:100,flip:1},
   dots  :{amt:100,flip:1},
@@ -1839,6 +1849,10 @@ let RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
     for(const g in c) for(const k in c[g]) if(s[g]&&typeof s[g][k]==='number'&&Number.isFinite(s[g][k])) c[g][k]=s[g][k];
   }catch(e){}
+  // stored values that are just the RETIRED defaults follow the new ones (a deliberate choice
+  // of exactly the old default is indistinguishable — and these defaults changed on request)
+  if(c.shape.drift===8) c.shape.drift=30;
+  if(c.shape.pMin===2&&c.shape.pMax===8){ c.shape.pMin=3; c.shape.pMax=4; }
   return c; })();
 function saveRnd(){ try{ localStorage.setItem('lavoet-rnd',JSON.stringify(RNDCFG)); }catch(e){} }
 /* which gallery pictures the shuffle may use: {id:0} = excluded; anything absent is allowed,
@@ -1855,8 +1869,9 @@ try{ const a=+localStorage.getItem('lavoet-rnd-amt');
    greyed rows hang off the checkbox named in RND_DEPS */
 const RND_PANELS={
   shape:{t:'Shape & form',rows:[
+    ['pair','szMin','szMax','Motif size — between',30,100],
     ['chk','pos','Move the dots'],
-    ['rng','drift','Dot drift — up to',1,30,'%'],
+    ['rng','drift','Dot drift — up to',1,50,'%'],
     ['chk','round','Reshape corners (sharp ↔ rounded)'],
     ['chk','count','Change how many dots'],
     ['pair','cntMin','cntMax','Dots — between',3,24],
@@ -1927,7 +1942,8 @@ function randomize(){
   const tg=g=>T*(RNDCFG[g].amt/100);                 // each group follows Variation at its own strength
   if(on('shape')){
     const t=tg('shape'), c=RNDCFG.shape;
-    ['scale','pinGap','pinHole','pinTwist','pinTwistO','twist'].forEach(id=>rndNum(id,t));
+    rndNum('scale',t,Math.min(c.szMin,c.szMax),Math.max(c.szMin,c.szMax));   // size stays inside its bounds — the blob filter
+    ['pinGap','pinHole','pinTwist','pinTwistO','twist'].forEach(id=>rndNum(id,t));
     if(c.pieces&&rchance(t,0.5)){
       const lo=Math.min(c.pMin,c.pMax), hi=Math.max(c.pMin,c.pMax);
       $('pinN').value=String(lo+Math.floor(rrand()*(hi-lo+1)));
@@ -2039,9 +2055,10 @@ function syncRows(){
   off(wrap('highlight'), !d3);
   off(wrap('bevel'), !d3);
   off(wrap('shade3d'), !d3 && !shLine);
-  // an unticked randomize group won't be shuffled — its limits ⚙ (and open panel) grey with it
+  // an unticked randomize group won't be shuffled — its limits ⚙ greys, and an OPEN panel
+  // closes with it (a greyed-open panel read as a stuck gear)
   document.querySelectorAll('.rnd-gear').forEach(b=>{ const g=$('rnd_'+b.dataset.gear); off(b,!(g&&g.checked)); });
-  if(typeof RNDOPEN!=='undefined'&&RNDOPEN) off($('rndOpts'),!chk('rnd_'+RNDOPEN));
+  if(typeof RNDOPEN!=='undefined'&&RNDOPEN&&!chk('rnd_'+RNDOPEN)) toggleRndPanel(RNDOPEN);
 }
 // keep the header switches in step with the values they stand for
 function syncHeaderToggles(){ const a=$('sw3d'); if(a) a.checked=(num('depth3d')||0)>0; const b=$('swLogo'); if(b) b.checked=val('mqSlots')!=='0'; }
