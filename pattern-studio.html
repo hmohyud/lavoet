@@ -333,7 +333,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         </div>
         <div id="rndOpts" class="rnd-opts" hidden></div>
       </div>
-      <div id="rndPicBody" class="rnd-opts" aria-label="Picture-pattern randomize settings"></div>
+      <div id="rndPicBody" class="rnd-opts" aria-label="Picture-pattern randomize settings" hidden></div>
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="100"><output for="rndAmt">100</output></div>
       <div class="rnd-lbls"><span>Subtle</span><span>Wild</span></div>
       <div class="btns">
@@ -1981,14 +1981,15 @@ try{ const p=JSON.parse(localStorage.getItem('lavoet-rnd-pics')||'{}');
 function saveRndPool(){ try{ localStorage.setItem('lavoet-rnd-pics',JSON.stringify(RNDPOOL)); }catch(e){} }
 function rndPicPool(){ return IMGS.filter(r=>RNDPOOL[r.id]!==0); }
 /* what a shuffle PRODUCES: 'motif' shuffles the group grid, 'picture' makes picture patterns.
-   The inactive half greys out — visible, but plainly not in play. */
+   In Picture mode the motif grid greys out (visible, plainly not in play); in Motif mode the
+   picture block folds away entirely — the seg is the way back to it. */
 var RNDMODE=(()=>{ try{ return localStorage.getItem('lavoet-rnd-mode')==='picture'?'picture':'motif'; }catch(e){ return 'motif'; } })();
 function setRndMode(m){
   RNDMODE=m==='picture'?'picture':'motif';
   try{ localStorage.setItem('lavoet-rnd-mode',RNDMODE); }catch(e){}
   document.querySelectorAll('#rndModeSeg [data-rmode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.rmode===RNDMODE?'true':'false'));
   $('rndMotif').classList.toggle('opt-off',RNDMODE==='picture');
-  $('rndPicBody').classList.toggle('opt-off',RNDMODE!=='picture');
+  $('rndPicBody').hidden=RNDMODE!=='picture';
   if(RNDMODE==='picture'&&RNDOPEN) toggleRndPanel(RNDOPEN);   // a greyed-open gear panel reads as stuck
 }
 document.querySelectorAll('#rndModeSeg [data-rmode]').forEach(b=>b.addEventListener('click',()=>setRndMode(b.dataset.rmode)));
