@@ -130,12 +130,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rs-cell .save-thumb{width:100%;height:auto;aspect-ratio:4/3}
 .rs-again{flex:none;height:28px;display:flex;align-items:center;gap:5px;padding:0 12px;border:1px solid var(--hair);background:none;color:var(--ink);font:500 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
 .rs-again:hover{border-color:var(--brass);color:var(--brass)}
-/* the Randomize split button: the main half rolls, the caret picks how many a roll deals */
+/* the Randomize split button: the main half rolls, the slim caret picks how many a roll deals */
 .rnd-split{position:relative;display:flex;gap:2px;margin-top:4px}
 .rnd-split #rndGo{flex:1}
-.rnd-caret{flex:none;width:46px;padding-left:0;padding-right:0}
-.rnd-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:45;background:var(--paper);border:1px solid var(--brassD);box-shadow:0 10px 28px rgba(43,38,32,.28)}
-.rnd-menu button{display:block;width:100%;text-align:left;padding:12px 13px;font:500 11px var(--sans);letter-spacing:.04em;background:none;border:none;border-bottom:1px solid var(--hair);color:var(--ink);cursor:pointer}
+.rnd-split .rnd-caret{flex:none;width:32px;padding:13px 0;font-size:10px}   /* outranks .rnd-go's width:100% */
+.rnd-menu{position:absolute;top:calc(100% + 4px);right:0;left:auto;min-width:200px;z-index:45;background:var(--paper);border:1px solid var(--brassD);box-shadow:0 8px 22px rgba(43,38,32,.26)}
+.rnd-menu button{display:block;width:100%;text-align:left;padding:9px 12px;font:500 10.5px var(--sans);letter-spacing:.03em;background:none;border:none;border-bottom:1px solid var(--hair);color:var(--ink);cursor:pointer}
 .rnd-menu button:last-child{border-bottom:none}
 .rnd-menu button:hover{background:color-mix(in srgb,var(--brass) 12%,transparent)}
 .rnd-menu button[aria-pressed="true"]{font-weight:600;background:color-mix(in srgb,var(--brass) 7%,transparent)}
@@ -2170,7 +2170,7 @@ $('rndMore').addEventListener('click',e=>{ e.stopPropagation();
 document.querySelectorAll('#rndMenu [data-rolls]').forEach(b=>b.addEventListener('click',()=>{
   RNDROLLS=+b.dataset.rolls; try{ localStorage.setItem('lavoet-rnd-rolls',RNDROLLS); }catch(e){}
   $('rndMenu').hidden=true; $('rndMore').setAttribute('aria-expanded','false'); syncRollUI();
-  RNDROLLS===1?randomize():rollSheet(RNDROLLS);        // choosing an option also performs it
+  // choosing only SETS the mode — the labelled Randomize button is what rolls
 }));
 document.addEventListener('click',e=>{ if(!$('rndMenu').hidden&&!e.target.closest('.rnd-split')){ $('rndMenu').hidden=true; $('rndMore').setAttribute('aria-expanded','false'); } });
 /* ---------- the contact sheet: N rolls as thumbnails, pick one ----------
