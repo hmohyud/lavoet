@@ -168,6 +168,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rnd-pair{display:grid;grid-template-columns:1fr 56px 56px;gap:10px;align-items:center;margin-top:10px;min-height:30px}
 .rnd-pair label{font-size:11.5px;color:var(--ink)}
 .rnd-pair input[type=number]{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--hair);padding:6px 4px;width:100%;text-align:center}
+/* the picture pool: which gallery pictures the shuffle may draw from — click to allow / exclude */
+.rnd-pics{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;margin-top:8px}
+.rnd-pic{position:relative;aspect-ratio:4/3;padding:0;border:1px solid var(--brass);background:none;cursor:pointer;overflow:hidden}
+.rnd-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.rnd-pic.off{border-color:var(--hair)}
+.rnd-pic.off img{opacity:.22;filter:grayscale(1)}
+.rnd-pic.off::after{content:"✕";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--sepia);font:600 15px var(--sans)}
+.rnd-pics-hint{font-size:10px;font-style:italic;color:var(--sepia);margin-top:8px}
 .rnd-lbls{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-top:-2px}
 .rnd-go{width:100%;font:600 12px var(--sans);letter-spacing:.16em;text-transform:uppercase;padding:13px 10px;background:var(--ink);border:1px solid var(--ink);color:var(--paper);cursor:pointer}
 .rnd-go:hover{background:var(--brassD);border-color:var(--brassD)}
@@ -291,7 +299,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Randomize</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Shuffle the design for ideas. Tick which parts may change, then set how far they wander with <b>Variation</b> — Subtle nudges the current look, Wild reaches across the whole range. Unticked parts stay exactly as they are, so you can lock a palette or a shape and explore around it. Each part's <b>⚙</b> opens its own limits — what exactly may change and between which bounds (how far the shape dots drift, how many there may be, depth limits…). Every shuffle is a single Undo.</p>
+      <p class="acc-info" hidden>Shuffle the design for ideas. Tick which parts may change, then set how far they wander with <b>Variation</b> — Subtle nudges the current look, Wild reaches across the whole range. Unticked parts stay exactly as they are, so you can lock a palette or a shape and explore around it. Each part's <b>⚙</b> opens its own limits — what exactly may change and between which bounds (how far the shape dots drift, how many there may be, depth limits…). Tick <b>Picture pattern</b> to let the shuffle dip into picture designs too; its ⚙ chooses which gallery pictures are allowed. Every shuffle is a single Undo.</p>
       <div class="rnd-groups" role="group" aria-label="What may be randomized">
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_shape" checked>Shape &amp; form</label><button type="button" class="rnd-gear" data-gear="shape" title="Limits for Shape &amp; form" aria-label="Limits for Shape &amp; form randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_colour" checked>Colours</label><button type="button" class="rnd-gear" data-gear="colour" title="Limits for Colours" aria-label="Limits for Colours randomization" aria-expanded="false">⚙</button></span>
@@ -300,6 +308,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_relief">3D &amp; shading</label><button type="button" class="rnd-gear" data-gear="relief" title="Limits for 3D &amp; shading" aria-label="Limits for 3D &amp; shading randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_layout" checked>Layout</label><button type="button" class="rnd-gear" data-gear="layout" title="Limits for Layout" aria-label="Limits for Layout randomization" aria-expanded="false">⚙</button></span>
         <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_logo">Logo</label><button type="button" class="rnd-gear" data-gear="logo" title="Limits for Logo" aria-label="Limits for Logo randomization" aria-expanded="false">⚙</button></span>
+        <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_picture">Picture pattern</label><button type="button" class="rnd-gear" data-gear="picture" title="Limits for Picture pattern — including which pictures are allowed" aria-label="Limits for Picture pattern randomization" aria-expanded="false">⚙</button></span>
       </div>
       <div id="rndOpts" class="rnd-opts" hidden></div>
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="100"><output for="rndAmt">100</output></div>
@@ -1824,6 +1833,7 @@ const RND_DEF={
   relief:{amt:100,dMin:0,dMax:60},
   layout:{amt:100,flip:1},
   logo  :{amt:100,slots:1},
+  picture:{amt:100,flip:1,style:1,area:1,scMin:60,scMax:220},
 };
 let RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
@@ -1831,6 +1841,13 @@ let RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   }catch(e){}
   return c; })();
 function saveRnd(){ try{ localStorage.setItem('lavoet-rnd',JSON.stringify(RNDCFG)); }catch(e){} }
+/* which gallery pictures the shuffle may use: {id:0} = excluded; anything absent is allowed,
+   so new uploads join the pool automatically */
+let RNDPOOL={};
+try{ const p=JSON.parse(localStorage.getItem('lavoet-rnd-pics')||'{}');
+  if(p&&typeof p==='object') for(const k in p) if(p[k]===0) RNDPOOL[cleanImgId(k)]=0; }catch(e){}
+function saveRndPool(){ try{ localStorage.setItem('lavoet-rnd-pics',JSON.stringify(RNDPOOL)); }catch(e){} }
+function rndPicPool(){ return IMGS.filter(r=>RNDPOOL[r.id]!==0); }
 /* Variation opens at 100 on a first visit; after that it keeps whatever you set last */
 try{ const a=+localStorage.getItem('lavoet-rnd-amt');
   if(a>=5&&a<=100){ $('rndAmt').value=a; const o=document.querySelector('output[for="rndAmt"]'); if(o) o.value=a; } }catch(e){}
@@ -1852,6 +1869,12 @@ const RND_PANELS={
   relief:{t:'3D & shading',rows:[ ['pair','dMin','dMax','Depth — between',0,60] ]},
   layout:{t:'Layout',rows:[ ['chk','flip','May flip the row offset / mirroring'] ]},
   logo:{t:'Logo',rows:[ ['chk','slots','May add or remove the emblem'] ]},
+  picture:{t:'Picture pattern',rows:[
+    ['chk','flip','May switch picture mode on or off'],
+    ['chk','style','May change the tiling shape / style'],
+    ['chk','area','May move the picked area / dots'],
+    ['pair','scMin','scMax','Pattern scale — between',40,300],
+  ]},
 };
 const RND_DEPS={drift:'pos',cntMin:'count',pMin:'pieces'};
 let RNDOPEN=null;
@@ -1860,6 +1883,10 @@ function drawRndPanel(){
   if(!RNDOPEN){ host.hidden=true; host.innerHTML=''; return; }
   const P=RND_PANELS[RNDOPEN], c=RNDCFG[RNDOPEN];
   let h=`<div class="saves-h">${P.t} — limits</div>`;
+  if(RNDOPEN==='picture'){                             // the pool: which pictures the shuffle may draw from
+    h+=`<div class="rnd-pics">${IMGS.map(r=>`<button type="button" class="rnd-pic${RNDPOOL[r.id]===0?' off':''}" data-pid="${escapeHtml(r.id)}" title="${escapeHtml(r.name)}" aria-pressed="${RNDPOOL[r.id]===0?'false':'true'}"><img src="${escapeHtml(r.data)}" alt="${escapeHtml(r.name)}"></button>`).join('')}</div>`
+      +`<p class="rnd-pics-hint">Click a picture to allow or exclude it from the shuffle.</p>`;
+  }
   for(const r of [...P.rows,['rng','amt','Strength within Variation',5,100,'%']]){
     const off=RND_DEPS[r[1]]&&!c[RND_DEPS[r[1]]]?' opt-off':'';
     if(r[0]==='chk') h+=`<label class="chk"><input type="checkbox" data-rk="${r[1]}"${c[r[1]]?' checked':''}>${r[2]}</label>`;
@@ -1880,6 +1907,12 @@ $('rndOpts').addEventListener('input',e=>{           // checks + sliders commit 
   if(e.target.type==='checkbox'){ c[k]=e.target.checked?1:0; saveRnd(); drawRndPanel(); }
   else if(e.target.type==='range'){ c[k]=+e.target.value; saveRnd();
     const o=e.target.nextElementSibling; if(o) o.value=e.target.value+(e.target.dataset.unit||''); }
+});
+$('rndOpts').addEventListener('click',e=>{           // pool thumbs toggle allowed ↔ excluded
+  const p=e.target.closest('.rnd-pic'); if(!p) return;
+  const id=p.dataset.pid;
+  if(RNDPOOL[id]===0) delete RNDPOOL[id]; else RNDPOOL[id]=0;
+  saveRndPool(); drawRndPanel();
 });
 $('rndOpts').addEventListener('change',e=>{          // …numbers commit on leave, clamped (typing stays free)
   const k=e.target.dataset.rk; if(!k||!RNDOPEN||e.target.type!=='number') return;
@@ -1911,6 +1944,33 @@ function randomize(){
     if((num('depth3d')||0)>0) last3d=num('depth3d'); }
   if(on('layout')){ const t=tg('layout'); if(RNDCFG.layout.flip){ rndChk('quinconce',t,0.6); rndChk('mirrorAlt',t,0.5); } }   // zoom (cell) is presentation, not design — never shuffled
   if(on('logo')){ const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4'])); rndSel('mqMode',t); rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
+  if(on('picture')){
+    const t=tg('picture'), c=RNDCFG.picture, pool=rndPicPool();
+    if(pool.length){                                   // an empty pool means the group has nothing to work with
+      if(c.flip) rndChk('imgOn',t,0.55);
+      if(chk('imgOn')){                                // only shuffle picture params when they'll be SEEN —
+        if(!IMG||RNDPOOL[IMG.id]===0||rchance(t,0.6))  // invisible changes would only churn undo/autosave dedup
+          setActiveImg(rpick(pool.filter(r=>!IMG||r.id!==IMG.id))||pool[0]);
+        if(c.style&&rchance(t,0.85)){
+          const sym=rpick(['tri','tristretch','mirror','kaleido','spin','hex','hexm','hexfull']);
+          $('imgSym').value=sym;                       // keep the stored fit coherent with the pick
+          $('imgFit').value=shapeOfSym(sym)==='square'?rpick(['tess','stretch'])
+            :(sym==='tristretch'||sym==='hex'||sym==='hexm')?'stretch':'tess';
+        }
+        if(c.area){                                    // wander the crop and the triangle dots, t of the way
+          const rs=0.2+rrand()*0.45, rx=0.15+rrand()*0.7, ry=0.15+rrand()*0.7;
+          IMGSEL={x:+(IMGSEL.x+(rx-IMGSEL.x)*t).toFixed(3), y:+(IMGSEL.y+(ry-IMGSEL.y)*t).toFixed(3),
+                  s:+Math.max(0.08,IMGSEL.s+(rs-IMGSEL.s)*t).toFixed(3)};
+          setOut('imgSize',Math.round(IMGSEL.s*100));
+          const cx2=0.3+rrand()*0.4, cy2=0.3+rrand()*0.4, a0=rrand()*Math.PI*2;
+          const tri=[0,1,2].map(k=>{ const a=a0+k*2.094+(rrand()-0.5)*0.7, r=0.12+rrand()*0.23;
+            return [Math.max(0.02,Math.min(0.98,cx2+Math.cos(a)*r)), Math.max(0.02,Math.min(0.98,cy2+Math.sin(a)*r))]; });
+          IMGTRI=IMGTRI.map((p,i)=>[+(p[0]+(tri[i][0]-p[0])*t).toFixed(3), +(p[1]+(tri[i][1]-p[1])*t).toFixed(3)]);
+        }
+        rndNum('imgScale',t,Math.min(c.scMin,c.scMax),Math.max(c.scMin,c.scMax));
+      }
+    }
+  }
   syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
 }
 $('rndGo').addEventListener('click',randomize);
