@@ -181,6 +181,10 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rnd-item .chk{margin-top:0;flex:1;min-width:0}
 /* an unticked group is LOCKED — the shuffle keeps it exactly as it is; dim it so that reads */
 .rnd-item:has(input:not(:checked)) .chk{opacity:.55}
+/* hovering a locked group explains WHAT persists — including its live on/off state */
+#rndTip{position:fixed;z-index:80;max-width:250px;padding:9px 12px;background:var(--ink);color:var(--paper);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:400 10.5px/1.55 var(--sans);pointer-events:none}
+#rndTip[hidden]{display:none}
+#rndTip b{color:var(--brass)}
 .rnd-gear{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:3px;color:var(--sepia);font-size:13px;line-height:1;cursor:pointer;padding:0}
 .rnd-gear:hover{color:var(--brass)}
 .rnd-gear[aria-expanded="true"]{color:var(--paper);background:var(--brassD)}
@@ -626,6 +630,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 </main>
 
 <div id="thumbPop" hidden aria-hidden="true"><img alt=""></div>
+<div id="rndTip" hidden aria-hidden="true"></div>
 
 <div id="saveBrowser" hidden role="dialog" aria-modal="true" aria-labelledby="svTitle">
   <div class="sv-panel">
@@ -2237,6 +2242,37 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
     if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) stop(); });   // drag off to cancel
   btn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault();
     if(!holding&&confirm('Reset every randomize setting to its default?')) fire(); } });
+})();
+/* hovering a LOCKED (unticked) group spells out what the lock means — including the group's
+   live on/off state, so "locked" clearly reads as "persists as-is", never as "turned off" */
+(function initRndTip(){
+  const tip=$('rndTip'), grid=document.querySelector('.rnd-groups');
+  if(!tip||!grid) return;
+  const NAMES={shape:'Shape & form',colour:'Colours',outline:'Outline',dots:'Dots',relief:'3D & shading',layout:'Layout',logo:'Logo'};
+  const ONOFF={outline:()=>chk('outlineOn'), dots:()=>chk('accentOn'),
+    relief:()=>(num('depth3d')||0)>0, logo:()=>val('mqSlots')!=='0'};
+  function msg(g){
+    if(ONOFF[g]){ const on=ONOFF[g]();
+      return `<b>Locked</b> — ${NAMES[g]} won't be shuffled. It is currently <b>${on?'ON':'OFF'}</b> and will ${on?'persist exactly as set':'stay off'} through every shuffle.`; }
+    return `<b>Locked</b> — ${NAMES[g]} won't be shuffled; it persists exactly as it is through every shuffle.`;
+  }
+  grid.addEventListener('mouseover',e=>{
+    const it=e.target.closest('.rnd-item');
+    const cb=it&&it.querySelector('input[type=checkbox]');
+    if(!cb||cb.checked){ tip.hidden=true; return; }
+    tip.innerHTML=msg(cb.id.replace('rnd_',''));
+    tip.hidden=false;
+    const r=it.getBoundingClientRect();
+    // floor the viewport reads: an occluded/embedded frame can report 0×0, which would
+    // clamp the tip to nonsense — a real browser's numbers always win over the floor
+    const vw=Math.max(320,innerWidth||0,document.documentElement.clientWidth||0);
+    const vh=Math.max(240,innerHeight||0,document.documentElement.clientHeight||0);
+    tip.style.left=Math.max(8,Math.min(vw-8-tip.offsetWidth,r.left))+'px';
+    tip.style.top=(r.bottom+6+tip.offsetHeight>vh-8?r.top-6-tip.offsetHeight:r.bottom+6)+'px';
+  });
+  grid.addEventListener('mouseleave',()=>{ tip.hidden=true; });
+  grid.addEventListener('click',()=>{ tip.hidden=true; });          // a toggle changes the story
+  const pn=$('panel'); if(pn) pn.addEventListener('scroll',()=>{ tip.hidden=true; },{passive:true});
 })();
 
 /* ---------- starter gallery ----------
