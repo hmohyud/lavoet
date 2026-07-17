@@ -175,8 +175,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
    Each toggle carries a ⚙ that opens that group's LIMITS (what exactly may change, and
    between which bounds) in one shared panel below the grid. */
 .rnd-groups{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin-top:4px}
+.rnd-note{font-size:10px;font-style:italic;color:var(--sepia);margin:8px 0 2px}
+.rnd-note b{color:var(--brassD);font-weight:600}
 .rnd-item{display:flex;align-items:center;gap:2px;min-width:0;margin-top:5px}
 .rnd-item .chk{margin-top:0;flex:1;min-width:0}
+/* an unticked group is LOCKED — the shuffle keeps it exactly as it is; dim it so that reads */
+.rnd-item:has(input:not(:checked)) .chk{opacity:.55}
 .rnd-gear{flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:3px;color:var(--sepia);font-size:13px;line-height:1;cursor:pointer;padding:0}
 .rnd-gear:hover{color:var(--brass)}
 .rnd-gear[aria-expanded="true"]{color:var(--paper);background:var(--brassD)}
@@ -332,6 +336,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <button type="button" data-rmode="picture" aria-pressed="false">Picture pattern</button>
       </div>
       <div id="rndMotif">
+        <p class="rnd-note">Ticked parts get shuffled — unticked parts are <b>locked as they are</b>.</p>
         <div class="rnd-groups" role="group" aria-label="What may be randomized">
           <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_shape" checked>Shape &amp; form</label><button type="button" class="rnd-gear" data-gear="shape" title="Limits for Shape &amp; form" aria-label="Limits for Shape &amp; form randomization" aria-expanded="false">⚙</button></span>
           <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_colour" checked>Colours</label><button type="button" class="rnd-gear" data-gear="colour" title="Limits for Colours" aria-label="Limits for Colours randomization" aria-expanded="false">⚙</button></span>
@@ -411,7 +416,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <option value="stretch" selected>Stretch</option>
       </select>
       <input type="range" id="imgSize" min="8" max="100" value="50" hidden aria-hidden="true">
-      <div class="row img-need-on"><label for="imgScale">Pattern scale</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
+      <div class="row img-need-on"><label for="imgScale">Zoom</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
       <p class="hint" id="imgHint">No picture yet — upload one to start.</p>
     </div>
   </section>
@@ -1960,7 +1965,7 @@ const RND_DEF={
   relief:{amt:100,dMin:0,dMax:60},
   layout:{amt:100,flip:1},
   logo  :{amt:100,slots:1},
-  picture:{amt:100,style:1,area:1,scMin:60,scMax:220},
+  picture:{amt:100,style:1,area:1},
 };
 var RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
@@ -2020,7 +2025,6 @@ const RND_PANELS={
 const PIC_ROWS=[
   ['chk','style','May change the tiling shape / style'],
   ['chk','area','May move the picked area / dots'],
-  ['pair','scMin','scMax','Pattern scale — between',40,300],
 ];
 /* a row greys when its dep says so — drift only matters in drift mode (pos on, scatter off) */
 const RND_DEPS={drift:c=>!c.pos||!!c.scatter, scatter:c=>!c.pos, cntMin:c=>!c.count, pMin:c=>!c.pieces};
@@ -2105,7 +2109,7 @@ function randomize(){
         return [Math.max(0.02,Math.min(0.98,cx2+Math.cos(a)*r)), Math.max(0.02,Math.min(0.98,cy2+Math.sin(a)*r))]; });
       IMGTRI=IMGTRI.map((p,i)=>[+(p[0]+(tri[i][0]-p[0])*t).toFixed(3), +(p[1]+(tri[i][1]-p[1])*t).toFixed(3)]);
     }
-    rndNum('imgScale',t,Math.min(c.scMin,c.scMax),Math.max(c.scMin,c.scMax));
+    // imgScale is the picture-mode ZOOM — presentation, not design; never shuffled (like cell)
     syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
     return;
   }
