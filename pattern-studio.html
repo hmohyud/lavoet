@@ -582,8 +582,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <input type="checkbox" id="mqFig" checked hidden aria-hidden="true">
         <input type="checkbox" id="mqText" checked hidden aria-hidden="true">
         <div class="cols" id="mqTextRow">
-          <div class="col"><label for="mqT1">Wordmark</label><input type="text" id="mqT1" value="LAVOËT" maxlength="18" placeholder="Your name"></div>
-          <div class="col"><label for="mqT2">Small line</label><input type="text" id="mqT2" value="1869" maxlength="18" placeholder="Year or motto"></div>
+          <div class="col"><label for="mqTxt">Wordmark — lines, comma-separated</label><input type="text" id="mqTxt" value="LAVOËT, 1869" maxlength="72" placeholder="Name, year, motto…"></div>
         </div>
         <div class="row"><label for="mqSize">Fine size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div id="imgMqRows">
@@ -1078,19 +1077,24 @@ function marquePhase(W,H){
 /* ---------- la marque ---------- */
 /* what the marque SHOWS is two independent toggles — the figure (bellboy or an upload) and the
    wordmark (whatever text the user typed, sized to fit) — shared by both marque boxes */
+/* the wordmark is ONE comma-separated field: the first line is the big wordmark, every further
+   line renders in the small-line style beneath it */
+function mqLines(){ return (val('mqTxt')||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,4); }
 function marqueGeom(E){
   const fig=chk('mqFig'), custom=logoIsCustom();
-  const t1=chk('mqText')?(val('mqT1')||'').trim():'', t2=chk('mqText')?(val('mqT2')||'').trim():'';
-  const figH=fig?((t1||t2)?E*0.74:E*1.18):0, figW=figH*163.3/213;
-  const F1=t1?E*0.165:0, F2=t2?E*0.085:0;
-  const fs1=t1?F1*Math.min(1,6.6/Math.max(4,t1.length)):0;   // long wordmarks shrink to fit the slot
-  const fs2=t2?F2*Math.min(1,7.5/Math.max(4,t2.length)):0;
-  const textW=Math.max(t1.length*fs1*1.05, t2.length*fs2*1.2);
+  const lines=chk('mqText')?mqLines():[];
+  const l1=lines[0]||'', rest=lines.slice(1);
+  const figH=fig?(lines.length?E*0.74:E*1.18):0, figW=figH*163.3/213;
+  const F1=l1?E*0.165:0, F2=rest.length?E*0.085:0;
+  const fs1=l1?F1*Math.min(1,6.6/Math.max(4,l1.length)):0;   // long wordmarks shrink to fit the slot
+  const maxRest=rest.reduce((a,s)=>Math.max(a,s.length),0);
+  const fsR=F2?F2*Math.min(1,7.5/Math.max(4,maxRest)):0;
+  const textW=Math.max(l1.length*fs1*1.05, maxRest*fsR*1.2);
   let cw=0,ch=0;
   if(custom){ const a=CLOGO.el.naturalWidth/CLOGO.el.naturalHeight;   // the upload sits in the figure slot
     ch=Math.min(figH*1.12,E*1.3/a); cw=ch*a; }
-  const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
-  return {figH,figW,F1,F2,fs1,fs2,t1,t2,textW,blockH,cw,ch,custom};
+  const blockH=figH+(F1?F1*1.55:0)+rest.length*F2*1.9;
+  return {figH,figW,F1,F2,fs1,fsR,l1,rest,textW,blockH,cw,ch,custom};
 }
 function marqueBox(W,H){
   const S=num('cell'), q=chk('quinconce'), slots=val('mqSlots');
@@ -1121,8 +1125,8 @@ function marqueMarkup(b){
     y+=b.figH;
   }
   const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="currentColor">${escapeHtml(txt)}</text>`;
-  if(b.F1){ s+=T(b.t1,b.fs1,b.F1*1.18,0.22); y+=b.F1*1.55; }
-  if(b.F2){ s+=T(b.t2,b.fs2,b.F2*1.15,0.3); }
+  if(b.F1){ s+=T(b.l1,b.fs1,b.F1*1.18,0.22); y+=b.F1*1.55; }
+  for(const ln of (b.rest||[])){ s+=T(ln,b.fsR,b.F2*1.15,0.3); y+=b.F2*1.9; }
   return s;
 }
 // the logo, flat or RAISED like the motifs (same depth3d/angle3d/shade3d/highlight):
@@ -1158,7 +1162,7 @@ function syncLogoUI(){
 }
 /* the picker cards mirror the hidden mqFig/mqArt/mqText state; the wordmark card previews the
    LIVE typed text. One of figure/text always stays on — an empty cleared slot is a hole. */
-function mqIsHouse(){ return (val('mqT1')||'').trim()==='LAVOËT'&&(val('mqT2')||'').trim()==='1869'; }
+function mqIsHouse(){ return mqLines().join('|')==='LAVOËT|1869'; }
 function syncMqPick(){
   if(!$('mqFigPick')) return;
   const fig=chk('mqFig'), art=val('mqArt'), txt=chk('mqText'), house=mqIsHouse();
@@ -1168,9 +1172,9 @@ function syncMqPick(){
     b.setAttribute('aria-pressed',
       b.dataset.mt==='off'?!txt : b.dataset.mt==='house'?(txt&&house) : (txt&&!house)));
   const tp=$('mqpTxt');
-  if(tp){ const t1=(val('mqT1')||'').trim(), t2=(val('mqT2')||'').trim();
-    tp.innerHTML=(!house&&(t1||t2))
-      ?`<i>${escapeHtml(t1||'—')}</i>${t2?`<em>${escapeHtml(t2)}</em>`:''}`
+  if(tp){ const ls=mqLines();
+    tp.innerHTML=(!house&&ls.length)
+      ?`<i>${escapeHtml(ls[0])}</i>${ls[1]?`<em>${escapeHtml(ls[1])}</em>`:''}`
       :'<i>Aa</i>';                                 // nothing of your own yet — a type specimen
   }
 }
@@ -1185,11 +1189,11 @@ $('mqTextPick').addEventListener('click',e=>{
   const b=e.target.closest('[data-mt]'); if(!b) return;
   const mt=b.dataset.mt;
   if(mt==='off'){ $('mqText').checked=false; if(!chk('mqFig')) $('mqFig').checked=true; }
-  else if(mt==='house'){ $('mqText').checked=true; $('mqT1').value='LAVOËT'; $('mqT2').value='1869'; }
+  else if(mt==='house'){ $('mqText').checked=true; $('mqTxt').value='LAVOËT, 1869'; }
   else{                                             // your own wordmark: clear the house text and type
     $('mqText').checked=true;
-    if(mqIsHouse()){ $('mqT1').value=''; $('mqT2').value=''; }
-    setTimeout(()=>{ try{ $('mqT1').focus(); }catch(_){} },60);
+    if(mqIsHouse()) $('mqTxt').value='';
+    setTimeout(()=>{ try{ $('mqTxt').focus(); }catch(_){} },60);
   }
   syncRows(); renderEd(); render();
 });
@@ -2888,7 +2892,7 @@ function cfgHash(){
 }
 let fontCSS={};                                     // cached per wordmark text — the subset must cover the glyphs
 async function embedFont(){
-  const txt=(((val('mqT1')||'')+' '+(val('mqT2')||'')).trim())||'LAVOËT 1869';
+  const txt=(mqLines().join(' ').trim())||'LAVOËT 1869';
   if(fontCSS[txt]!=null) return fontCSS[txt];
   try{
     const t=AbortSignal.timeout(8000);
@@ -2904,7 +2908,7 @@ async function embedFont(){
 function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
-function marqueTextOn(){ return val('mqSlots')!=='0'&&chk('mqText')&&(((val('mqT1')||'').trim()!=='')||((val('mqT2')||'').trim()!=='')); }
+function marqueTextOn(){ return val('mqSlots')!=='0'&&chk('mqText')&&mqLines().length>0; }
 
 /* ---------- settings ride inside every download ---------- */
 const CRC_T=(()=>{ const t=new Uint32Array(256);
@@ -3018,7 +3022,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqArt','mqT1','mqT2','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
+  'cBg','cFg','cAc','cOl','mqArt','mqTxt','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn','mqFig','mqText'];
 function paramsString(){
   const p=new URLSearchParams();
@@ -3042,6 +3046,9 @@ function applyParams(p){
   // the old three-way Logo dropdown became two independent toggles: figure + wordmark
   if(p.has('mqMode')&&!p.has('mqFig')){ const m=p.get('mqMode');
     $('mqFig').checked=m!=='text'; $('mqText').checked=m!=='figure'; }
+  // the two wordmark fields became one comma-separated field
+  if((p.has('mqT1')||p.has('mqT2'))&&!p.has('mqTxt'))
+    p.set('mqTxt',[p.get('mqT1'),p.get('mqT2')].map(s=>(s||'').trim()).filter(Boolean).join(', '));
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
