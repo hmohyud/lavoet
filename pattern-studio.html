@@ -391,6 +391,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_logo">Logo</label><button type="button" class="rnd-gear" data-gear="logo" title="Limits for Logo" aria-label="Limits for Logo randomization" aria-expanded="false">⚙</button></span>
         </div>
         <div id="rndOpts" class="rnd-opts" hidden></div>
+        <label class="chk" title="Rolls show the pattern alone — the Logo section's switch brings the emblem back any time"><input type="checkbox" id="rndHideLogo">Hide the logo in rolls</label>
         <label class="chk" title="Each roll commits to one character — bold, fine, dense or airy — pulling its sliders together instead of scattering them"><input type="checkbox" id="rndTemper">Temperaments — each roll commits to a character</label>
       </div>
       <div id="rndPicBody" class="rnd-opts" aria-label="Picture-pattern randomize settings" hidden></div>
@@ -2493,7 +2494,8 @@ const RND_DEF={
   layout:{amt:100,flip:1},
   logo  :{amt:100,slots:1},
   picture:{amt:100,style:1,area:1},
-  roll  :{temper:0},                                 // temper: each roll commits to a character (off by default)
+  roll  :{temper:0,hideLogo:1},                      // temper: each roll commits to a character (off by default);
+                                                     // hideLogo: rolls present the pattern alone (on by default)
 };
 var RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
@@ -2526,9 +2528,17 @@ function setRndMode(m){
   if(RNDMODE==='picture'&&RNDOPEN) toggleRndPanel(RNDOPEN);   // a greyed-open gear panel reads as stuck
 }
 document.querySelectorAll('#rndModeSeg [data-rmode]').forEach(b=>b.addEventListener('click',()=>setRndMode(b.dataset.rmode)));
-/* the temperament toggle is a tool pref like the rest of RNDCFG — persisted, reset by the hold */
+/* the temperament + hide-logo toggles are tool prefs like the rest of RNDCFG — persisted, reset by the hold */
 $('rndTemper').checked=!!(RNDCFG.roll&&RNDCFG.roll.temper);
 $('rndTemper').addEventListener('change',()=>{ RNDCFG.roll.temper=$('rndTemper').checked?1:0; saveRnd(); });
+$('rndHideLogo').checked=!!(RNDCFG.roll&&RNDCFG.roll.hideLogo);
+function syncRndHide(){                              // hiding the logo makes its shuffle group moot — grey it
+  const off=!!(RNDCFG.roll&&RNDCFG.roll.hideLogo);
+  const it=$('rnd_logo').closest('.rnd-item'); if(it) it.classList.toggle('opt-off',off);
+  if(off&&RNDOPEN==='logo') toggleRndPanel('logo');  // a greyed-open limits panel reads as stuck
+}
+$('rndHideLogo').addEventListener('change',()=>{ RNDCFG.roll.hideLogo=$('rndHideLogo').checked?1:0; saveRnd(); syncRndHide(); });
+syncRndHide();
 /* Variation opens at 100 on a first visit; after that it keeps whatever you set last */
 try{ const a=+localStorage.getItem('lavoet-rnd-amt');
   if(a>=5&&a<=100){ $('rndAmt').value=a; const o=document.querySelector('output[for="rndAmt"]'); if(o) o.value=a; } }catch(e){}
@@ -2685,6 +2695,7 @@ function randomize(){
       IMGTRI=IMGTRI.map((p,i)=>[+(p[0]+(tri[i][0]-p[0])*t).toFixed(3), +(p[1]+(tri[i][1]-p[1])*t).toFixed(3)]);
     }
     // imgScale is the picture-mode ZOOM — presentation, not design; never shuffled (like cell)
+    if(RNDCFG.roll&&RNDCFG.roll.hideLogo) setSlots('0');   // picture rolls present the pattern alone too
     syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
     return;
   }
@@ -2716,7 +2727,9 @@ function randomize(){
     ['angle3d','shade3d','highlight','bevel'].forEach(id=>rndNum(id,t));
     if((num('depth3d')||0)>0) last3d=num('depth3d'); }
   if(on('layout')){ const t=tg('layout'); if(RNDCFG.layout.flip){ rndChk('quinconce',t,0.6); rndChk('mirrorAlt',t,0.5); } }   // zoom (cell) is presentation, not design — never shuffled
-  if(on('logo')){ const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4']));
+  if(RNDCFG.roll&&RNDCFG.roll.hideLogo) setSlots('0');   // rolls present the pattern alone — and the
+  else if(on('logo')){                                    // group is skipped whole, never shuffled unseen
+    const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4']));
     rndChk('mqFig',t,0.85); rndChk('mqText',t,0.6);
     if(!chk('mqFig')&&!chk('mqText')) $('mqFig').checked=true;   // an empty cleared slot is a hole, not a logo
     rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
@@ -2813,6 +2826,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
     const tick={rnd_shape:1,rnd_colour:1,rnd_outline:1,rnd_layout:1};
     document.querySelectorAll('.rnd-groups input').forEach(cb=>cb.checked=!!tick[cb.id]);
     $('rndTemper').checked=!!(RNDCFG.roll&&RNDCFG.roll.temper);   // back to its default (off)
+    $('rndHideLogo').checked=!!(RNDCFG.roll&&RNDCFG.roll.hideLogo); // back to its default (on)
+    syncRndHide();
     setRndMode('motif');
     if(RNDOPEN) drawRndPanel();                        // an open limits panel refreshes to the defaults
     drawRndPicture(); syncRows();
