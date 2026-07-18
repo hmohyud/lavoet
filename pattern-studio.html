@@ -569,6 +569,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <div class="logo-row" id="logoRow">
           <div class="btns">
             <button type="button" id="logoUp">Upload emblem…</button>
+            <button type="button" id="logoCreate">Create emblem…</button>
             <button type="button" id="logoEdit" hidden>Edit emblem…</button>
           </div>
         </div>
@@ -708,6 +709,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="le-tools" role="group" aria-label="Tools">
         <button type="button" id="leCrop" aria-pressed="false">✂ Crop</button>
         <button type="button" id="leCut" aria-pressed="false">✎ Cutout</button>
+        <button type="button" id="leText" aria-pressed="false">T Text</button>
         <button type="button" id="lePaint" aria-pressed="false">🖌 Paint</button>
         <button type="button" id="leBrush" aria-pressed="false">◌ Erase brush</button>
         <button type="button" id="leAll" aria-pressed="false">Erase colour — everywhere</button>
@@ -716,7 +718,31 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       </div>
       <div class="row"><label for="leZoom">Zoom</label><input type="range" id="leZoom" min="100" max="400" value="100"><output for="leZoom">100</output></div>
       <div class="row" id="leSizeRow"><label for="leSize">Brush size</label><input type="range" id="leSize" min="2" max="48" value="12"><output for="leSize">12</output></div>
-      <div class="cols" id="leColRow"><div class="col"><label for="leCol">Paint colour</label><input type="color" id="leCol" value="#2B2620"></div></div>
+      <div class="cols" id="leTxtRow">
+        <div class="col"><label for="leTxt">Text</label><input type="text" id="leTxt" value="LAVOËT" maxlength="40"></div>
+        <div class="col"><label for="leFont">Font</label><select id="leFont">
+          <option value="'Cormorant Garamond',Georgia,serif" selected>Cormorant (house)</option>
+          <option value="Georgia,serif">Georgia</option>
+          <option value="'Times New Roman',Times,serif">Times</option>
+          <option value="Garamond,'Times New Roman',serif">Garamond</option>
+          <option value="'Palatino Linotype',Palatino,serif">Palatino</option>
+          <option value="'Book Antiqua',Palatino,serif">Book Antiqua</option>
+          <option value="'Archivo',Arial,sans-serif">Archivo</option>
+          <option value="Arial,Helvetica,sans-serif">Arial</option>
+          <option value="Verdana,Geneva,sans-serif">Verdana</option>
+          <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+          <option value="'Century Gothic',Futura,sans-serif">Century Gothic</option>
+          <option value="Impact,'Arial Black',sans-serif">Impact</option>
+          <option value="'Courier New',Courier,monospace">Courier</option>
+          <option value="'Brush Script MT',cursive">Brush Script</option>
+          <option value="'Comic Sans MS',cursive">Comic Sans</option>
+          <option value="fantasy">Fantasy</option>
+        </select></div>
+      </div>
+      <div class="row" id="leTSRow"><label for="leTS">Text size</label><input type="range" id="leTS" min="10" max="220" value="64"><output for="leTS">64</output></div>
+      <div class="row" id="leBendRow"><label for="leBend">Bend</label><input type="range" id="leBend" min="-100" max="100" value="0"><output for="leBend">0</output></div>
+      <label class="chk" id="leBoldRow"><input type="checkbox" id="leBold" checked>Bold</label>
+      <div class="cols" id="leColRow"><div class="col"><label for="leCol">Paint / text colour</label><input type="color" id="leCol" value="#2B2620"></div></div>
       <div class="row"><label for="leTol">Tolerance</label><input type="range" id="leTol" min="4" max="120" value="40"><output for="leTol">40</output></div>
       <p class="le-hint" id="leHint">Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.</p>
       <div class="le-tools">
@@ -1162,10 +1188,11 @@ let LEDRAG=null;
 function leCtx(){ return $('leCanvas').getContext('2d',{willReadFrequently:true}); }
 function leSetMode(m){
   LE.mode=LE.mode===m?'':m;
-  for(const [id,mm] of [['leCrop','crop'],['leCut','cut'],['lePaint','paint'],['leBrush','brush'],['leAll','all'],['leArea','area']])
+  for(const [id,mm] of [['leCrop','crop'],['leCut','cut'],['leText','text'],['lePaint','paint'],['leBrush','brush'],['leAll','all'],['leArea','area']])
     $(id).setAttribute('aria-pressed',LE.mode===mm);
   $('leHint').textContent=LE.mode==='crop'?'Drag a box over the part to keep.'
     :LE.mode==='cut'?'Draw around the part to keep — everything outside the loop is cut away.'
+    :LE.mode==='text'?'Type below, then press on the picture and drag into place — release to stamp. Stamped text is pixels: paint, erase or cut it like anything else.'
     :LE.mode==='paint'?'Drag to paint with the chosen colour.'
     :LE.mode==='brush'?'Drag to rub pixels out — transparent where you scrub.'
     :LE.mode==='all'?'Click a colour — every pixel like it (within tolerance) turns transparent.'
@@ -1173,7 +1200,30 @@ function leSetMode(m){
     :'Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.';
   const tr=$('leTol').closest('.row'); if(tr) tr.classList.toggle('opt-off',LE.mode!=='all'&&LE.mode!=='area');
   $('leSizeRow').classList.toggle('opt-off',LE.mode!=='paint'&&LE.mode!=='brush');
-  $('leColRow').classList.toggle('opt-off',LE.mode!=='paint');
+  $('leColRow').classList.toggle('opt-off',LE.mode!=='paint'&&LE.mode!=='text');
+  for(const id of ['leTxtRow','leTSRow','leBendRow','leBoldRow']) $(id).classList.toggle('opt-off',LE.mode!=='text');
+}
+/* text is drawn straight or along an arc: Bend sets how much of a half-circle the line spans
+   (positive arches up, negative smiles down); each glyph is placed and rotated on the arc */
+function leDrawText(x0,y0){
+  const t=(($('leTxt').value)||'').replace(/\s+$/,''); if(!t.trim()) return false;
+  const x=leCtx(), size=+$('leTS').value||64, bend=+$('leBend').value||0;
+  x.save();
+  x.font=`${chk('leBold')?'700':'400'} ${size}px ${$('leFont').value}`;
+  x.fillStyle=$('leCol').value; x.textAlign='center'; x.textBaseline='middle';
+  if(!bend){ x.fillText(t,x0,y0); x.restore(); return true; }
+  const chars=[...t], widths=chars.map(ch=>x.measureText(ch).width);
+  const total=Math.max(1,widths.reduce((a,b)=>a+b,0));
+  const th=Math.abs(bend)/100*Math.PI, R=total/th, s=bend>0?1:-1;
+  const cy=y0+s*R;
+  let ang=-th/2;
+  for(let i=0;i<chars.length;i++){
+    const half=widths[i]/2/R; ang+=half;
+    const xi=x0+R*Math.sin(ang), yi=cy-s*R*Math.cos(ang);
+    x.save(); x.translate(xi,yi); x.rotate(s*ang); x.fillText(chars[i],0,0); x.restore();
+    ang+=half;
+  }
+  x.restore(); return true;
 }
 function syncLoupe(){ $('leLoupeB').setAttribute('aria-pressed',!!LE.loupe); if(!LE.loupe) $('leLens').hidden=true; }
 function leLens(ev){
@@ -1250,6 +1300,7 @@ function leErase(px,py,areaOnly){
 }
 let LEST=null;                                      // an in-flight paint / erase-brush stroke
 let LECUT=null;                                     // an in-flight freehand cutout loop
+let LETXT=false;                                    // a text stamp riding the pointer until release
 function leCutTrail(){                              // repaint the picture + the dashed loop so far
   const x=leCtx();
   x.putImageData(LE.hist[LE.hist.length-1],0,0);
@@ -1289,6 +1340,11 @@ $('leCanvas').addEventListener('pointerdown',ev=>{
     try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
     lePush(); LECUT=[[px,py]]; leCutTrail();
   }
+  else if(LE.mode==='text'){
+    if(!(($('leTxt').value)||'').trim()) return;
+    try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    lePush(); LETXT=true; leDrawText(px,py);        // the stamp follows the pointer until release
+  }
   else if(LE.mode==='paint'||LE.mode==='brush'){
     try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
     lePush(); LEST={x:px,y:py}; leDab(px,py,null);
@@ -1298,6 +1354,8 @@ $('leCanvas').addEventListener('pointerdown',ev=>{
 });
 $('leCanvas').addEventListener('pointermove',ev=>{
   leLens(ev);
+  if(LETXT){ const {px,py}=lePos(ev);
+    leCtx().putImageData(LE.hist[LE.hist.length-1],0,0); leDrawText(px,py); return; }
   if(LECUT){ const {px,py}=lePos(ev); LECUT.push([px,py]); leCutTrail(); return; }
   if(LEST){ const {px,py}=lePos(ev); leDab(px,py,LEST); LEST={x:px,y:py}; return; }
   if(!LEDRAG) return;
@@ -1308,6 +1366,7 @@ $('leCanvas').addEventListener('pointermove',ev=>{
 });
 $('leCanvas').addEventListener('pointerleave',()=>{ $('leLens').hidden=true; });
 $('leCanvas').addEventListener('pointerup',ev=>{
+  if(LETXT){ LETXT=false; return; }                 // the stamp already sits at the release point
   if(LECUT){ leCutApply(); return; }
   if(LEST){ LEST=null; return; }                    // the stroke is already on the canvas
   if(!LEDRAG) return;
@@ -1321,8 +1380,22 @@ $('leCanvas').addEventListener('pointerup',ev=>{
 });
 $('leCanvas').addEventListener('pointercancel',()=>{
   if(LECUT){ LECUT=null; const h=LE.hist.pop(); if(h) lePut(h); }   // abandon the loop, restore the picture
+  if(LETXT){ LETXT=false; const h=LE.hist.pop(); if(h) lePut(h); }  // abandon the stamp likewise
   LEDRAG=null; LEST=null; $('leBox').hidden=true;
 });
+$('leText').addEventListener('click',()=>leSetMode('text'));
+/* start from NOTHING: a blank transparent canvas to paint and set type on */
+function leOpenBlank(){
+  const c=$('leCanvas'); c.width=512; c.height=512;
+  leCtx().clearRect(0,0,512,512);
+  LE.orig=leCtx().getImageData(0,0,512,512); LE.hist=[];
+  LE.mode=''; leSetMode('text');                    // creating a mark usually starts with type
+  LE.loupe=false; syncLoupe();
+  $('leZoom').value='100'; const o2=document.querySelector('output[for="leZoom"]'); if(o2) o2.value='100';
+  document.querySelector('.le-wrap').style.setProperty('--lez',1);
+  $('logoEd').hidden=false;
+}
+$('logoCreate').addEventListener('click',leOpenBlank);
 $('leCut').addEventListener('click',()=>leSetMode('cut'));
 $('leLoupeB').addEventListener('click',()=>{ LE.loupe=!LE.loupe; syncLoupe(); });
 $('leZoom').addEventListener('input',()=>{
