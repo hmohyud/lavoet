@@ -127,7 +127,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rs-grid{flex:1;overflow-y:auto;padding:15px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start}
 .rs-cell{padding:4px;border:1px solid var(--hair);background:none;cursor:pointer;transition:border-color .12s}
 .rs-cell:hover{border-color:var(--brass)}
-.rs-cell .save-thumb{width:100%;height:auto;aspect-ratio:4/3}
+/* each thumb is captured WIDE (560×420) and the zoom slider scales it inside its window:
+   scale 1 shows the whole wide view (most repeats), larger crops closer in */
+.rs-th{display:block;overflow:hidden;aspect-ratio:4/3}
+.rs-th img{width:100%;height:100%;display:block;transform:scale(var(--rsz,1.4));transform-origin:50% 50%}
+.rs-th .save-thumb.empty{width:100%;height:100%}
+.rs-zoom{flex:none;display:flex;align-items:center;gap:5px}
+.rs-zoom>span{font:600 12px/1 var(--sans);color:var(--sepia)}
+.rs-zoom input{width:104px;height:20px;accent-color:var(--brass)}
 .rs-again{flex:none;height:28px;display:flex;align-items:center;gap:5px;padding:0 12px;border:1px solid var(--hair);background:none;color:var(--ink);font:500 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
 .rs-again:hover{border-color:var(--brass);color:var(--brass)}
 /* the Randomize split button: the main half rolls, the slim caret picks how many a roll deals */
@@ -641,7 +648,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
 <div id="rndSheet" hidden role="dialog" aria-modal="true" aria-label="Nine shuffles — pick one">
   <div class="sv-panel">
-    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
+    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><span class="rs-zoom" title="Thumbnail zoom"><span aria-hidden="true">−</span><input type="range" id="rsZoom" min="100" max="300" value="140" aria-label="Thumbnail zoom"><span aria-hidden="true">+</span></span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
     <div class="rs-grid" id="rsGrid"></div>
   </div>
 </div>
@@ -2187,13 +2194,13 @@ async function rollSheet(n){
         while(!(IMG&&IMG.el&&IMG.el.complete&&IMG.el.naturalWidth)&&performance.now()-t0<1500)
           await new Promise(r=>setTimeout(r,30));
       }
-      let th=''; try{ th=thumbSVG(); }catch(e){}
+      let th=''; try{ th=thumbSVG(560,420); }catch(e){}   // a wide view — the sheet's zoom slider crops into it
       shots.push({cfg:paramsString(),th});
     }
     RNDSHOTS=shots;
     $('rsTitle').textContent=(RS_LAST===16?'Sixteen':'Nine')+' ideas — pick one';
     $('rsGrid').style.gridTemplateColumns=`repeat(${RS_LAST===16?4:3},1fr)`;
-    $('rsGrid').innerHTML=shots.map((s,i)=>`<button type="button" class="rs-cell" data-rs="${i}" title="Apply this one">${s.th?`<img class="save-thumb" alt="Shuffle ${i+1}" src="data:image/svg+xml,${encodeURIComponent(s.th)}">`:'<span class="save-thumb empty"></span>'}</button>`).join('');
+    $('rsGrid').innerHTML=shots.map((s,i)=>`<button type="button" class="rs-cell" data-rs="${i}" title="Apply this one"><span class="rs-th">${s.th?`<img alt="Shuffle ${i+1}" src="data:image/svg+xml,${encodeURIComponent(s.th)}">`:'<span class="save-thumb empty"></span>'}</span></button>`).join('');
     $('rndSheet').hidden=false;
     $('rsClose').focus();
   }finally{
@@ -2202,6 +2209,17 @@ async function rollSheet(n){
   }
 }
 $('rsAgain').addEventListener('click',()=>rollSheet(RS_LAST));
+/* the sheet's thumbnail zoom: 100% shows each thumb's whole wide capture (most repeats);
+   300% crops close. Remembered as a tool pref. */
+(function initRsZoom(){
+  let z=140; try{ const s=+localStorage.getItem('lavoet-rs-zoom'); if(s>=100&&s<=300) z=s; }catch(e){}
+  $('rsZoom').value=z; $('rsGrid').style.setProperty('--rsz',z/100);
+  $('rsZoom').addEventListener('input',()=>{
+    const v=Math.max(100,Math.min(300,+$('rsZoom').value||140));
+    $('rsGrid').style.setProperty('--rsz',v/100);
+    try{ localStorage.setItem('lavoet-rs-zoom',v); }catch(e){}
+  });
+})();
 syncRollUI();
 function closeRndSheet(){ $('rndSheet').hidden=true; }
 $('rsClose').addEventListener('click',closeRndSheet);
@@ -2646,25 +2664,25 @@ function relTime(ts){
   if(s<86400) return Math.round(s/3600)+' h ago';
   return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
 }
-function thumbSVG(){   // a compact preview of the current design
+function thumbSVG(W=200,H=150){   // a compact preview of the current design (bigger W,H = more repeats)
   try{
     if(imgActive()){
       // picture mode: a small JPEG thumbnail (~10KB) — embedding the full tile PNG per save
       // would exhaust localStorage within a handful of saves
-      const c=document.createElement('canvas'); c.width=200; c.height=150;
+      const c=document.createElement('canvas'); c.width=W; c.height=H;
       const cc=c.getContext('2d');
       if(val('imgSym')==='tri'){                   // slanted lattice: stamp the reduced cells by hand
         const {cv,ru,rv,x0,y0}=triCell();
-        const kk=Math.min(1,90/Math.max(Math.hypot(ru[0],ru[1]),Math.hypot(rv[0],rv[1])));
-        cc.scale(kk,kk); cc.translate(100/kk-(x0+cv.width/2),75/kk-(y0+cv.height/2));
+        const kk=Math.min(1,(W*0.45)/Math.max(Math.hypot(ru[0],ru[1]),Math.hypot(rv[0],rv[1])));
+        cc.scale(kk,kk); cc.translate(W/2/kk-(x0+cv.width/2),H/2/kk-(y0+cv.height/2));
         for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++) cc.drawImage(cv,x0+i*ru[0]+j*rv[0],y0+i*ru[1]+j*rv[1]);
       }else{
-        const t=buildImgTile(), k=Math.min(1,100/Math.max(t.width,t.height));
-        cc.save(); cc.scale(k,k); cc.fillStyle=cc.createPattern(t,'repeat'); cc.fillRect(0,0,200/k,150/k); cc.restore();
+        const t=buildImgTile(), k=Math.min(1,(W/2)/Math.max(t.width,t.height));
+        cc.save(); cc.scale(k,k); cc.fillStyle=cc.createPattern(t,'repeat'); cc.fillRect(0,0,W/k,H/k); cc.restore();
       }
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150"><image href="${c.toDataURL('image/jpeg',0.6)}" width="200" height="150"/></svg>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"><image href="${c.toDataURL('image/jpeg',0.6)}" width="${W}" height="${H}"/></svg>`;
     }
-    return buildSwatch(200,150,{marque:false});
+    return buildSwatch(W,H,{marque:false});
   }catch(e){ return ''; }
 }
 function thumbTag(svg,load){
