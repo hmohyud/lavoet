@@ -83,6 +83,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .col{flex:1;text-align:center}
 .col label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-bottom:6px}
 .col input[type=color]{width:100%;height:36px;border:1px solid var(--hair);background:none;padding:2px;cursor:pointer}
+.col input[type=text]{width:100%;font:12px var(--sans);color:var(--ink);background:var(--paper);border:1px solid var(--hair);padding:8px 7px}
 .presets{display:flex;gap:8px;margin-top:14px}
 .presets button{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:1px solid var(--hair);padding:8px 2px 7px;cursor:pointer;color:var(--sepia);font:10px var(--sans);letter-spacing:.06em}
 .presets button:hover{border-color:var(--brass)}
@@ -143,9 +144,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .logo-prev:empty::after{content:"—";color:var(--sepia);font-size:12px}
 #logoEd .sv-panel{max-width:560px}
 .le-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-.le-wrap{position:relative;align-self:center;max-width:100%;border:1px solid var(--hair);background:repeating-conic-gradient(#d9d3c4 0% 25%,#f7f3e8 0% 50%) 0 0/16px 16px}
-#leCanvas{display:block;max-width:100%;max-height:44vh;touch-action:none}
+.le-wrap{position:relative;width:100%;max-height:46vh;overflow:auto;border:1px solid var(--hair)}
+#leCanvas{display:block;width:calc(var(--lez,1)*100%);height:auto;touch-action:none;background:repeating-conic-gradient(#d9d3c4 0% 25%,#f7f3e8 0% 50%) 0 0/16px 16px}
 #leBox{position:absolute;border:1.5px dashed var(--red);background:color-mix(in srgb,var(--red) 12%,transparent);pointer-events:none}
+/* the loupe: a round window of un-smoothed pixels riding beside the pointer */
+#leLens{position:fixed;z-index:85;width:120px;height:120px;border:2px solid var(--brassD);border-radius:50%;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.32);background:repeating-conic-gradient(#d9d3c4 0% 25%,#f7f3e8 0% 50%) 0 0/10px 10px}
+#leLens[hidden]{display:none}
 .le-tools{display:flex;gap:6px;flex-wrap:wrap}
 .le-tools button{font:500 10.5px var(--sans);letter-spacing:.06em;padding:9px 11px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
 .le-tools button:hover{border-color:var(--brass)}
@@ -555,12 +559,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           </div>
         </div>
         <input type="file" id="logoFile" accept="image/*" hidden>
-        <div class="row-sel"><label for="mqMode">Logo</label>
-          <select id="mqMode">
-            <option value="full" selected>Bellboy + LAVOËT</option>
-            <option value="figure">Bellboy only</option>
-            <option value="text">LAVOËT only</option>
-          </select>
+        <label class="chk"><input type="checkbox" id="mqFig" checked>Show the emblem figure</label>
+        <label class="chk"><input type="checkbox" id="mqText" checked>Show the wordmark text</label>
+        <div class="cols" id="mqTextRow">
+          <div class="col"><label for="mqT1">Wordmark</label><input type="text" id="mqT1" value="LAVOËT" maxlength="18"></div>
+          <div class="col"><label for="mqT2">Small line</label><input type="text" id="mqT2" value="1869" maxlength="18"></div>
         </div>
         <div class="row"><label for="mqSize">Fine size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div id="imgMqRows">
@@ -683,11 +686,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="sv-head"><span class="sv-title">Emblem editor</span><button type="button" class="sv-close" id="leClose" title="Close without keeping" aria-label="Close">×</button></div>
     <div class="le-body">
       <div class="le-wrap"><canvas id="leCanvas"></canvas><div id="leBox" hidden></div></div>
+      <canvas id="leLens" width="120" height="120" hidden aria-hidden="true"></canvas>
       <div class="le-tools" role="group" aria-label="Tools">
         <button type="button" id="leCrop" aria-pressed="false">✂ Crop</button>
+        <button type="button" id="lePaint" aria-pressed="false">🖌 Paint</button>
+        <button type="button" id="leBrush" aria-pressed="false">◌ Erase brush</button>
         <button type="button" id="leAll" aria-pressed="false">Erase colour — everywhere</button>
         <button type="button" id="leArea" aria-pressed="false">Erase colour — this area</button>
+        <button type="button" id="leLoupeB" aria-pressed="false" title="A magnifier that follows the pointer — turned on automatically for small pictures">🔍 Loupe</button>
       </div>
+      <div class="row"><label for="leZoom">Zoom</label><input type="range" id="leZoom" min="100" max="400" value="100"><output for="leZoom">100</output></div>
+      <div class="row" id="leSizeRow"><label for="leSize">Brush size</label><input type="range" id="leSize" min="2" max="48" value="12"><output for="leSize">12</output></div>
+      <div class="cols" id="leColRow"><div class="col"><label for="leCol">Paint colour</label><input type="color" id="leCol" value="#2B2620"></div></div>
       <div class="row"><label for="leTol">Tolerance</label><input type="range" id="leTol" min="4" max="120" value="40"><output for="leTol">40</output></div>
       <p class="le-hint" id="leHint">Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.</p>
       <div class="le-tools">
@@ -1020,8 +1030,24 @@ function marquePhase(W,H){
 }
 
 /* ---------- la marque ---------- */
+/* what the marque SHOWS is two independent toggles — the figure (bellboy or an upload) and the
+   wordmark (whatever text the user typed, sized to fit) — shared by both marque boxes */
+function marqueGeom(E){
+  const fig=chk('mqFig'), custom=logoIsCustom();
+  const t1=chk('mqText')?(val('mqT1')||'').trim():'', t2=chk('mqText')?(val('mqT2')||'').trim():'';
+  const figH=fig?((t1||t2)?E*0.74:E*1.18):0, figW=figH*163.3/213;
+  const F1=t1?E*0.165:0, F2=t2?E*0.085:0;
+  const fs1=t1?F1*Math.min(1,6.6/Math.max(4,t1.length)):0;   // long wordmarks shrink to fit the slot
+  const fs2=t2?F2*Math.min(1,7.5/Math.max(4,t2.length)):0;
+  const textW=Math.max(t1.length*fs1*1.05, t2.length*fs2*1.2);
+  let cw=0,ch=0;
+  if(custom){ const a=CLOGO.el.naturalWidth/CLOGO.el.naturalHeight;   // the upload sits in the figure slot
+    ch=Math.min(figH*1.12,E*1.3/a); cw=ch*a; }
+  const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
+  return {figH,figW,F1,F2,fs1,fs2,t1,t2,textW,blockH,cw,ch,custom};
+}
 function marqueBox(W,H){
-  const S=num('cell'), q=chk('quinconce'), slots=val('mqSlots'), mode=val('mqMode');
+  const S=num('cell'), q=chk('quinconce'), slots=val('mqSlots');
   // the lattice is phase-shifted so the slot sits exactly under the emblem centre
   const cx=W/2+mqShiftX(), cy=H/2;
   // emblem size: fill the freed slot(s) but never touch the surviving motifs
@@ -1029,34 +1055,28 @@ function marqueBox(W,H){
   const maxr=SHAPE?Math.max(0.6,...SHAPE.pts.map(p=>{const w=shapeModify(p[0],p[1]);return Math.hypot(w[0],w[1]);}))+0.12:1.1;
   const reach=num('cell')*num('scale')/200*maxr;
   const E=Math.min(slots==='1'?0.78*S:1.25*S, Math.max(0.4*S,1.6*(nd-reach)))*num('mqSize')/100;
-  const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
-  const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
-  const textW=F1*6.2;
-  const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
   const rM=slots==='1'?0.3*S:(q?0.8:1.1)*S, rA=0.3*S;
-  if(logoIsCustom()){ const f=logoFit(E);           // the custom emblem's box replaces the bellboy's
-    return {E,mode,figH:0,figW:f.w,F1:0,F2:0,textW:f.w,blockH:f.h,cx,cy,rM,rA}; }
-  return {E,mode,figH,figW,F1,F2,textW,blockH,cx,cy,rM,rA};
+  return {E,...marqueGeom(E),cx,cy,rM,rA};
 }
 // the marque's ink, drawn in currentColor so a caller can <use> it in any tone
 function marqueMarkup(b){
-  if(logoIsCustom()){                               // an uploaded emblem replaces the bellboy whole
-    const f=logoFit(b.E);
-    return `<image href="${CLOGO.data}" xlink:href="${CLOGO.data}" x="${(b.cx-f.w/2).toFixed(1)}" y="${(b.cy-f.h/2).toFixed(1)}" width="${f.w.toFixed(1)}" height="${f.h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
-  }
   let y=b.cy-b.blockH/2, s='';
   if(b.figH){
-    // centre the bellboy by his ink centroid — the artwork's mass sits 54.3%
-    // across and 57.1% down its box (he leans); in figure-only mode centre
-    // the mass on both axes
-    const fx=b.cx-b.figW*0.543;
-    const fy=b.mode==='figure'?b.cy-b.figH*0.571:y;
-    s+=`<use href="#bellboy" xlink:href="#bellboy" x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}"/>`;
+    if(b.custom){                                   // an uploaded emblem takes the figure slot
+      s+=`<image href="${CLOGO.data}" xlink:href="${CLOGO.data}" x="${(b.cx-b.cw/2).toFixed(1)}" y="${(y+(b.figH-b.ch)/2).toFixed(1)}" width="${b.cw.toFixed(1)}" height="${b.ch.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
+    }else{
+      // centre the bellboy by his ink centroid — the artwork's mass sits 54.3%
+      // across and 57.1% down its box (he leans); with no wordmark centre the
+      // mass on both axes
+      const fx=b.cx-b.figW*0.543;
+      const fy=(!b.F1&&!b.F2)?b.cy-b.figH*0.571:y;
+      s+=`<use href="#bellboy" xlink:href="#bellboy" x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${b.figW.toFixed(1)}" height="${b.figH.toFixed(1)}"/>`;
+    }
     y+=b.figH;
   }
-  const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="currentColor">${txt}</text>`;
-  if(b.F1){ s+=T('LAVOËT',b.F1,b.F1*1.18,0.22); y+=b.F1*1.55; }
-  if(b.F2){ s+=T('1869',b.F2,b.F2*1.15,0.3); }
+  const T=(txt,fs,dy,ls)=>`<text x="${(b.cx+fs*ls/2).toFixed(1)}" y="${(y+dy).toFixed(1)}" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600" font-size="${fs.toFixed(1)}" letter-spacing="${(fs*ls).toFixed(1)}" fill="currentColor">${escapeHtml(txt)}</text>`;
+  if(b.F1){ s+=T(b.t1,b.fs1,b.F1*1.18,0.22); y+=b.F1*1.55; }
+  if(b.F2){ s+=T(b.t2,b.fs2,b.F2*1.15,0.3); }
   return s;
 }
 // the logo, flat or RAISED like the motifs (same depth3d/angle3d/shade3d/highlight):
@@ -1083,11 +1103,7 @@ function setLogo(data,persist=true){
   if(persist) try{ data?localStorage.setItem('lavoet-logo',data):localStorage.removeItem('lavoet-logo'); }catch(e){}
   syncLogoUI();
 }
-function logoIsCustom(){ return val('mqArt')==='custom'&&!!(CLOGO&&CLOGO.el&&CLOGO.el.complete&&CLOGO.el.naturalWidth); }
-function logoFit(E){                              // contain the emblem in a square of side E·1.15
-  const a=CLOGO.el.naturalWidth/CLOGO.el.naturalHeight, S=E*1.15;
-  return a>=1?{w:S,h:S/a}:{w:S*a,h:S};
-}
+function logoIsCustom(){ return chk('mqFig')&&val('mqArt')==='custom'&&!!(CLOGO&&CLOGO.el&&CLOGO.el.complete&&CLOGO.el.naturalWidth); }
 function syncLogoUI(){
   const pv=$('logoPrev'); if(!pv) return;
   pv.innerHTML=CLOGO?`<img src="${CLOGO.data}" alt="Your emblem">`:'';
@@ -1101,14 +1117,43 @@ let LEDRAG=null;
 function leCtx(){ return $('leCanvas').getContext('2d',{willReadFrequently:true}); }
 function leSetMode(m){
   LE.mode=LE.mode===m?'':m;
-  $('leCrop').setAttribute('aria-pressed',LE.mode==='crop');
-  $('leAll').setAttribute('aria-pressed',LE.mode==='all');
-  $('leArea').setAttribute('aria-pressed',LE.mode==='area');
+  for(const [id,mm] of [['leCrop','crop'],['lePaint','paint'],['leBrush','brush'],['leAll','all'],['leArea','area']])
+    $(id).setAttribute('aria-pressed',LE.mode===mm);
   $('leHint').textContent=LE.mode==='crop'?'Drag a box over the part to keep.'
+    :LE.mode==='paint'?'Drag to paint with the chosen colour.'
+    :LE.mode==='brush'?'Drag to rub pixels out — transparent where you scrub.'
     :LE.mode==='all'?'Click a colour — every pixel like it (within tolerance) turns transparent.'
     :LE.mode==='area'?'Click a colour — only the touching patch of it turns transparent.'
     :'Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.';
   const tr=$('leTol').closest('.row'); if(tr) tr.classList.toggle('opt-off',LE.mode!=='all'&&LE.mode!=='area');
+  $('leSizeRow').classList.toggle('opt-off',LE.mode!=='paint'&&LE.mode!=='brush');
+  $('leColRow').classList.toggle('opt-off',LE.mode!=='paint');
+}
+function syncLoupe(){ $('leLoupeB').setAttribute('aria-pressed',!!LE.loupe); if(!LE.loupe) $('leLens').hidden=true; }
+function leLens(ev){
+  if(!LE.loupe||$('logoEd').hidden){ $('leLens').hidden=true; return; }
+  const cv=$('leCanvas'), r=cv.getBoundingClientRect();
+  if(ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom){ $('leLens').hidden=true; return; }
+  const px=(ev.clientX-r.left)*cv.width/r.width, py=(ev.clientY-r.top)*cv.height/r.height;
+  const L=$('leLens'), lc=L.getContext('2d'); L.hidden=false;
+  lc.imageSmoothingEnabled=false;
+  lc.clearRect(0,0,120,120);
+  lc.drawImage(cv,px-15,py-15,30,30,0,0,120,120);   // 4× the canvas pixels
+  lc.strokeStyle='rgba(140,59,49,.85)'; lc.lineWidth=1;
+  lc.beginPath(); lc.moveTo(60,50); lc.lineTo(60,70); lc.moveTo(50,60); lc.lineTo(70,60); lc.stroke();
+  const vw=Math.max(320,innerWidth||0,document.documentElement.clientWidth||0);
+  L.style.left=(ev.clientX+18+124>vw?ev.clientX-18-124:ev.clientX+18)+'px';
+  L.style.top=Math.max(8,ev.clientY-138)+'px';
+}
+function leDab(x2,y2,from){
+  const x=leCtx(); x.save();
+  x.globalCompositeOperation=LE.mode==='brush'?'destination-out':'source-over';
+  x.strokeStyle=x.fillStyle=LE.mode==='brush'?'#000':$('leCol').value;
+  x.lineWidth=+$('leSize').value||12; x.lineCap='round'; x.lineJoin='round';
+  x.beginPath();
+  if(from){ x.moveTo(from.x,from.y); x.lineTo(x2,y2); x.stroke(); }
+  else{ x.arc(x2,y2,x.lineWidth/2,0,7); x.fill(); }
+  x.restore();
 }
 function lePush(){
   const c=$('leCanvas');
@@ -1125,6 +1170,9 @@ function leOpenFrom(url,revoke){
     const x=leCtx(); x.clearRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height);
     LE.orig=x.getImageData(0,0,c.width,c.height); LE.hist=[];
     LE.mode=''; leSetMode('crop');                  // open ready to crop — the commonest first step
+    LE.loupe=Math.max(c.width,c.height)<260; syncLoupe();   // small pictures get the loupe by default
+    $('leZoom').value='100'; const o2=document.querySelector('output[for="leZoom"]'); if(o2) o2.value='100';
+    document.querySelector('.le-wrap').style.setProperty('--lez',1);
     $('logoEd').hidden=false;
   };
   im.onerror=()=>{ if(revoke) URL.revokeObjectURL(url); alert('That file could not be read as a picture.'); };
@@ -1154,28 +1202,40 @@ function leErase(px,py,areaOnly){
   }
   x.putImageData(img,0,0);
 }
-$('leCanvas').addEventListener('pointerdown',ev=>{
+let LEST=null;                                      // an in-flight paint / erase-brush stroke
+function lePos(ev){
   const cv=$('leCanvas'), r=cv.getBoundingClientRect();
-  const kx=cv.width/r.width, ky=cv.height/r.height;
-  const px=Math.max(0,Math.min(cv.width-1,Math.floor((ev.clientX-r.left)*kx)));
-  const py=Math.max(0,Math.min(cv.height-1,Math.floor((ev.clientY-r.top)*ky)));
+  return {r,kx:cv.width/r.width,ky:cv.height/r.height,
+    px:Math.max(0,Math.min(cv.width-1,Math.floor((ev.clientX-r.left)*cv.width/r.width))),
+    py:Math.max(0,Math.min(cv.height-1,Math.floor((ev.clientY-r.top)*cv.height/r.height)))};
+}
+$('leCanvas').addEventListener('pointerdown',ev=>{
+  const cv=$('leCanvas'), {r,kx,ky,px,py}=lePos(ev);
   if(LE.mode==='crop'){
     LEDRAG={x0:ev.clientX,y0:ev.clientY,r,kx,ky};
     try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
     const b=$('leBox'); b.hidden=false;
     b.style.left=(ev.clientX-r.left)+'px'; b.style.top=(ev.clientY-r.top)+'px'; b.style.width='0'; b.style.height='0';
   }
+  else if(LE.mode==='paint'||LE.mode==='brush'){
+    try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    lePush(); LEST={x:px,y:py}; leDab(px,py,null);
+  }
   else if(LE.mode==='all') leErase(px,py,false);
   else if(LE.mode==='area') leErase(px,py,true);
 });
 $('leCanvas').addEventListener('pointermove',ev=>{
+  leLens(ev);
+  if(LEST){ const {px,py}=lePos(ev); leDab(px,py,LEST); LEST={x:px,y:py}; return; }
   if(!LEDRAG) return;
   const b=$('leBox'), r=LEDRAG.r;
   const x1=Math.max(r.left,Math.min(r.right,ev.clientX)), y1=Math.max(r.top,Math.min(r.bottom,ev.clientY));
   b.style.left=(Math.min(LEDRAG.x0,x1)-r.left)+'px'; b.style.top=(Math.min(LEDRAG.y0,y1)-r.top)+'px';
   b.style.width=Math.abs(x1-LEDRAG.x0)+'px'; b.style.height=Math.abs(y1-LEDRAG.y0)+'px';
 });
+$('leCanvas').addEventListener('pointerleave',()=>{ $('leLens').hidden=true; });
 $('leCanvas').addEventListener('pointerup',ev=>{
+  if(LEST){ LEST=null; return; }                    // the stroke is already on the canvas
   if(!LEDRAG) return;
   const d=LEDRAG; LEDRAG=null; $('leBox').hidden=true;
   const x1=Math.max(d.r.left,Math.min(d.r.right,ev.clientX)), y1=Math.max(d.r.top,Math.min(d.r.bottom,ev.clientY));
@@ -1185,7 +1245,13 @@ $('leCanvas').addEventListener('pointerup',ev=>{
   lePush();
   lePut(leCtx().getImageData(X,Y,W2,H2));
 });
-$('leCanvas').addEventListener('pointercancel',()=>{ LEDRAG=null; $('leBox').hidden=true; });
+$('leCanvas').addEventListener('pointercancel',()=>{ LEDRAG=null; LEST=null; $('leBox').hidden=true; });
+$('leLoupeB').addEventListener('click',()=>{ LE.loupe=!LE.loupe; syncLoupe(); });
+$('leZoom').addEventListener('input',()=>{
+  document.querySelector('.le-wrap').style.setProperty('--lez',Math.max(1,(+$('leZoom').value||100)/100));
+});
+$('lePaint').addEventListener('click',()=>leSetMode('paint'));
+$('leBrush').addEventListener('click',()=>leSetMode('brush'));
 $('leCrop').addEventListener('click',()=>leSetMode('crop'));
 $('leAll').addEventListener('click',()=>leSetMode('all'));
 $('leArea').addEventListener('click',()=>leSetMode('area'));
@@ -1454,14 +1520,10 @@ function triPatternDefs(){
 }
 /* the marque geometry over a picture: centred, sized from the swatch (no lattice slots here) */
 function imgMarqueBox(W,H){
-  const mode=val('mqMode'), E=Math.min(W,H)*0.30*(num('mqSize')||100)/100;
-  const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
-  const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
-  const textW=F1*6.2, blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
-  if(logoIsCustom()){ const f=logoFit(E);
-    return {E,mode,figH:0,figW:f.w,F1:0,F2:0,textW:f.w,blockH:f.h,cx:W/2,cy:H/2,backR:Math.hypot(f.w,f.h)/2+E*0.16}; }
-  const backR=Math.hypot(Math.max(figW,textW),blockH)/2+E*0.16;
-  return {E,mode,figH,figW,F1,F2,textW,blockH,cx:W/2,cy:H/2,backR};
+  const E=Math.min(W,H)*0.30*(num('mqSize')||100)/100;
+  const g=marqueGeom(E);
+  const backR=Math.hypot(Math.max(g.custom?g.cw:g.figW,g.textW),g.blockH)/2+E*0.16;
+  return {E,...g,cx:W/2,cy:H/2,backR};
 }
 function luma(hex){ const n=parseInt(hex.slice(1),16); return (0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255; }
 function buildImgSwatch(W,H,style=''){
@@ -1475,7 +1537,7 @@ function buildImgSwatch(W,H,style=''){
   if(val('mqSlots')!=='0'){
     const b=imgMarqueBox(W,H), back=val('imgMqBack'), col=val('cMqBack');
     const ink=back==='colour'?(luma(col)>0.55?'#2B2620':'#F4EFE4'):col;   // solid disk picks a contrasting ink
-    if(val('mqMode')!=='text'&&!logoIsCustom()) defs+=document.getElementById('bellboy').outerHTML;
+    if(chk('mqFig')&&!logoIsCustom()) defs+=document.getElementById('bellboy').outerHTML;
     if(back==='blur'){
       defs+=`<filter id="mqb" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${(b.backR/9).toFixed(1)}"/></filter><clipPath id="mqc"><circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.backR.toFixed(1)}"/></clipPath>`;
       mq+=`<g clip-path="url(#mqc)"><rect width="${W}" height="${H}" fill="url(#fld)" filter="url(#mqb)"/></g>`;
@@ -1652,7 +1714,7 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
     marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${clearR.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marque3D(b)}`;
   }
   const patt=`<pattern id="fld" width="${sys.T}" height="${sys.T}" patternUnits="userSpaceOnUse" patternTransform="translate(${ph.ox.toFixed(1)} ${ph.oy.toFixed(1)})">${tileBody(sys)}</pattern>`;
-  const sym=useMq&&val('mqMode')!=='text'&&!logoIsCustom()?document.getElementById('bellboy').outerHTML:'';
+  const sym=useMq&&chk('mqFig')&&!logoIsCustom()?document.getElementById('bellboy').outerHTML:'';
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}${sys.defs}${patt}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/><rect width="${W}" height="${H}" fill="url(#fld)"/>${marquePart}</svg>`;
   return fill(svg,c);
 }
@@ -2353,7 +2415,10 @@ function randomize(){
     ['angle3d','shade3d','highlight','bevel'].forEach(id=>rndNum(id,t));
     if((num('depth3d')||0)>0) last3d=num('depth3d'); }
   if(on('layout')){ const t=tg('layout'); if(RNDCFG.layout.flip){ rndChk('quinconce',t,0.6); rndChk('mirrorAlt',t,0.5); } }   // zoom (cell) is presentation, not design — never shuffled
-  if(on('logo')){ const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4'])); rndSel('mqMode',t); rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
+  if(on('logo')){ const t=tg('logo'); if(RNDCFG.logo.slots&&rchance(t,0.5)) setSlots(rpick(['0','1','4']));
+    rndChk('mqFig',t,0.85); rndChk('mqText',t,0.6);
+    if(!chk('mqFig')&&!chk('mqText')) $('mqFig').checked=true;   // an empty cleared slot is a hole, not a logo
+    rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
   syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
 }
 /* the split button's mode: how many shuffles one press deals — 1 applies directly,
@@ -2553,10 +2618,11 @@ function syncRows(){
   // Logo off → every logo option does nothing
   off($('mqOpts'), !logoOn);
   off(wrap('dotsInLogo'), logoOn&&!dotsOn);       // (only add-grey when the logo itself is on)
-  const custom=typeof CLOGO!=='undefined'&&val('mqArt')==='custom';
-  off(wrap('mqMode'), logoOn&&custom);            // bellboy layouts mean nothing to an uploaded emblem
-  off($('logoRow'), logoOn&&!custom);             // …and the upload row only matters in custom mode
-  off(wrap('logo3d'), logoOn&&(!d3||custom));     // 3D needs relief on, and can't re-tint a picture
+  const fig=chk('mqFig'), custom=val('mqArt')==='custom';
+  off(wrap('mqArt'), logoOn&&!fig);               // the emblem choice matters only when the figure shows
+  off($('logoRow'), logoOn&&(!fig||!custom));     // …and the upload row only in custom mode
+  off($('mqTextRow'), logoOn&&!chk('mqText'));    // the wordmark inputs need the text on
+  off(wrap('logo3d'), logoOn&&(!d3||(fig&&custom)));   // 3D needs relief on, and can't re-tint a picture
   // 3D depth 0 → direction, highlight, bevel do nothing; side-shade still feeds a shade line
   off(wrap('angle3d'), !d3);
   off(wrap('highlight'), !d3);
@@ -2655,24 +2721,25 @@ function cfgHash(){
   for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
   return ('000000'+(h>>>0).toString(36)).slice(-6);
 }
-let fontCSS=null;
+let fontCSS={};                                     // cached per wordmark text — the subset must cover the glyphs
 async function embedFont(){
-  if(fontCSS!==null) return fontCSS;
+  const txt=(((val('mqT1')||'')+' '+(val('mqT2')||'')).trim())||'LAVOËT 1869';
+  if(fontCSS[txt]!=null) return fontCSS[txt];
   try{
     const t=AbortSignal.timeout(8000);
-    const css=await (await fetch('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&text='+encodeURIComponent('LAVOËT 1869'),{signal:t})).text();
+    const css=await (await fetch('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&text='+encodeURIComponent(txt),{signal:t})).text();
     const m=css.match(/url\((https:[^)]+)\)/);
     if(!m) throw new Error('no font url');
     const buf=new Uint8Array(await (await fetch(m[1],{signal:t})).arrayBuffer());
     let bin=''; for(let i=0;i<buf.length;i+=8192) bin+=String.fromCharCode(...buf.subarray(i,i+8192));
-    fontCSS=`<style>@font-face{font-family:'Cormorant Garamond';font-weight:600;src:url(data:font/woff2;base64,${btoa(bin)}) format('woff2')}</style>`;
-    return fontCSS;
-  }catch(e){ return ''; } /* leave fontCSS null so the next export retries */
+    fontCSS[txt]=`<style>@font-face{font-family:'Cormorant Garamond';font-weight:600;src:url(data:font/woff2;base64,${btoa(bin)}) format('woff2')}</style>`;
+    return fontCSS[txt];
+  }catch(e){ return ''; } /* not cached, so the next export retries */
 }
 function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
-function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'&&!logoIsCustom(); }   // custom emblems carry no LAVOËT text — skip the font embed
+function marqueTextOn(){ return val('mqSlots')!=='0'&&chk('mqText')&&(((val('mqT1')||'').trim()!=='')||((val('mqT2')||'').trim()!=='')); }
 
 /* ---------- settings ride inside every download ---------- */
 const CRC_T=(()=>{ const t=new Uint32Array(256);
@@ -2786,8 +2853,8 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqArt','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
-const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn'];
+  'cBg','cFg','cAc','cOl','mqArt','mqT1','mqT2','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
+const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn','mqFig','mqText'];
 function paramsString(){
   const p=new URLSearchParams();
   for(const id of HASH_IDS) p.set(id,val(id));
@@ -2807,6 +2874,9 @@ function applyParams(p){
   // retired picture styles map to their nearest living relatives (Tessellate itself is retired)
   if(p.get('imgSym')==='tri') p.set('imgSym','tristretch');
   if(p.get('imgSym')==='hexfull') p.set('imgSym','hexm');
+  // the old three-way Logo dropdown became two independent toggles: figure + wordmark
+  if(p.has('mqMode')&&!p.has('mqFig')){ const m=p.get('mqMode');
+    $('mqFig').checked=m!=='text'; $('mqText').checked=m!=='figure'; }
   for(const id of HASH_IDS){
     if(!p.has(id)) continue;
     const el=$(id), v=p.get(id);
