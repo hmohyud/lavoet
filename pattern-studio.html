@@ -558,12 +558,13 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div id="mqOpts">
         <label class="seg-lbl">Emblem — the figure, and the text beneath it</label>
         <div class="mq-pick" id="mqFigPick" role="group" aria-label="Emblem figure">
-          <button type="button" data-mf="bellboy" aria-pressed="true"><span class="mqp-th"><svg viewBox="77.2 45.3 163.3 213" aria-hidden="true"><use href="#bellboy" xlink:href="#bellboy"/></svg></span>Bellboy</button>
+          <button type="button" data-mf="bellboy" aria-pressed="true"><span class="mqp-th"><svg viewBox="77.2 45.3 163.3 213" aria-hidden="true"><use href="#bellboy" xlink:href="#bellboy" x="77.2" y="45.3" width="163.3" height="213"/></svg></span>Bellboy</button>
           <button type="button" data-mf="custom" aria-pressed="false" title="Your upload — it can be a full logo with the text already in it"><span class="mqp-th" id="mqpCust">+</span>My emblem</button>
           <button type="button" data-mf="none" aria-pressed="false"><span class="mqp-th mqp-dash">—</span>None</button>
         </div>
         <div class="mq-pick" id="mqTextPick" role="group" aria-label="Wordmark text beneath">
-          <button type="button" data-mt="on" aria-pressed="true" class="mqp-wide"><span class="mqp-th mqp-txt" id="mqpTxt"><i>LAVOËT</i><em>1869</em></span>Wordmark</button>
+          <button type="button" data-mt="house" aria-pressed="true"><span class="mqp-th mqp-txt"><i>LAVOËT</i><em>1869</em></span>Lavoët</button>
+          <button type="button" data-mt="mine" aria-pressed="false" title="Your own wordmark — type it below"><span class="mqp-th mqp-txt" id="mqpTxt"><i>Aa</i></span>My wordmark</button>
           <button type="button" data-mt="off" aria-pressed="false"><span class="mqp-th mqp-dash">—</span>None</button>
         </div>
         <div class="logo-row" id="logoRow">
@@ -581,8 +582,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <input type="checkbox" id="mqFig" checked hidden aria-hidden="true">
         <input type="checkbox" id="mqText" checked hidden aria-hidden="true">
         <div class="cols" id="mqTextRow">
-          <div class="col"><label for="mqT1">Wordmark</label><input type="text" id="mqT1" value="LAVOËT" maxlength="18"></div>
-          <div class="col"><label for="mqT2">Small line</label><input type="text" id="mqT2" value="1869" maxlength="18"></div>
+          <div class="col"><label for="mqT1">Wordmark</label><input type="text" id="mqT1" value="LAVOËT" maxlength="18" placeholder="Your name"></div>
+          <div class="col"><label for="mqT2">Small line</label><input type="text" id="mqT2" value="1869" maxlength="18" placeholder="Year or motto"></div>
         </div>
         <div class="row"><label for="mqSize">Fine size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div id="imgMqRows">
@@ -1157,16 +1158,21 @@ function syncLogoUI(){
 }
 /* the picker cards mirror the hidden mqFig/mqArt/mqText state; the wordmark card previews the
    LIVE typed text. One of figure/text always stays on — an empty cleared slot is a hole. */
+function mqIsHouse(){ return (val('mqT1')||'').trim()==='LAVOËT'&&(val('mqT2')||'').trim()==='1869'; }
 function syncMqPick(){
   if(!$('mqFigPick')) return;
-  const fig=chk('mqFig'), art=val('mqArt'), txt=chk('mqText');
+  const fig=chk('mqFig'), art=val('mqArt'), txt=chk('mqText'), house=mqIsHouse();
   document.querySelectorAll('#mqFigPick [data-mf]').forEach(b=>
     b.setAttribute('aria-pressed',fig?b.dataset.mf===art:b.dataset.mf==='none'));
   document.querySelectorAll('#mqTextPick [data-mt]').forEach(b=>
-    b.setAttribute('aria-pressed',(b.dataset.mt==='on')===txt));
+    b.setAttribute('aria-pressed',
+      b.dataset.mt==='off'?!txt : b.dataset.mt==='house'?(txt&&house) : (txt&&!house)));
   const tp=$('mqpTxt');
   if(tp){ const t1=(val('mqT1')||'').trim(), t2=(val('mqT2')||'').trim();
-    tp.innerHTML=`<i>${escapeHtml(t1||'—')}</i>${t2?`<em>${escapeHtml(t2)}</em>`:''}`; }
+    tp.innerHTML=(!house&&(t1||t2))
+      ?`<i>${escapeHtml(t1||'—')}</i>${t2?`<em>${escapeHtml(t2)}</em>`:''}`
+      :'<i>Aa</i>';                                 // nothing of your own yet — a type specimen
+  }
 }
 $('mqFigPick').addEventListener('click',e=>{
   const b=e.target.closest('[data-mf]'); if(!b) return;
@@ -1177,8 +1183,14 @@ $('mqFigPick').addEventListener('click',e=>{
 });
 $('mqTextPick').addEventListener('click',e=>{
   const b=e.target.closest('[data-mt]'); if(!b) return;
-  if(b.dataset.mt==='off'){ $('mqText').checked=false; if(!chk('mqFig')) $('mqFig').checked=true; }
-  else $('mqText').checked=true;
+  const mt=b.dataset.mt;
+  if(mt==='off'){ $('mqText').checked=false; if(!chk('mqFig')) $('mqFig').checked=true; }
+  else if(mt==='house'){ $('mqText').checked=true; $('mqT1').value='LAVOËT'; $('mqT2').value='1869'; }
+  else{                                             // your own wordmark: clear the house text and type
+    $('mqText').checked=true;
+    if(mqIsHouse()){ $('mqT1').value=''; $('mqT2').value=''; }
+    setTimeout(()=>{ try{ $('mqT1').focus(); }catch(_){} },60);
+  }
   syncRows(); renderEd(); render();
 });
 /* ---------- the emblem editor: crop + colour-erase (everywhere / one patch) with tolerance.
@@ -2773,7 +2785,7 @@ function syncRows(){
   off(wrap('dotsInLogo'), logoOn&&!dotsOn);       // (only add-grey when the logo itself is on)
   const fig=chk('mqFig'), custom=val('mqArt')==='custom';
   off($('logoRow'), logoOn&&(!fig||!custom));     // the upload/edit row matters in custom-figure mode only
-  off($('mqTextRow'), logoOn&&!chk('mqText'));    // the wordmark inputs need the text on
+  off($('mqTextRow'), logoOn&&(!chk('mqText')||mqIsHouse()));   // the inputs are for YOUR wordmark — the house one is fixed
   off(wrap('logo3d'), logoOn&&(!d3||(fig&&custom)));   // 3D needs relief on, and can't re-tint a picture
   syncMqPick();                                   // the picker cards mirror the state everywhere
   // 3D depth 0 → direction, highlight, bevel do nothing; side-shade still feeds a shade line
