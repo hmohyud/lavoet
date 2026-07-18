@@ -121,8 +121,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .saves-more:hover{border-color:var(--brass);color:var(--brass)}
 /* browse every save/autosave in a modal, so the panel list can't grow unbounded
    (#rndSheet — the 3×3 contact sheet of randomize rolls — shares the overlay chrome) */
-#saveBrowser,#rndSheet{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--choc) 58%,transparent)}
-#saveBrowser[hidden],#rndSheet[hidden]{display:none}
+#saveBrowser,#rndSheet,#logoEd{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--choc) 58%,transparent)}
+#saveBrowser[hidden],#rndSheet[hidden],#logoEd[hidden]{display:none}
 #rndSheet .sv-panel{max-width:600px}
 .rs-grid{flex:1;overflow-y:auto;padding:15px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:start}
 .rs-cell{padding:4px;border:1px solid var(--hair);background:none;cursor:pointer;transition:border-color .12s}
@@ -130,11 +130,29 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 /* each thumb is captured WIDE (560×420) and the zoom slider scales it inside its window:
    scale 1 shows the whole wide view (most repeats), larger crops closer in */
 .rs-th{display:block;overflow:hidden;aspect-ratio:4/3}
-.rs-th img{width:100%;height:100%;display:block;transform:scale(var(--rsz,1.4));transform-origin:50% 50%}
+.rs-th img{width:100%;height:100%;display:block;transform:scale(var(--rsz,1));transform-origin:50% 50%}
 .rs-th .save-thumb.empty{width:100%;height:100%}
 .rs-zoom{flex:none;display:flex;align-items:center;gap:5px}
 .rs-zoom>span{font:600 12px/1 var(--sans);color:var(--sepia)}
 .rs-zoom input{width:104px;height:20px;accent-color:var(--brass)}
+/* custom emblem: preview chip (checkerboard shows transparency) + the light editor overlay */
+.logo-row{display:flex;gap:10px;align-items:center;margin-top:10px}
+.logo-row .btns{flex:1;margin-top:0}
+.logo-prev{flex:none;width:64px;height:64px;border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;overflow:hidden;background:repeating-conic-gradient(#d9d3c4 0% 25%,#f7f3e8 0% 50%) 0 0/12px 12px}
+.logo-prev img{max-width:100%;max-height:100%;display:block}
+.logo-prev:empty::after{content:"—";color:var(--sepia);font-size:12px}
+#logoEd .sv-panel{max-width:560px}
+.le-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.le-wrap{position:relative;align-self:center;max-width:100%;border:1px solid var(--hair);background:repeating-conic-gradient(#d9d3c4 0% 25%,#f7f3e8 0% 50%) 0 0/16px 16px}
+#leCanvas{display:block;max-width:100%;max-height:44vh;touch-action:none}
+#leBox{position:absolute;border:1.5px dashed var(--red);background:color-mix(in srgb,var(--red) 12%,transparent);pointer-events:none}
+.le-tools{display:flex;gap:6px;flex-wrap:wrap}
+.le-tools button{font:500 10.5px var(--sans);letter-spacing:.06em;padding:9px 11px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
+.le-tools button:hover{border-color:var(--brass)}
+.le-tools button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.le-tools .le-use{margin-left:auto;background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.le-tools .le-use:hover{background:var(--brassD);border-color:var(--brassD)}
+.le-hint{font-size:10px;font-style:italic;color:var(--sepia)}
 .rs-again{flex:none;height:28px;display:flex;align-items:center;gap:5px;padding:0 12px;border:1px solid var(--hair);background:none;color:var(--ink);font:500 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;cursor:pointer}
 .rs-again:hover{border-color:var(--brass);color:var(--brass)}
 /* the Randomize split button: the main half rolls, the slim caret picks how many a roll deals */
@@ -523,6 +541,20 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       </div>
       <input type="hidden" id="mqSlots" value="4">
       <div id="mqOpts">
+        <div class="row-sel"><label for="mqArt">Emblem</label>
+          <select id="mqArt">
+            <option value="bellboy" selected>Lavoët bellboy</option>
+            <option value="custom">My emblem</option>
+          </select>
+        </div>
+        <div class="logo-row" id="logoRow">
+          <span class="logo-prev" id="logoPrev" title="Your emblem, as it will print"></span>
+          <div class="btns">
+            <button type="button" id="logoUp">Upload emblem…</button>
+            <button type="button" id="logoEdit" hidden>Edit emblem…</button>
+          </div>
+        </div>
+        <input type="file" id="logoFile" accept="image/*" hidden>
         <div class="row-sel"><label for="mqMode">Logo</label>
           <select id="mqMode">
             <option value="full" selected>Bellboy + LAVOËT</option>
@@ -646,9 +678,30 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </div>
 </div>
 
+<div id="logoEd" hidden role="dialog" aria-modal="true" aria-label="Emblem editor">
+  <div class="sv-panel">
+    <div class="sv-head"><span class="sv-title">Emblem editor</span><button type="button" class="sv-close" id="leClose" title="Close without keeping" aria-label="Close">×</button></div>
+    <div class="le-body">
+      <div class="le-wrap"><canvas id="leCanvas"></canvas><div id="leBox" hidden></div></div>
+      <div class="le-tools" role="group" aria-label="Tools">
+        <button type="button" id="leCrop" aria-pressed="false">✂ Crop</button>
+        <button type="button" id="leAll" aria-pressed="false">Erase colour — everywhere</button>
+        <button type="button" id="leArea" aria-pressed="false">Erase colour — this area</button>
+      </div>
+      <div class="row"><label for="leTol">Tolerance</label><input type="range" id="leTol" min="4" max="120" value="40"><output for="leTol">40</output></div>
+      <p class="le-hint" id="leHint">Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.</p>
+      <div class="le-tools">
+        <button type="button" id="leUndo">↩ Undo</button>
+        <button type="button" id="leReset">Reset</button>
+        <button type="button" id="leUse" class="le-use">✓ Use emblem</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="rndSheet" hidden role="dialog" aria-modal="true" aria-label="Nine shuffles — pick one">
   <div class="sv-panel">
-    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><span class="rs-zoom" title="Thumbnail zoom"><span aria-hidden="true">−</span><input type="range" id="rsZoom" min="100" max="300" value="140" aria-label="Thumbnail zoom"><span aria-hidden="true">+</span></span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
+    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><span class="rs-zoom" title="Thumbnail zoom"><span aria-hidden="true">−</span><input type="range" id="rsZoom" min="100" max="300" value="100" aria-label="Thumbnail zoom"><span aria-hidden="true">+</span></span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
     <div class="rs-grid" id="rsGrid"></div>
   </div>
 </div>
@@ -981,10 +1034,16 @@ function marqueBox(W,H){
   const textW=F1*6.2;
   const blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
   const rM=slots==='1'?0.3*S:(q?0.8:1.1)*S, rA=0.3*S;
+  if(logoIsCustom()){ const f=logoFit(E);           // the custom emblem's box replaces the bellboy's
+    return {E,mode,figH:0,figW:f.w,F1:0,F2:0,textW:f.w,blockH:f.h,cx,cy,rM,rA}; }
   return {E,mode,figH,figW,F1,F2,textW,blockH,cx,cy,rM,rA};
 }
 // the marque's ink, drawn in currentColor so a caller can <use> it in any tone
 function marqueMarkup(b){
+  if(logoIsCustom()){                               // an uploaded emblem replaces the bellboy whole
+    const f=logoFit(b.E);
+    return `<image href="${CLOGO.data}" xlink:href="${CLOGO.data}" x="${(b.cx-f.w/2).toFixed(1)}" y="${(b.cy-f.h/2).toFixed(1)}" width="${f.w.toFixed(1)}" height="${f.h.toFixed(1)}" preserveAspectRatio="xMidYMid meet"/>`;
+  }
   let y=b.cy-b.blockH/2, s='';
   if(b.figH){
     // centre the bellboy by his ink centroid — the artwork's mass sits 54.3%
@@ -1004,7 +1063,9 @@ function marqueMarkup(b){
 // a stack of dark offset copies (the extruded side) under a lit face
 function marque3D(b){
   const def=`<defs><g id="mqi">${marqueMarkup(b)}</g></defs>`;
-  const on=chk('logo3d') && (num('depth3d')||0)>0 && !chk('shadeLine');
+  // an uploaded emblem can't be re-tinted, so the extruded-stack effect would just smear
+  // opaque copies of the picture — custom emblems always render flat
+  const on=chk('logo3d') && (num('depth3d')||0)>0 && !chk('shadeLine') && !logoIsCustom();
   if(!on) return def+`<use href="#mqi" xlink:href="#mqi" color="MOTIF_FG"/>`;
   const a=(num('angle3d')||55)*Math.PI/180, dep=(num('depth3d')||0)/100*b.E*0.22;
   const ex=Math.cos(a)*dep, ey=Math.sin(a)*dep, N=Math.max(4,Math.min(22,Math.round(dep/1.3)));
@@ -1012,6 +1073,143 @@ function marque3D(b){
   for(let k=N;k>=1;k--){ const t=k/N; stack+=`<use href="#mqi" xlink:href="#mqi" color="MOTIF_SIDE" transform="translate(${(ex*t).toFixed(2)} ${(ey*t).toFixed(2)})"/>`; }
   return def+stack+`<use href="#mqi" xlink:href="#mqi" color="MOTIF_TOP"/>`;
 }
+/* ---------- a CUSTOM emblem: an uploaded picture takes the bellboy's place ----------
+   Stored once under its own key (never inside paramsString — that would bloat every history
+   entry and autosave); the config carries only mqArt=custom, and exports embed logodata so a
+   design is recreatable from the file alone. */
+let CLOGO=null;                                   // {data,el} — the uploaded emblem, edited to taste
+function setLogo(data,persist=true){
+  CLOGO=data?{data,el:(()=>{ const el=new Image(); el.onload=()=>{ renderEd(); render(); }; el.src=data; return el; })()}:null;
+  if(persist) try{ data?localStorage.setItem('lavoet-logo',data):localStorage.removeItem('lavoet-logo'); }catch(e){}
+  syncLogoUI();
+}
+function logoIsCustom(){ return val('mqArt')==='custom'&&!!(CLOGO&&CLOGO.el&&CLOGO.el.complete&&CLOGO.el.naturalWidth); }
+function logoFit(E){                              // contain the emblem in a square of side E·1.15
+  const a=CLOGO.el.naturalWidth/CLOGO.el.naturalHeight, S=E*1.15;
+  return a>=1?{w:S,h:S/a}:{w:S*a,h:S};
+}
+function syncLogoUI(){
+  const pv=$('logoPrev'); if(!pv) return;
+  pv.innerHTML=CLOGO?`<img src="${CLOGO.data}" alt="Your emblem">`:'';
+  $('logoEdit').hidden=!CLOGO;
+  $('logoUp').textContent=CLOGO?'Upload new…':'Upload emblem…';
+}
+/* ---------- the emblem editor: crop + colour-erase (everywhere / one patch) with tolerance.
+   Edits run on the working canvas at up to 1024px; "Use emblem" stores a ≤512px PNG. ---------- */
+const LE={mode:'',hist:[],orig:null};
+let LEDRAG=null;
+function leCtx(){ return $('leCanvas').getContext('2d',{willReadFrequently:true}); }
+function leSetMode(m){
+  LE.mode=LE.mode===m?'':m;
+  $('leCrop').setAttribute('aria-pressed',LE.mode==='crop');
+  $('leAll').setAttribute('aria-pressed',LE.mode==='all');
+  $('leArea').setAttribute('aria-pressed',LE.mode==='area');
+  $('leHint').textContent=LE.mode==='crop'?'Drag a box over the part to keep.'
+    :LE.mode==='all'?'Click a colour — every pixel like it (within tolerance) turns transparent.'
+    :LE.mode==='area'?'Click a colour — only the touching patch of it turns transparent.'
+    :'Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.';
+  const tr=$('leTol').closest('.row'); if(tr) tr.classList.toggle('opt-off',LE.mode!=='all'&&LE.mode!=='area');
+}
+function lePush(){
+  const c=$('leCanvas');
+  LE.hist.push(leCtx().getImageData(0,0,c.width,c.height));
+  if(LE.hist.length>10) LE.hist.shift();
+}
+function lePut(img){ const c=$('leCanvas'); c.width=img.width; c.height=img.height; leCtx().putImageData(img,0,0); }
+function leOpenFrom(url,revoke){
+  const im=new Image();
+  im.onload=()=>{
+    if(revoke) URL.revokeObjectURL(url);
+    const k=Math.min(1,1024/Math.max(im.naturalWidth,im.naturalHeight));
+    const c=$('leCanvas'); c.width=Math.max(1,Math.round(im.naturalWidth*k)); c.height=Math.max(1,Math.round(im.naturalHeight*k));
+    const x=leCtx(); x.clearRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height);
+    LE.orig=x.getImageData(0,0,c.width,c.height); LE.hist=[];
+    LE.mode=''; leSetMode('crop');                  // open ready to crop — the commonest first step
+    $('logoEd').hidden=false;
+  };
+  im.onerror=()=>{ if(revoke) URL.revokeObjectURL(url); alert('That file could not be read as a picture.'); };
+  im.src=url;
+}
+function leSeedDist(d,i,s){ const dr=d[i]-s[0],dg=d[i+1]-s[1],db=d[i+2]-s[2]; return Math.sqrt((dr*dr+dg*dg+db*db)/3); }
+function leErase(px,py,areaOnly){
+  const c=$('leCanvas'), x=leCtx(), W=c.width, H=c.height;
+  const img=x.getImageData(0,0,W,H), d=img.data, i0=(py*W+px)*4;
+  if(!d[i0+3]) return;                              // clicked an already-clear pixel
+  const seed=[d[i0],d[i0+1],d[i0+2]], tol=+$('leTol').value||40;
+  lePush();
+  if(!areaOnly){
+    for(let i=0;i<d.length;i+=4) if(d[i+3]&&leSeedDist(d,i,seed)<=tol) d[i+3]=0;
+  }else{                                            // flood: only the touching patch of that colour
+    const st=[py*W+px], seen=new Uint8Array(W*H); seen[st[0]]=1;
+    while(st.length){
+      const p=st.pop(), i=p*4;
+      if(!d[i+3]||leSeedDist(d,i,seed)>tol) continue;
+      d[i+3]=0;
+      const X=p%W, Y=(p-X)/W;
+      if(X>0&&!seen[p-1]){ seen[p-1]=1; st.push(p-1); }
+      if(X<W-1&&!seen[p+1]){ seen[p+1]=1; st.push(p+1); }
+      if(Y>0&&!seen[p-W]){ seen[p-W]=1; st.push(p-W); }
+      if(Y<H-1&&!seen[p+W]){ seen[p+W]=1; st.push(p+W); }
+    }
+  }
+  x.putImageData(img,0,0);
+}
+$('leCanvas').addEventListener('pointerdown',ev=>{
+  const cv=$('leCanvas'), r=cv.getBoundingClientRect();
+  const kx=cv.width/r.width, ky=cv.height/r.height;
+  const px=Math.max(0,Math.min(cv.width-1,Math.floor((ev.clientX-r.left)*kx)));
+  const py=Math.max(0,Math.min(cv.height-1,Math.floor((ev.clientY-r.top)*ky)));
+  if(LE.mode==='crop'){
+    LEDRAG={x0:ev.clientX,y0:ev.clientY,r,kx,ky};
+    try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    const b=$('leBox'); b.hidden=false;
+    b.style.left=(ev.clientX-r.left)+'px'; b.style.top=(ev.clientY-r.top)+'px'; b.style.width='0'; b.style.height='0';
+  }
+  else if(LE.mode==='all') leErase(px,py,false);
+  else if(LE.mode==='area') leErase(px,py,true);
+});
+$('leCanvas').addEventListener('pointermove',ev=>{
+  if(!LEDRAG) return;
+  const b=$('leBox'), r=LEDRAG.r;
+  const x1=Math.max(r.left,Math.min(r.right,ev.clientX)), y1=Math.max(r.top,Math.min(r.bottom,ev.clientY));
+  b.style.left=(Math.min(LEDRAG.x0,x1)-r.left)+'px'; b.style.top=(Math.min(LEDRAG.y0,y1)-r.top)+'px';
+  b.style.width=Math.abs(x1-LEDRAG.x0)+'px'; b.style.height=Math.abs(y1-LEDRAG.y0)+'px';
+});
+$('leCanvas').addEventListener('pointerup',ev=>{
+  if(!LEDRAG) return;
+  const d=LEDRAG; LEDRAG=null; $('leBox').hidden=true;
+  const x1=Math.max(d.r.left,Math.min(d.r.right,ev.clientX)), y1=Math.max(d.r.top,Math.min(d.r.bottom,ev.clientY));
+  const X=Math.round((Math.min(d.x0,x1)-d.r.left)*d.kx), Y=Math.round((Math.min(d.y0,y1)-d.r.top)*d.ky);
+  const W2=Math.round(Math.abs(x1-d.x0)*d.kx), H2=Math.round(Math.abs(y1-d.y0)*d.ky);
+  if(W2<8||H2<8) return;                            // a stray click isn't a crop
+  lePush();
+  lePut(leCtx().getImageData(X,Y,W2,H2));
+});
+$('leCanvas').addEventListener('pointercancel',()=>{ LEDRAG=null; $('leBox').hidden=true; });
+$('leCrop').addEventListener('click',()=>leSetMode('crop'));
+$('leAll').addEventListener('click',()=>leSetMode('all'));
+$('leArea').addEventListener('click',()=>leSetMode('area'));
+$('leUndo').addEventListener('click',()=>{ const h=LE.hist.pop(); if(h) lePut(h); });
+$('leReset').addEventListener('click',()=>{ if(LE.orig){ LE.hist=[]; lePut(LE.orig); } });
+$('leUse').addEventListener('click',()=>{
+  const c=$('leCanvas'), k=Math.min(1,512/Math.max(c.width,c.height));
+  const o=document.createElement('canvas'); o.width=Math.max(1,Math.round(c.width*k)); o.height=Math.max(1,Math.round(c.height*k));
+  const x=o.getContext('2d'); x.imageSmoothingQuality='high'; x.drawImage(c,0,0,o.width,o.height);
+  setLogo(o.toDataURL('image/png'));
+  $('mqArt').value='custom';
+  $('logoEd').hidden=true;
+  syncRows(); renderEd(); render();
+});
+$('leClose').addEventListener('click',()=>{ $('logoEd').hidden=true; });
+$('logoEd').addEventListener('click',e=>{ if(e.target===$('logoEd')) $('logoEd').hidden=true; });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('logoEd').hidden) $('logoEd').hidden=true; });
+$('logoUp').addEventListener('click',()=>$('logoFile').click());
+$('logoEdit').addEventListener('click',()=>{ if(CLOGO) leOpenFrom(CLOGO.data,false); });
+$('logoFile').addEventListener('change',()=>{
+  const f=$('logoFile').files[0]; $('logoFile').value='';
+  if(f) leOpenFrom(URL.createObjectURL(f),true);
+});
+try{ const d=localStorage.getItem('lavoet-logo'); if(d&&/^data:image\//.test(d)) setLogo(d,false); }catch(e){}
 
 /* ---------- picture patterns: a seamless tile cut from an uploaded photo ---------- */
 let IMGS=[];                                     // saved pictures [{id,name,data}]
@@ -1260,6 +1458,8 @@ function imgMarqueBox(W,H){
   const figH=mode==='text'?0:(mode==='figure'?E*1.18:E*0.74), figW=figH*163.3/213;
   const F1=mode==='figure'?0:E*0.165, F2=mode==='figure'?0:E*0.085;
   const textW=F1*6.2, blockH=figH+(F1?F1*1.55:0)+(F2?F2*1.9:0);
+  if(logoIsCustom()){ const f=logoFit(E);
+    return {E,mode,figH:0,figW:f.w,F1:0,F2:0,textW:f.w,blockH:f.h,cx:W/2,cy:H/2,backR:Math.hypot(f.w,f.h)/2+E*0.16}; }
   const backR=Math.hypot(Math.max(figW,textW),blockH)/2+E*0.16;
   return {E,mode,figH,figW,F1,F2,textW,blockH,cx:W/2,cy:H/2,backR};
 }
@@ -1275,7 +1475,7 @@ function buildImgSwatch(W,H,style=''){
   if(val('mqSlots')!=='0'){
     const b=imgMarqueBox(W,H), back=val('imgMqBack'), col=val('cMqBack');
     const ink=back==='colour'?(luma(col)>0.55?'#2B2620':'#F4EFE4'):col;   // solid disk picks a contrasting ink
-    if(val('mqMode')!=='text') defs+=document.getElementById('bellboy').outerHTML;
+    if(val('mqMode')!=='text'&&!logoIsCustom()) defs+=document.getElementById('bellboy').outerHTML;
     if(back==='blur'){
       defs+=`<filter id="mqb" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="${(b.backR/9).toFixed(1)}"/></filter><clipPath id="mqc"><circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.backR.toFixed(1)}"/></clipPath>`;
       mq+=`<g clip-path="url(#mqc)"><rect width="${W}" height="${H}" fill="url(#fld)" filter="url(#mqb)"/></g>`;
@@ -1452,7 +1652,7 @@ function buildSwatch(W,H,{marque=true,style=''}={}){
     marquePart=`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${clearR.toFixed(1)}" fill="${c.bg}"/>${r.back}${r.accL}${r.face}${marque3D(b)}`;
   }
   const patt=`<pattern id="fld" width="${sys.T}" height="${sys.T}" patternUnits="userSpaceOnUse" patternTransform="translate(${ph.ox.toFixed(1)} ${ph.oy.toFixed(1)})">${tileBody(sys)}</pattern>`;
-  const sym=useMq&&val('mqMode')!=='text'?document.getElementById('bellboy').outerHTML:'';
+  const sym=useMq&&val('mqMode')!=='text'&&!logoIsCustom()?document.getElementById('bellboy').outerHTML:'';
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${sym}${sys.defs}${patt}</defs><rect width="${W}" height="${H}" fill="${c.bg}"/><rect width="${W}" height="${H}" fill="url(#fld)"/>${marquePart}</svg>`;
   return fill(svg,c);
 }
@@ -2194,7 +2394,9 @@ async function rollSheet(n){
         while(!(IMG&&IMG.el&&IMG.el.complete&&IMG.el.naturalWidth)&&performance.now()-t0<1500)
           await new Promise(r=>setTimeout(r,30));
       }
-      let th=''; try{ th=thumbSVG(560,420); }catch(e){}   // a wide view — the sheet's zoom slider crops into it
+      // full-fidelity wide capture — buildSwatch includes the logo when the roll has one;
+      // the sheet's zoom slider crops into it
+      let th=''; try{ th=buildSwatch(720,540); }catch(e){}
       shots.push({cfg:paramsString(),th});
     }
     RNDSHOTS=shots;
@@ -2212,10 +2414,10 @@ $('rsAgain').addEventListener('click',()=>rollSheet(RS_LAST));
 /* the sheet's thumbnail zoom: 100% shows each thumb's whole wide capture (most repeats);
    300% crops close. Remembered as a tool pref. */
 (function initRsZoom(){
-  let z=140; try{ const s=+localStorage.getItem('lavoet-rs-zoom'); if(s>=100&&s<=300) z=s; }catch(e){}
+  let z=100; try{ const s=+localStorage.getItem('lavoet-rs-zoom'); if(s>=100&&s<=300) z=s; }catch(e){}
   $('rsZoom').value=z; $('rsGrid').style.setProperty('--rsz',z/100);
   $('rsZoom').addEventListener('input',()=>{
-    const v=Math.max(100,Math.min(300,+$('rsZoom').value||140));
+    const v=Math.max(100,Math.min(300,+$('rsZoom').value||100));
     $('rsGrid').style.setProperty('--rsz',v/100);
     try{ localStorage.setItem('lavoet-rs-zoom',v); }catch(e){}
   });
@@ -2351,7 +2553,10 @@ function syncRows(){
   // Logo off → every logo option does nothing
   off($('mqOpts'), !logoOn);
   off(wrap('dotsInLogo'), logoOn&&!dotsOn);       // (only add-grey when the logo itself is on)
-  off(wrap('logo3d'), logoOn&&!d3);               // the 3D logo needs 3D relief on
+  const custom=typeof CLOGO!=='undefined'&&val('mqArt')==='custom';
+  off(wrap('mqMode'), logoOn&&custom);            // bellboy layouts mean nothing to an uploaded emblem
+  off($('logoRow'), logoOn&&!custom);             // …and the upload row only matters in custom mode
+  off(wrap('logo3d'), logoOn&&(!d3||custom));     // 3D needs relief on, and can't re-tint a picture
   // 3D depth 0 → direction, highlight, bevel do nothing; side-shade still feeds a shade line
   off(wrap('angle3d'), !d3);
   off(wrap('highlight'), !d3);
@@ -2378,6 +2583,7 @@ document.querySelectorAll('input,select').forEach(el=>['input','change'].forEach
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   if(el.id==='rndAmt') try{ localStorage.setItem('lavoet-rnd-amt',el.value); }catch(e){}   // Variation is a remembered tool pref
+  if(el.id==='mqArt'&&el.value==='custom'&&!CLOGO) $('logoFile').click();   // custom with nothing uploaded → ask for a picture
   syncRows(); renderEd(); render();
 })));
 /* close every help bubble — section "?" popovers and the shade-line one */
@@ -2466,7 +2672,7 @@ async function embedFont(){
 function swatchDims(){
   return [Math.max(200,Math.round(preview.clientWidth)),Math.max(200,Math.round(preview.clientHeight))];
 }
-function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'; }
+function marqueTextOn(){ return val('mqSlots')!=='0'&&val('mqMode')!=='figure'&&!logoIsCustom(); }   // custom emblems carry no LAVOËT text — skip the font embed
 
 /* ---------- settings ride inside every download ---------- */
 const CRC_T=(()=>{ const t=new Uint32Array(256);
@@ -2481,6 +2687,7 @@ function crc32(bytes){
 function exportConfig(){
   let cfg=paramsString();
   if(imgActive()&&IMG) cfg+='&imgdata='+encodeURIComponent(IMG.data);
+  if(logoIsCustom()) cfg+='&logodata='+encodeURIComponent(CLOGO.data);   // the emblem travels with the file
   return cfg;
 }
 function svgWithConfig(svg){
@@ -2579,7 +2786,7 @@ $('dlPng').addEventListener('click',async()=>{
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
-  'cBg','cFg','cAc','cOl','mqMode','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
+  'cBg','cFg','cAc','cOl','mqMode','mqArt','mqSize','mqSlots','imgSym','imgFit','imgSize','imgScale','imgMqBack','cMqBack'];
 const HASH_CHK=['pinRound','outlineOn','shadeLine','shadeScope','quinconce','mirrorAlt','accentOn','dotsInLogo','logo3d','imgOn'];
 function paramsString(){
   const p=new URLSearchParams();
@@ -2632,6 +2839,11 @@ function applyParams(p){
     if(t.length===3&&t.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&v>=0&&v<=1))) IMGTRI=t;
   }
   if(!p.has('imgOn')) $('imgOn').checked=false;    // configs from before picture mode: motif design
+  if(!p.has('mqArt')) $('mqArt').value='bellboy';  // configs from before custom emblems: the bellboy
+  if(p.has('logodata')&&/^data:image\//.test(p.get('logodata'))){
+    // an emblem travelling inside an exported file — adopt it
+    if(!CLOGO||CLOGO.data!==p.get('logodata')) setLogo(p.get('logodata'));
+  }
   if(p.has('imgdata')&&/^data:image\//.test(p.get('imgdata'))){
     // a picture travelling inside an exported file — bring it into the gallery and use it
     const d=p.get('imgdata');
