@@ -395,7 +395,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         </div>
         <div id="rndOpts" class="rnd-opts" hidden></div>
         <label class="chk" title="Rolls show the pattern alone — the Logo section's switch brings the emblem back any time"><input type="checkbox" id="rndHideLogo">Hide the logo in rolls</label>
-        <label class="chk" title="Each roll commits to one character — bold, fine, dense or airy — pulling its sliders together instead of scattering them"><input type="checkbox" id="rndTemper">Temperaments — each roll commits to a character</label>
+        <label class="chk" title="A ×9/×16 deal rolls ONE fresh idea, then fills the sheet with gentle variants of it — pick the take you like best. Off: every cell is its own independent idea."><input type="checkbox" id="rndVary">Sheets deal one idea + variations of it</label>
       </div>
       <div id="rndPicBody" class="rnd-opts" aria-label="Picture-pattern randomize settings" hidden></div>
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="100"><output for="rndAmt">100</output></div>
@@ -613,13 +613,18 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Export</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Download a seamless tile or a swatch. Every file carries its full settings inside it — load one back with “Load config…” to restore that exact design.</p>
-      <div class="btns">
-        <button type="button" id="dlTile">Tile · SVG (seamless)</button>
-        <button type="button" id="dlSwatch">Swatch · SVG</button>
-        <button type="button" id="dlPng">Swatch · PNG</button>
+      <p class="acc-info" hidden>Download a single seamless tile or a full swatch, in the format you pick — SVG (vector), PNG or JPG. Whatever the format, the file carries its full settings inside it — load any of them back with “Load config…” to restore that exact design (unless Thin export is ticked).</p>
+      <label class="seg-lbl">Format</label>
+      <div class="seg" id="expFmtSeg" role="group" aria-label="Download format">
+        <button type="button" data-fmt="svg" aria-pressed="true">SVG</button>
+        <button type="button" data-fmt="png" aria-pressed="false">PNG</button>
+        <button type="button" data-fmt="jpg" aria-pressed="false">JPG</button>
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button type="button" id="dlTile" title="One tile that repeats seamlessly">Single tile</button>
+        <button type="button" id="dlSwatch" title="The whole preview, logo included">Swatch</button>
         <button type="button" id="cfgLoad">Load config…</button>
-        <input type="file" id="cfgFile" accept=".png,.svg,image/png,image/svg+xml" hidden>
+        <input type="file" id="cfgFile" accept=".png,.svg,.jpg,.jpeg,image/png,image/svg+xml,image/jpeg" hidden>
       </div>
       <label class="chk" title="Leave the settings (and any picture) out of the file to keep it small — a thin file can't be re-loaded with 'Load config…'"><input type="checkbox" id="thinExport">Thin export (no embedded settings)</label>
       <p class="hint" id="tileInfo"></p>
@@ -2517,9 +2522,9 @@ const RND_DEF={
   relief:{amt:100,dMin:0,dMax:60},
   layout:{amt:100,flip:1},
   logo  :{amt:100,slots:1},
-  picture:{amt:100,style:1,area:1},
-  roll  :{temper:0,hideLogo:1},                      // temper: each roll commits to a character (off by default);
-                                                     // hideLogo: rolls present the pattern alone (on by default)
+  picture:{amt:100,style:1,area:1,sHex:1,sPent:1,sMisc:0},   // which tiling shapes the shuffle may pick
+  roll  :{hideLogo:1,vary:1},                        // hideLogo: rolls present the pattern alone (on by default);
+                                                     // vary: sheets deal ONE idea + gentle variants of it (on by default)
 };
 var RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
@@ -2552,9 +2557,9 @@ function setRndMode(m){
   if(RNDMODE==='picture'&&RNDOPEN) toggleRndPanel(RNDOPEN);   // a greyed-open gear panel reads as stuck
 }
 document.querySelectorAll('#rndModeSeg [data-rmode]').forEach(b=>b.addEventListener('click',()=>setRndMode(b.dataset.rmode)));
-/* the temperament + hide-logo toggles are tool prefs like the rest of RNDCFG — persisted, reset by the hold */
-$('rndTemper').checked=!!(RNDCFG.roll&&RNDCFG.roll.temper);
-$('rndTemper').addEventListener('change',()=>{ RNDCFG.roll.temper=$('rndTemper').checked?1:0; saveRnd(); });
+/* the variations + hide-logo toggles are tool prefs like the rest of RNDCFG — persisted, reset by the hold */
+$('rndVary').checked=!!(RNDCFG.roll&&RNDCFG.roll.vary);
+$('rndVary').addEventListener('change',()=>{ RNDCFG.roll.vary=$('rndVary').checked?1:0; saveRnd(); });
 $('rndHideLogo').checked=!!(RNDCFG.roll&&RNDCFG.roll.hideLogo);
 function syncRndHide(){                              // hiding the logo makes its shuffle group moot — grey it
   const off=!!(RNDCFG.roll&&RNDCFG.roll.hideLogo);
@@ -2592,10 +2597,14 @@ const RND_PANELS={
 };
 const PIC_ROWS=[
   ['chk','style','May change the tiling shape / style'],
+  ['chk','sHex','· Hexagon styles'],
+  ['chk','sPent','· Pentagon (Cairo weave)'],
+  ['chk','sMisc','· Misc (triangle, mirror, kaleidoscope, pinwheel)'],
   ['chk','area','May move the picked area / dots'],
 ];
 /* a row greys when its dep says so — drift only matters in drift mode (pos on, scatter off) */
-const RND_DEPS={drift:c=>!c.pos||!!c.scatter, scatter:c=>!c.pos, cntMin:c=>!c.count, pMin:c=>!c.pieces};
+const RND_DEPS={drift:c=>!c.pos||!!c.scatter, scatter:c=>!c.pos, cntMin:c=>!c.count, pMin:c=>!c.pieces,
+  sHex:c=>!c.style, sPent:c=>!c.style, sMisc:c=>!c.style};
 var RNDOPEN=null;
 function rndRowsHTML(g,rows){
   const c=RNDCFG[g];
@@ -2653,49 +2662,10 @@ function wireRnd(host,groupOf,redraw){
 }
 wireRnd($('rndOpts'),()=>RNDOPEN,drawRndPanel);
 wireRnd($('rndPicBody'),()=>'picture',drawRndPicture);
-/* a TEMPERAMENT (optional): after the groups roll, one character — bold, fine, dense or airy —
-   pulls the correlated sliders its way. Independent uniform jitter lands every roll in samey
-   middles; a committed character reads as a deliberate design (the same lesson the scatter
-   archetypes taught the piece outline). Locks are honoured: only ticked groups move, on/off
-   flips only where that group's flip permission allows, and configured bounds still bind. */
-function applyTemper(on,tg){
-  const pull=(id,v,t)=>{ const el=$(id); if(!el||!t) return;
-    const min=+el.min, max=+el.max, st=+el.step||1;
-    let nv=+el.value+(Math.max(min,Math.min(max,v))-+el.value)*Math.min(1,t*1.35);
-    nv=Math.round(nv/st)*st;
-    setOut(id,+nv.toFixed(2)); };
-  const temper=rpick(['bold','fin','plein','aere']);
-  const cS=RNDCFG.shape, szLo=Math.min(cS.szMin,cS.szMax), szHi=Math.max(cS.szMin,cS.szMax);
-  const cR=RNDCFG.relief, dLo=Math.min(cR.dMin,cR.dMax), dHi=Math.max(cR.dMin,cR.dMax);
-  const tS=on('shape')?tg('shape'):0, tO=on('outline')?tg('outline'):0,
-        tD=on('dots')?tg('dots'):0, tR=on('relief')?tg('relief'):0;
-  if(temper==='bold'){                               // heavy: big motif, weighty border or deep relief
-    pull('scale',szHi-rrand()*0.15*(szHi-szLo),tS);
-    if(tO&&RNDCFG.outline.flip&&rchance(tO,0.85)) $('outlineOn').checked=true;
-    pull('outlineW',4.5+rrand()*2.5,tO);
-    pull('depth3d',Math.min(dHi,34+rrand()*20),tR); pull('shade3d',40+rrand()*18,tR);
-  }else if(temper==='fin'){                          // fine: hairline border, flat, delicate dots
-    pull('scale',szLo+(szHi-szLo)*(0.25+rrand()*0.2),tS);
-    if(tO&&RNDCFG.outline.flip&&rchance(tO,0.85)) $('outlineOn').checked=true;
-    pull('outlineW',0.4+rrand()*0.8,tO);
-    pull('depth3d',dLo,tR);
-    if(tD&&RNDCFG.dots.flip&&rchance(tD,0.7)) $('accentOn').checked=true;
-    pull('accentSize',4+rrand()*3,tD);
-  }else if(temper==='plein'){                        // dense: large pieces packed tight, dotted
-    pull('scale',szHi-rrand()*0.25*(szHi-szLo),tS);
-    pull('pinGap',4+rrand()*8,tS); pull('pinHole',4+rrand()*10,tS);
-    if(tD&&RNDCFG.dots.flip&&rchance(tD,0.7)) $('accentOn').checked=true;
-    pull('accentSize',8+rrand()*6,tD);
-  }else{                                             // aéré: small motif in open ground, quiet accents
-    pull('scale',szLo+rrand()*0.2*(szHi-szLo),tS);
-    pull('pinGap',22+rrand()*12,tS); pull('pinHole',26+rrand()*16,tS);
-    pull('depth3d',Math.min(dHi,rrand()*14),tR);
-    if(tD&&RNDCFG.dots.flip&&rchance(tD,0.5)) $('accentOn').checked=false;
-    pull('accentSize',3+rrand()*3,tD);
-  }
-}
-function randomize(){
-  const T=Math.max(0.05,(+$('rndAmt').value||45)/100);
+/* tOv (optional) overrides the Variation slider for this one roll — the contact sheet uses a
+   small tOv to deal gentle VARIANTS of a base design instead of nine unrelated ideas */
+function randomize(tOv){
+  const T=Math.max(0.05,tOv!=null?tOv:(+$('rndAmt').value||45)/100);
   const on=g=>{ const el=$('rnd_'+g); return el&&el.checked; };
   const tg=g=>T*(RNDCFG[g].amt/100);                 // each group follows Variation at its own strength
   if(RNDMODE==='picture'){                           // the Picture tab: shuffles MAKE picture patterns
@@ -2705,8 +2675,12 @@ function randomize(){
     if(!IMG||RNDPOOL[IMG.id]===0||rchance(t,0.6))
       setActiveImg(rpick(pool.filter(r=>!IMG||r.id!==IMG.id))||pool[0]);
     if(c.style&&rchance(t,0.85)){
-      $('imgSym').value=rpick(['tristretch','mirror','kaleido','spin','hex','hexm','pent','pent']);
-      $('imgFit').value='stretch';                   // the only fit there is
+      // only the shape buckets ticked in the limits may be dealt (hexagon+pentagon by default —
+      // the Misc styles are wilder and join in only when asked)
+      const pool=[...(c.sHex?['hex','hexm','hexm']:[]),
+                  ...(c.sPent?['pent','pent']:[]),
+                  ...(c.sMisc?['tristretch','mirror','kaleido','spin']:[])];
+      if(pool.length){ $('imgSym').value=rpick(pool); $('imgFit').value='stretch'; }
     }
     if(c.area){                                      // wander the crop and the triangle dots, t of the way
       const rs=0.2+rrand()*0.45, rx=0.15+rrand()*0.7, ry=0.15+rrand()*0.7;
@@ -2757,7 +2731,6 @@ function randomize(){
     rndChk('mqFig',t,0.85); rndChk('mqText',t,0.6);
     if(!chk('mqFig')&&!chk('mqText')) $('mqFig').checked=true;   // an empty cleared slot is a hole, not a logo
     rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
-  if(RNDCFG.roll&&RNDCFG.roll.temper) applyTemper(on,tg);   // then one character pulls it together
   syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
 }
 /* the split button's mode: how many shuffles one press deals — 1 applies directly,
@@ -2789,10 +2762,14 @@ async function rollSheet(n){
   $('rndGo').disabled=true; $('rndMore').disabled=true;
   RND_ROLLING=true;
   const orig=paramsString();
+  const vary=!!(RNDCFG.roll&&RNDCFG.roll.vary);
   try{
     const shots=[];
     for(let i=0;i<RS_LAST;i++){
-      randomize();
+      // variations: cell 1 is ONE fresh idea (the base); every other cell re-starts from that
+      // base and wanders only a little — nine takes on one design instead of nine strangers
+      if(vary&&i>0){ applyParams(new URLSearchParams(shots[0].cfg)); randomize(0.14+rrand()*0.1); }
+      else randomize();
       if(RNDMODE==='picture'){                       // the picked image must be ready or the thumb is blank
         const t0=performance.now();
         while(!(IMG&&IMG.el&&IMG.el.complete&&IMG.el.naturalWidth)&&performance.now()-t0<1500)
@@ -2804,7 +2781,7 @@ async function rollSheet(n){
       shots.push({cfg:paramsString(),th});
     }
     RNDSHOTS=shots;
-    $('rsTitle').textContent=(RS_LAST===16?'Sixteen':'Nine')+' ideas — pick one';
+    $('rsTitle').textContent=(RS_LAST===16?'Sixteen':'Nine')+(vary?' takes on one idea — pick one':' ideas — pick one');
     $('rsGrid').style.gridTemplateColumns=`repeat(${RS_LAST===16?4:3},1fr)`;
     $('rsGrid').innerHTML=shots.map((s,i)=>`<button type="button" class="rs-cell" data-rs="${i}" title="Apply this one"><span class="rs-th">${s.th?`<img alt="Shuffle ${i+1}" src="data:image/svg+xml,${encodeURIComponent(s.th)}">`:'<span class="save-thumb empty"></span>'}</span></button>`).join('');
     $('rndSheet').hidden=false;
@@ -2849,7 +2826,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
     $('rsZoom').value='100'; $('rsGrid').style.setProperty('--rsz',1);
     const tick={rnd_shape:1,rnd_colour:1,rnd_outline:1,rnd_layout:1};
     document.querySelectorAll('.rnd-groups input').forEach(cb=>cb.checked=!!tick[cb.id]);
-    $('rndTemper').checked=!!(RNDCFG.roll&&RNDCFG.roll.temper);   // back to its default (off)
+    $('rndVary').checked=!!(RNDCFG.roll&&RNDCFG.roll.vary);       // back to its default (on)
     $('rndHideLogo').checked=!!(RNDCFG.roll&&RNDCFG.roll.hideLogo); // back to its default (on)
     syncRndHide();
     setRndMode('motif');
@@ -3130,6 +3107,43 @@ async function pngWithConfig(blob){
     return new Blob([out],{type:'image/png'});
   }catch(e){ return blob; }
 }
+async function jpgWithConfig(blob){
+  /* settings ride in COM (comment) segments right after SOI. One COM caps at ~64KB and a
+     picture-mode config can be far bigger, so the string is CHUNKED across consecutive COMs
+     (keyword only on the first) and the reader concatenates every COM back together. */
+  if(chk('thinExport')) return blob;
+  try{
+    const buf=new Uint8Array(await blob.arrayBuffer());
+    if(buf[0]!==0xFF||buf[1]!==0xD8) return blob;
+    const cfg='lavoet-config:'+exportConfig();
+    const parts=[buf.subarray(0,2)];
+    for(let i=0;i<cfg.length;i+=60000){
+      const seg=cfg.slice(i,i+60000), bytes=new Uint8Array(4+seg.length);
+      bytes[0]=0xFF; bytes[1]=0xFE;
+      const L=seg.length+2; bytes[2]=(L>>8)&255; bytes[3]=L&255;
+      for(let k=0;k<seg.length;k++) bytes[4+k]=seg.charCodeAt(k)&0xFF;
+      parts.push(bytes);
+    }
+    parts.push(buf.subarray(2));
+    return new Blob(parts,{type:'image/jpeg'});
+  }catch(e){ return blob; }
+}
+function jpgReadConfig(buf){
+  if(buf.length<4||buf[0]!==0xFF||buf[1]!==0xD8) return null;
+  let p=2, out='';
+  while(p+4<=buf.length){
+    if(buf[p]!==0xFF) break;
+    const m=buf[p+1];
+    if(m===0xDA||m===0xD9) break;                    // scan data / end — headers are over
+    const L=(buf[p+2]<<8)|buf[p+3];
+    if(m===0xFE){                                    // a comment segment — ours are consecutive from SOI
+      const d=buf.subarray(p+4,p+2+L);
+      for(let i=0;i<d.length;i+=8192) out+=String.fromCharCode.apply(null,d.subarray(i,i+8192));
+    }
+    p+=2+L;
+  }
+  return out.startsWith('lavoet-config:')?out.slice('lavoet-config'.length+1):null;
+}
 function pngReadConfig(buf){
   if(buf.length<8||buf[0]!==0x89||buf[1]!==0x50) return null;
   const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
@@ -3162,44 +3176,62 @@ $('cfgFile').addEventListener('change',async()=>{
     const m=(await f.text()).match(/<!--lavoet-config:([^>]*?)-->/);
     if(m) cfg=m[1];
   } else {
-    cfg=pngReadConfig(new Uint8Array(await f.arrayBuffer()));
+    const u8=new Uint8Array(await f.arrayBuffer());
+    cfg=pngReadConfig(u8)||jpgReadConfig(u8);
   }
   if(!cfg){ alert('No Lavoët settings found in that file — use a swatch or tile downloaded from this studio.'); return; }
   applyParams(new URLSearchParams(cfg));
   renderEd(); render();
 });
 
-$('dlTile').addEventListener('click',async()=>{
-  await awaitActiveImage();                        // never export the motif fallback mid-decode
-  download(`lavoet-tuile-${cfgHash()}.svg`,new Blob([svgWithConfig(buildTile())],{type:'image/svg+xml'}));
-});
-$('dlSwatch').addEventListener('click',async()=>{
-  await awaitActiveImage();
-  const [W,H]=swatchDims();
-  const style=marqueTextOn()?await embedFont():'';
-  download(`lavoet-toile-${cfgHash()}.svg`,new Blob([svgWithConfig(buildSwatch(W,H,{style}))],{type:'image/svg+xml'}));
-});
-$('dlPng').addEventListener('click',async()=>{
-  await awaitActiveImage();
-  const [W,H]=swatchDims(), k=2;
-  const style=marqueTextOn()?await embedFont():'';
-  const svg=buildSwatch(W,H,{style});
+/* the chosen download format — a tool pref, remembered */
+let EXPFMT=(()=>{ try{ const f=localStorage.getItem('lavoet-exp-fmt'); return ['svg','png','jpg'].includes(f)?f:'svg'; }catch(e){ return 'svg'; } })();
+function syncExpFmt(){ document.querySelectorAll('#expFmtSeg [data-fmt]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.fmt===EXPFMT?'true':'false')); }
+document.querySelectorAll('#expFmtSeg [data-fmt]').forEach(b=>b.addEventListener('click',()=>{
+  EXPFMT=b.dataset.fmt; try{ localStorage.setItem('lavoet-exp-fmt',EXPFMT); }catch(e){} syncExpFmt();
+}));
+syncExpFmt();
+/* rasterize an SVG string at W×H and hand back a PNG/JPG blob (JPG gets the bg — no alpha) */
+function svgToRaster(svg,W,H,fmt,cb){
   const url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
   const img=new Image();
-  img.onerror=()=>{ URL.revokeObjectURL(url); alert('PNG export failed — the swatch could not be rendered.'); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); alert('Export failed — the image could not be rendered.'); };
   img.onload=()=>{
     try{
-      const cv=document.createElement('canvas'); cv.width=W*k; cv.height=H*k;
-      cv.getContext('2d').drawImage(img,0,0,W*k,H*k);
-      cv.toBlob(async b=>{
-        if(!b){ alert('PNG export failed.'); return; }
-        download(`lavoet-toile-${cfgHash()}.png`,await pngWithConfig(b));
-      },'image/png');
-    }catch(e){ alert('PNG export failed.'); }
+      const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+      const x=cv.getContext('2d');
+      if(fmt==='jpg'){ x.fillStyle=val('cBg'); x.fillRect(0,0,W,H); }
+      x.drawImage(img,0,0,W,H);
+      cv.toBlob(b=>{ if(!b){ alert('Export failed.'); return; } cb(b); },
+        fmt==='jpg'?'image/jpeg':'image/png', fmt==='jpg'?0.92:undefined);
+    }catch(e){ alert('Export failed.'); }
     finally{ URL.revokeObjectURL(url); }
   };
   img.src=url;
-});
+}
+/* one download path for both buttons: SVG as-is, or rasterized ×2 — every format carries the
+   embedded settings (SVG comment / PNG tEXt / JPG COM), so each re-loads via "Load config…" */
+async function exportDoc(kind){
+  await awaitActiveImage();                        // never export the motif fallback mid-decode
+  const name=kind==='tile'?'tuile':'toile';
+  let svg,W,H;
+  if(kind==='tile'){
+    svg=buildTile();
+    const m=svg.match(/<svg[^>]*?\swidth="([\d.]+)"[^>]*?\sheight="([\d.]+)"/);
+    if(!m){ alert('Export failed.'); return; }
+    W=Math.round(+m[1]); H=Math.round(+m[2]);      // ×2 below stays an exact multiple — still seamless
+  }else{
+    [W,H]=swatchDims();
+    const style=marqueTextOn()?await embedFont():'';
+    svg=buildSwatch(W,H,{style});
+  }
+  if(EXPFMT==='svg'){ download(`lavoet-${name}-${cfgHash()}.svg`,new Blob([svgWithConfig(svg)],{type:'image/svg+xml'})); return; }
+  svgToRaster(svg,W*2,H*2,EXPFMT,async b=>{
+    download(`lavoet-${name}-${cfgHash()}.${EXPFMT}`, EXPFMT==='png'?await pngWithConfig(b):await jpgWithConfig(b));
+  });
+}
+$('dlTile').addEventListener('click',()=>exportDoc('tile'));
+$('dlSwatch').addEventListener('click',()=>exportDoc('swatch'));
 
 /* ---------- state in hash ---------- */
 const HASH_IDS=['scale','pinN','twist','pinGap','pinHole','pinTwist','pinTwistO','depth3d','angle3d','shade3d','highlight','bevel','outlineMode','outlineW','cell','accentStyle','accentSize',
@@ -3308,6 +3340,8 @@ function relTime(ts){
   return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
 }
 function thumbSVG(W=200,H=150){   // a compact preview of the current design (bigger W,H = more repeats)
+  // the LOGO is part of the picture: three autosaves differing only in logo settings used to
+  // render three identical thumbnails — indistinguishable rows for genuinely different designs
   try{
     if(imgActive()){
       // picture mode: a small JPEG thumbnail (~10KB) — embedding the full tile PNG per save
@@ -3323,9 +3357,18 @@ function thumbSVG(W=200,H=150){   // a compact preview of the current design (bi
         const t=buildImgTile(), k=Math.min(1,(W/2)/Math.max(t.width,t.height));
         cc.save(); cc.scale(k,k); cc.fillStyle=cc.createPattern(t,'repeat'); cc.fillRect(0,0,W/k,H/k); cc.restore();
       }
-      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"><image href="${c.toDataURL('image/jpeg',0.6)}" width="${W}" height="${H}"/></svg>`;
+      let mq='';                                   // the marque rides on top, as in the real swatch
+      if(val('mqSlots')!=='0'){
+        const b=imgMarqueBox(W,H), back=val('imgMqBack'), col=val('cMqBack');
+        const ink=back==='colour'?(luma(col)>0.55?'#2B2620':'#F4EFE4'):col;
+        const defs=chk('mqFig')&&!logoIsCustom()?`<defs>${document.getElementById('bellboy').outerHTML}</defs>`:'';
+        const backing=back==='colour'?`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.backR.toFixed(1)}" fill="${col}"/>`
+                     :back==='blur'?`<circle cx="${b.cx.toFixed(1)}" cy="${b.cy.toFixed(1)}" r="${b.backR.toFixed(1)}" fill="#000" opacity=".28"/>`:'';
+        mq=`${defs}${backing}<g color="${ink}" fill="${ink}">${marqueMarkup(b)}</g>`;
+      }
+      return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}"><image href="${c.toDataURL('image/jpeg',0.6)}" width="${W}" height="${H}"/>${mq}</svg>`;
     }
-    return buildSwatch(W,H,{marque:false});
+    return buildSwatch(W,H);
   }catch(e){ return ''; }
 }
 function thumbTag(svg,load){
