@@ -136,12 +136,23 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rs-zoom{flex:none;display:flex;align-items:center;gap:5px}
 .rs-zoom>span{font:600 12px/1 var(--sans);color:var(--sepia)}
 .rs-zoom input{width:104px;height:20px;accent-color:var(--brass)}
-/* custom emblem: preview chip (checkerboard shows transparency) + the light editor overlay */
+/* the emblem picker: figure cards, then the wordmark cards BENEATH — pictures, like Examples */
+.mq-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.mq-pick button{display:flex;flex-direction:column;gap:5px;padding:5px;border:1px solid var(--hair);background:none;cursor:pointer;color:var(--ink);font:500 9.5px var(--sans);letter-spacing:.05em;align-items:center;min-width:0}
+.mq-pick button:hover{border-color:var(--brass)}
+.mq-pick button[aria-pressed="true"]{border-color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);font-weight:600}
+.mq-pick .mqp-wide{grid-column:span 2}
+.mqp-th{width:100%;aspect-ratio:5/4;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:repeating-conic-gradient(#e6e0d0 0% 25%,#f7f3e8 0% 50%) 0 0/12px 12px}
+.mqp-th svg{height:88%;color:var(--choc)}
+.mqp-th img{max-width:92%;max-height:92%;display:block}
+#mqpCust{font:600 20px var(--sans);color:var(--sepia)}
+#mqpCust img+*{display:none}
+.mqp-dash{font:400 15px var(--sans);color:var(--sepia)}
+.mqp-txt{font-family:var(--serif)}
+.mqp-txt i{font-style:normal;font-weight:600;font-size:13px;letter-spacing:.16em;color:var(--choc);max-width:96%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mqp-txt em{font-style:normal;font-size:8.5px;letter-spacing:.24em;color:var(--sepia)}
 .logo-row{display:flex;gap:10px;align-items:center;margin-top:10px}
 .logo-row .btns{flex:1;margin-top:0}
-.logo-prev{flex:none;width:64px;height:64px;border:1px solid var(--hair);display:flex;align-items:center;justify-content:center;overflow:hidden;background:repeating-conic-gradient(#d9d3c4 0% 25%,#f7f3e8 0% 50%) 0 0/12px 12px}
-.logo-prev img{max-width:100%;max-height:100%;display:block}
-.logo-prev:empty::after{content:"—";color:var(--sepia);font-size:12px}
 #logoEd .sv-panel{max-width:560px}
 .le-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
 .le-wrap{position:relative;width:100%;max-height:46vh;overflow:auto;border:1px solid var(--hair)}
@@ -393,7 +404,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <button type="button" data-rolls="16">Deal ×16 — pick from sixteen</button>
         </div>
       </div>
-      <button type="button" id="rndReset" class="rnd-rst" title="Hold to put every randomize setting — mode, groups, limits, picture pool, Variation — back to the defaults"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to reset randomize settings to defaults</span></button>
+      <button type="button" id="rndReset" class="rnd-rst"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to reset randomize settings to defaults</span></button>
     </div>
   </section>
 
@@ -545,22 +556,29 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       </div>
       <input type="hidden" id="mqSlots" value="4">
       <div id="mqOpts">
-        <div class="row-sel"><label for="mqArt">Emblem</label>
-          <select id="mqArt">
-            <option value="bellboy" selected>Lavoët bellboy</option>
-            <option value="custom">My emblem</option>
-          </select>
+        <label class="seg-lbl">Emblem — the figure, and the text beneath it</label>
+        <div class="mq-pick" id="mqFigPick" role="group" aria-label="Emblem figure">
+          <button type="button" data-mf="bellboy" aria-pressed="true"><span class="mqp-th"><svg viewBox="77.2 45.3 163.3 213" aria-hidden="true"><use href="#bellboy" xlink:href="#bellboy"/></svg></span>Bellboy</button>
+          <button type="button" data-mf="custom" aria-pressed="false" title="Your upload — it can be a full logo with the text already in it"><span class="mqp-th" id="mqpCust">+</span>My emblem</button>
+          <button type="button" data-mf="none" aria-pressed="false"><span class="mqp-th mqp-dash">—</span>None</button>
+        </div>
+        <div class="mq-pick" id="mqTextPick" role="group" aria-label="Wordmark text beneath">
+          <button type="button" data-mt="on" aria-pressed="true" class="mqp-wide"><span class="mqp-th mqp-txt" id="mqpTxt"><i>LAVOËT</i><em>1869</em></span>Wordmark</button>
+          <button type="button" data-mt="off" aria-pressed="false"><span class="mqp-th mqp-dash">—</span>None</button>
         </div>
         <div class="logo-row" id="logoRow">
-          <span class="logo-prev" id="logoPrev" title="Your emblem, as it will print"></span>
           <div class="btns">
             <button type="button" id="logoUp">Upload emblem…</button>
             <button type="button" id="logoEdit" hidden>Edit emblem…</button>
           </div>
         </div>
         <input type="file" id="logoFile" accept="image/*" hidden>
-        <label class="chk"><input type="checkbox" id="mqFig" checked>Show the emblem figure</label>
-        <label class="chk"><input type="checkbox" id="mqText" checked>Show the wordmark text</label>
+        <select id="mqArt" hidden aria-hidden="true">
+          <option value="bellboy" selected>Lavoët bellboy</option>
+          <option value="custom">My emblem</option>
+        </select>
+        <input type="checkbox" id="mqFig" checked hidden aria-hidden="true">
+        <input type="checkbox" id="mqText" checked hidden aria-hidden="true">
         <div class="cols" id="mqTextRow">
           <div class="col"><label for="mqT1">Wordmark</label><input type="text" id="mqT1" value="LAVOËT" maxlength="18"></div>
           <div class="col"><label for="mqT2">Small line</label><input type="text" id="mqT2" value="1869" maxlength="18"></div>
@@ -689,6 +707,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <canvas id="leLens" width="120" height="120" hidden aria-hidden="true"></canvas>
       <div class="le-tools" role="group" aria-label="Tools">
         <button type="button" id="leCrop" aria-pressed="false">✂ Crop</button>
+        <button type="button" id="leCut" aria-pressed="false">✎ Cutout</button>
         <button type="button" id="lePaint" aria-pressed="false">🖌 Paint</button>
         <button type="button" id="leBrush" aria-pressed="false">◌ Erase brush</button>
         <button type="button" id="leAll" aria-pressed="false">Erase colour — everywhere</button>
@@ -1105,11 +1124,37 @@ function setLogo(data,persist=true){
 }
 function logoIsCustom(){ return chk('mqFig')&&val('mqArt')==='custom'&&!!(CLOGO&&CLOGO.el&&CLOGO.el.complete&&CLOGO.el.naturalWidth); }
 function syncLogoUI(){
-  const pv=$('logoPrev'); if(!pv) return;
-  pv.innerHTML=CLOGO?`<img src="${CLOGO.data}" alt="Your emblem">`:'';
+  const c=$('mqpCust'); if(!c) return;
+  c.innerHTML=CLOGO?`<img src="${CLOGO.data}" alt="Your emblem">`:'+';
   $('logoEdit').hidden=!CLOGO;
   $('logoUp').textContent=CLOGO?'Upload new…':'Upload emblem…';
 }
+/* the picker cards mirror the hidden mqFig/mqArt/mqText state; the wordmark card previews the
+   LIVE typed text. One of figure/text always stays on — an empty cleared slot is a hole. */
+function syncMqPick(){
+  if(!$('mqFigPick')) return;
+  const fig=chk('mqFig'), art=val('mqArt'), txt=chk('mqText');
+  document.querySelectorAll('#mqFigPick [data-mf]').forEach(b=>
+    b.setAttribute('aria-pressed',fig?b.dataset.mf===art:b.dataset.mf==='none'));
+  document.querySelectorAll('#mqTextPick [data-mt]').forEach(b=>
+    b.setAttribute('aria-pressed',(b.dataset.mt==='on')===txt));
+  const tp=$('mqpTxt');
+  if(tp){ const t1=(val('mqT1')||'').trim(), t2=(val('mqT2')||'').trim();
+    tp.innerHTML=`<i>${escapeHtml(t1||'—')}</i>${t2?`<em>${escapeHtml(t2)}</em>`:''}`; }
+}
+$('mqFigPick').addEventListener('click',e=>{
+  const b=e.target.closest('[data-mf]'); if(!b) return;
+  const mf=b.dataset.mf;
+  if(mf==='none'){ $('mqFig').checked=false; if(!chk('mqText')) $('mqText').checked=true; }
+  else{ $('mqFig').checked=true; $('mqArt').value=mf; if(mf==='custom'&&!CLOGO) $('logoFile').click(); }
+  syncRows(); renderEd(); render();
+});
+$('mqTextPick').addEventListener('click',e=>{
+  const b=e.target.closest('[data-mt]'); if(!b) return;
+  if(b.dataset.mt==='off'){ $('mqText').checked=false; if(!chk('mqFig')) $('mqFig').checked=true; }
+  else $('mqText').checked=true;
+  syncRows(); renderEd(); render();
+});
 /* ---------- the emblem editor: crop + colour-erase (everywhere / one patch) with tolerance.
    Edits run on the working canvas at up to 1024px; "Use emblem" stores a ≤512px PNG. ---------- */
 const LE={mode:'',hist:[],orig:null};
@@ -1117,9 +1162,10 @@ let LEDRAG=null;
 function leCtx(){ return $('leCanvas').getContext('2d',{willReadFrequently:true}); }
 function leSetMode(m){
   LE.mode=LE.mode===m?'':m;
-  for(const [id,mm] of [['leCrop','crop'],['lePaint','paint'],['leBrush','brush'],['leAll','all'],['leArea','area']])
+  for(const [id,mm] of [['leCrop','crop'],['leCut','cut'],['lePaint','paint'],['leBrush','brush'],['leAll','all'],['leArea','area']])
     $(id).setAttribute('aria-pressed',LE.mode===mm);
   $('leHint').textContent=LE.mode==='crop'?'Drag a box over the part to keep.'
+    :LE.mode==='cut'?'Draw around the part to keep — everything outside the loop is cut away.'
     :LE.mode==='paint'?'Drag to paint with the chosen colour.'
     :LE.mode==='brush'?'Drag to rub pixels out — transparent where you scrub.'
     :LE.mode==='all'?'Click a colour — every pixel like it (within tolerance) turns transparent.'
@@ -1203,6 +1249,28 @@ function leErase(px,py,areaOnly){
   x.putImageData(img,0,0);
 }
 let LEST=null;                                      // an in-flight paint / erase-brush stroke
+let LECUT=null;                                     // an in-flight freehand cutout loop
+function leCutTrail(){                              // repaint the picture + the dashed loop so far
+  const x=leCtx();
+  x.putImageData(LE.hist[LE.hist.length-1],0,0);
+  x.save(); x.strokeStyle='#8C3B31'; x.lineWidth=Math.max(1.5,$('leCanvas').width/300);
+  x.setLineDash([6,4]); x.beginPath();
+  x.moveTo(LECUT[0][0],LECUT[0][1]);
+  for(const p of LECUT) x.lineTo(p[0],p[1]);
+  x.stroke(); x.restore();
+}
+function leCutApply(){
+  const pts=LECUT; LECUT=null;
+  const x=leCtx();
+  x.putImageData(LE.hist[LE.hist.length-1],0,0);    // drop the dashed trail
+  let area=0;                                        // shoelace — a stray click isn't a cutout
+  for(let i=0;i<pts.length;i++){ const [x1,y1]=pts[i],[x2,y2]=pts[(i+1)%pts.length]; area+=x1*y2-x2*y1; }
+  if(pts.length<3||Math.abs(area/2)<40){ LE.hist.pop(); return; }
+  x.save(); x.globalCompositeOperation='destination-in';
+  x.beginPath(); x.moveTo(pts[0][0],pts[0][1]);
+  for(const p of pts) x.lineTo(p[0],p[1]);
+  x.closePath(); x.fillStyle='#fff'; x.fill(); x.restore();
+}
 function lePos(ev){
   const cv=$('leCanvas'), r=cv.getBoundingClientRect();
   return {r,kx:cv.width/r.width,ky:cv.height/r.height,
@@ -1217,6 +1285,10 @@ $('leCanvas').addEventListener('pointerdown',ev=>{
     const b=$('leBox'); b.hidden=false;
     b.style.left=(ev.clientX-r.left)+'px'; b.style.top=(ev.clientY-r.top)+'px'; b.style.width='0'; b.style.height='0';
   }
+  else if(LE.mode==='cut'){
+    try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
+    lePush(); LECUT=[[px,py]]; leCutTrail();
+  }
   else if(LE.mode==='paint'||LE.mode==='brush'){
     try{ cv.setPointerCapture(ev.pointerId); }catch(e){}
     lePush(); LEST={x:px,y:py}; leDab(px,py,null);
@@ -1226,6 +1298,7 @@ $('leCanvas').addEventListener('pointerdown',ev=>{
 });
 $('leCanvas').addEventListener('pointermove',ev=>{
   leLens(ev);
+  if(LECUT){ const {px,py}=lePos(ev); LECUT.push([px,py]); leCutTrail(); return; }
   if(LEST){ const {px,py}=lePos(ev); leDab(px,py,LEST); LEST={x:px,y:py}; return; }
   if(!LEDRAG) return;
   const b=$('leBox'), r=LEDRAG.r;
@@ -1235,6 +1308,7 @@ $('leCanvas').addEventListener('pointermove',ev=>{
 });
 $('leCanvas').addEventListener('pointerleave',()=>{ $('leLens').hidden=true; });
 $('leCanvas').addEventListener('pointerup',ev=>{
+  if(LECUT){ leCutApply(); return; }
   if(LEST){ LEST=null; return; }                    // the stroke is already on the canvas
   if(!LEDRAG) return;
   const d=LEDRAG; LEDRAG=null; $('leBox').hidden=true;
@@ -1245,7 +1319,11 @@ $('leCanvas').addEventListener('pointerup',ev=>{
   lePush();
   lePut(leCtx().getImageData(X,Y,W2,H2));
 });
-$('leCanvas').addEventListener('pointercancel',()=>{ LEDRAG=null; LEST=null; $('leBox').hidden=true; });
+$('leCanvas').addEventListener('pointercancel',()=>{
+  if(LECUT){ LECUT=null; const h=LE.hist.pop(); if(h) lePut(h); }   // abandon the loop, restore the picture
+  LEDRAG=null; LEST=null; $('leBox').hidden=true;
+});
+$('leCut').addEventListener('click',()=>leSetMode('cut'));
 $('leLoupeB').addEventListener('click',()=>{ LE.loupe=!LE.loupe; syncLoupe(); });
 $('leZoom').addEventListener('input',()=>{
   document.querySelector('.le-wrap').style.setProperty('--lez',Math.max(1,(+$('leZoom').value||100)/100));
@@ -2504,8 +2582,10 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
   function fire(){
     holding=false; btn.classList.remove('holding'); lbl.textContent='Settings reset ✓';
     RNDCFG=JSON.parse(JSON.stringify(RND_DEF)); RNDPOOL={};
-    try{ localStorage.removeItem('lavoet-rnd'); localStorage.removeItem('lavoet-rnd-pics'); localStorage.removeItem('lavoet-rnd-amt'); localStorage.removeItem('lavoet-rnd-mode'); }catch(e){}
+    try{ ['lavoet-rnd','lavoet-rnd-pics','lavoet-rnd-amt','lavoet-rnd-mode','lavoet-rnd-rolls','lavoet-rs-zoom'].forEach(k=>localStorage.removeItem(k)); }catch(e){}
     $('rndAmt').value='100'; const o=document.querySelector('output[for="rndAmt"]'); if(o) o.value='100';
+    RNDROLLS=1; syncRollUI();                          // the roll mode and the sheet zoom are settings too
+    $('rsZoom').value='100'; $('rsGrid').style.setProperty('--rsz',1);
     const tick={rnd_shape:1,rnd_colour:1,rnd_outline:1,rnd_layout:1};
     document.querySelectorAll('.rnd-groups input').forEach(cb=>cb.checked=!!tick[cb.id]);
     setRndMode('motif');
@@ -2619,10 +2699,10 @@ function syncRows(){
   off($('mqOpts'), !logoOn);
   off(wrap('dotsInLogo'), logoOn&&!dotsOn);       // (only add-grey when the logo itself is on)
   const fig=chk('mqFig'), custom=val('mqArt')==='custom';
-  off(wrap('mqArt'), logoOn&&!fig);               // the emblem choice matters only when the figure shows
-  off($('logoRow'), logoOn&&(!fig||!custom));     // …and the upload row only in custom mode
+  off($('logoRow'), logoOn&&(!fig||!custom));     // the upload/edit row matters in custom-figure mode only
   off($('mqTextRow'), logoOn&&!chk('mqText'));    // the wordmark inputs need the text on
   off(wrap('logo3d'), logoOn&&(!d3||(fig&&custom)));   // 3D needs relief on, and can't re-tint a picture
+  syncMqPick();                                   // the picker cards mirror the state everywhere
   // 3D depth 0 → direction, highlight, bevel do nothing; side-shade still feeds a shade line
   off(wrap('angle3d'), !d3);
   off(wrap('highlight'), !d3);
