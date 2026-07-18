@@ -145,8 +145,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .mqp-th{width:100%;aspect-ratio:5/4;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:repeating-conic-gradient(#e6e0d0 0% 25%,#f7f3e8 0% 50%) 0 0/12px 12px}
 .mqp-th svg{height:88%;color:var(--choc)}
 .mqp-th img{max-width:92%;max-height:92%;display:block}
-#mqpCust{font:600 20px var(--sans);color:var(--sepia)}
-#mqpCust img+*{display:none}
 .mqp-dash{font:400 15px var(--sans);color:var(--sepia)}
 .mqp-txt{font-family:var(--serif)}
 .mqp-txt i{font-style:normal;font-weight:600;font-size:13px;letter-spacing:.16em;color:var(--choc);max-width:96%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -249,6 +247,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rnd-rst .rst-fill{background:color-mix(in srgb,var(--brass) 38%,transparent)}
 .rnd-rst.holding .rst-fill{width:100%;transition:width .6s linear}
 .rnd-rst .rst-label{color:inherit}
+/* the editor's hold-to-clear: same deliberate press as the other holds, danger-tinted */
+.le-hold{position:relative;overflow:hidden;border:1px dashed var(--red)!important;color:var(--red)!important;user-select:none;-webkit-user-select:none;touch-action:none}
+.le-hold .rst-fill{background:color-mix(in srgb,var(--red) 34%,transparent)}
+.le-hold.holding .rst-fill{width:100%;transition:width .6s linear}
+.le-hold .rst-label{position:relative;z-index:1;color:inherit}
 /* the two randomize modes: Motif shuffles the group grid; Picture shuffles the pool below */
 #rndMotif,#rndPicBody{transition:opacity .12s}
 .rnd-lbls{display:flex;justify-content:space-between;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin-top:-2px}
@@ -547,7 +550,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   <section class="acc">
     <div class="acc-head"><span class="acc-title">Logo</span><label class="acc-sw" title="Logo on/off"><input type="checkbox" id="swLogo" aria-label="Logo on/off"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
-      <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch — on the motif pattern it replaces one motif or a block of four; on a picture pattern it sits on top, with a blurred patch or a solid colour behind it for legibility. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
+      <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch — on the motif pattern it replaces one motif or a block of four; on a picture pattern it sits on top, with a blurred patch or a solid colour behind it for legibility. It shows on swatches only — the downloadable tile stays a clean repeat. “Upload emblem…” brings in your own figure, “Edit emblem…” opens the editor on the current one (your upload, or the house bellboy itself), and “Create wordmark…” lets you type your own text in place of LAVOËT 1869 — once you have your own, cards appear here to switch between yours and the house versions.</p>
       <div class="mq-motif-only">
         <label class="seg-lbl">Size — how many motifs it fills</label>
         <div class="seg" role="group" aria-label="Logo size">
@@ -559,21 +562,13 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <input type="hidden" id="mqSlots" value="4">
       <div id="mqOpts">
         <label class="seg-lbl">Emblem — the figure, and the text beneath it</label>
-        <div class="mq-pick" id="mqFigPick" role="group" aria-label="Emblem figure">
-          <button type="button" data-mf="bellboy" aria-pressed="true"><span class="mqp-th"><svg viewBox="77.2 45.3 163.3 213" aria-hidden="true"><use href="#bellboy" xlink:href="#bellboy" x="77.2" y="45.3" width="163.3" height="213"/></svg></span>Bellboy</button>
-          <button type="button" data-mf="custom" aria-pressed="false" title="Your upload — it can be a full logo with the text already in it"><span class="mqp-th" id="mqpCust">+</span>My emblem</button>
-          <button type="button" data-mf="none" aria-pressed="false"><span class="mqp-th mqp-dash">—</span>None</button>
-        </div>
-        <div class="mq-pick" id="mqTextPick" role="group" aria-label="Wordmark text beneath">
-          <button type="button" data-mt="house" aria-pressed="true"><span class="mqp-th mqp-txt"><i>LAVOËT</i><em>1869</em></span>Lavoët</button>
-          <button type="button" data-mt="mine" aria-pressed="false" title="Your own wordmark — type it below"><span class="mqp-th mqp-txt" id="mqpTxt"><i>Aa</i></span>My wordmark</button>
-          <button type="button" data-mt="off" aria-pressed="false"><span class="mqp-th mqp-dash">—</span>None</button>
-        </div>
+        <div class="mq-pick" id="mqFigPick" role="group" aria-label="Emblem figure"></div>
+        <div class="mq-pick" id="mqTextPick" role="group" aria-label="Wordmark text beneath"></div>
         <div class="logo-row" id="logoRow">
           <div class="btns">
             <button type="button" id="logoUp">Upload emblem…</button>
-            <button type="button" id="logoCreate">Create emblem…</button>
-            <button type="button" id="logoEdit" hidden>Edit emblem…</button>
+            <button type="button" id="logoEdit" title="Opens the editor on the current figure — your upload, or the house bellboy itself">Edit emblem…</button>
+            <button type="button" id="wmCreate" title="Type your own wordmark in place of LAVOËT 1869">Create wordmark…</button>
           </div>
         </div>
         <input type="file" id="logoFile" accept="image/*" hidden>
@@ -584,7 +579,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <input type="checkbox" id="mqFig" checked hidden aria-hidden="true">
         <input type="checkbox" id="mqText" checked hidden aria-hidden="true">
         <div class="cols" id="mqTextRow">
-          <div class="col"><label for="mqTxt">Wordmark — lines, comma-separated</label><input type="text" id="mqTxt" value="LAVOËT, 1869" maxlength="72" placeholder="Name, year, motto…"></div>
+          <div class="col"><label for="mqTxt">Your wordmark — up to 4 lines, commas between</label><input type="text" id="mqTxt" value="LAVOËT, 1869" maxlength="72" placeholder="Name, year, motto…"></div>
         </div>
         <div class="row"><label for="mqSize">Fine size</label><input type="range" id="mqSize" min="50" max="160" value="100"><output for="mqSize">100</output></div>
         <div id="imgMqRows">
@@ -637,7 +632,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <button type="button" id="undoBtn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ Undo</button>
       <button type="button" id="redoBtn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷ Redo</button>
     </div>
-    <button type="button" id="resetAll" class="rst" aria-label="Hold to reset everything to the original trunk motif">
+    <button type="button" id="resetAll" class="rst" title="Returns the design to the original trunk motif — and the logo to the house bellboy and LAVOËT wordmark, so any emblem edits or custom wordmark are wiped. Your saved designs and uploaded pictures are kept." aria-label="Hold to reset everything to the original trunk motif, including any logo modifications">
       <span class="rst-fill" aria-hidden="true"></span>
       <span class="rst-label">Hold to reset</span>
     </button>
@@ -749,7 +744,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <p class="le-hint" id="leHint">Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.</p>
       <div class="le-tools">
         <button type="button" id="leUndo">↩ Undo</button>
-        <button type="button" id="leReset">Reset</button>
+        <button type="button" id="leReset" title="Back to the picture as it opened">Reset</button>
+        <button type="button" id="leClear" class="le-hold" title="Wipe the canvas blank — hold to confirm (Undo brings it back)"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to clear</span></button>
         <button type="button" id="leUse" class="le-use">✓ Use emblem</button>
       </div>
     </div>
@@ -1156,35 +1152,36 @@ function setLogo(data,persist=true){
   syncLogoUI();
 }
 function logoIsCustom(){ return chk('mqFig')&&val('mqArt')==='custom'&&!!(CLOGO&&CLOGO.el&&CLOGO.el.complete&&CLOGO.el.naturalWidth); }
+/* the user's own wordmark text, remembered so switching to the house one and back loses nothing */
+let MY_TXT=''; try{ MY_TXT=localStorage.getItem('lavoet-mytxt')||''; }catch(e){}
+function saveMyTxt(){ try{ MY_TXT?localStorage.setItem('lavoet-mytxt',MY_TXT):localStorage.removeItem('lavoet-mytxt'); }catch(e){} }
 function syncLogoUI(){
-  const c=$('mqpCust'); if(!c) return;
-  c.innerHTML=CLOGO?`<img src="${CLOGO.data}" alt="Your emblem">`:'+';
-  $('logoEdit').hidden=!CLOGO;
   $('logoUp').textContent=CLOGO?'Upload new…':'Upload emblem…';
+  syncMqPick();
 }
-/* the picker cards mirror the hidden mqFig/mqArt/mqText state; the wordmark card previews the
-   LIVE typed text. One of figure/text always stays on — an empty cleared slot is a hole. */
+/* the picker cards are BUILT from the state: "My emblem" / "My wordmark" only exist once you
+   have one (upload/edit an emblem; Create wordmark) — until then there is nothing to pick.
+   One of figure/text always stays on — an empty cleared slot is a hole. */
 function mqIsHouse(){ return mqLines().join('|')==='LAVOËT|1869'; }
 function syncMqPick(){
   if(!$('mqFigPick')) return;
-  const fig=chk('mqFig'), art=val('mqArt'), txt=chk('mqText'), house=mqIsHouse();
-  document.querySelectorAll('#mqFigPick [data-mf]').forEach(b=>
-    b.setAttribute('aria-pressed',fig?b.dataset.mf===art:b.dataset.mf==='none'));
-  document.querySelectorAll('#mqTextPick [data-mt]').forEach(b=>
-    b.setAttribute('aria-pressed',
-      b.dataset.mt==='off'?!txt : b.dataset.mt==='house'?(txt&&house) : (txt&&!house)));
-  const tp=$('mqpTxt');
-  if(tp){ const ls=mqLines();
-    tp.innerHTML=(!house&&ls.length)
-      ?`<i>${escapeHtml(ls[0])}</i>${ls[1]?`<em>${escapeHtml(ls[1])}</em>`:''}`
-      :'<i>Aa</i>';                                 // nothing of your own yet — a type specimen
-  }
+  const fig=chk('mqFig'), txt=chk('mqText'), house=mqIsHouse();
+  const isCust=val('mqArt')==='custom'&&!!CLOGO;    // custom with no artwork behaves as bellboy
+  let fh=`<button type="button" data-mf="bellboy" aria-pressed="${fig&&!isCust}"><span class="mqp-th"><svg viewBox="77.2 45.3 163.3 213" aria-hidden="true"><use href="#bellboy" xlink:href="#bellboy" x="77.2" y="45.3" width="163.3" height="213"/></svg></span>Bellboy</button>`;
+  if(CLOGO) fh+=`<button type="button" data-mf="custom" aria-pressed="${fig&&isCust}" title="Your emblem — from Upload or Edit"><span class="mqp-th"><img src="${CLOGO.data}" alt=""></span>My emblem</button>`;
+  fh+=`<button type="button" data-mf="none" aria-pressed="${!fig}"><span class="mqp-th mqp-dash">—</span>None</button>`;
+  $('mqFigPick').innerHTML=fh;
+  const mine=(txt&&!house)?mqLines():(MY_TXT?MY_TXT.split(',').map(s=>s.trim()).filter(Boolean).slice(0,4):[]);
+  let th=`<button type="button" data-mt="house" aria-pressed="${txt&&house}"><span class="mqp-th mqp-txt"><i>LAVOËT</i><em>1869</em></span>Lavoët</button>`;
+  if(mine.length) th+=`<button type="button" data-mt="mine" aria-pressed="${txt&&!house}" title="Your wordmark — from Create wordmark"><span class="mqp-th mqp-txt"><i>${escapeHtml(mine[0])}</i>${mine[1]?`<em>${escapeHtml(mine[1])}</em>`:''}</span>My wordmark</button>`;
+  th+=`<button type="button" data-mt="off" aria-pressed="${!txt}"><span class="mqp-th mqp-dash">—</span>None</button>`;
+  $('mqTextPick').innerHTML=th;
 }
 $('mqFigPick').addEventListener('click',e=>{
   const b=e.target.closest('[data-mf]'); if(!b) return;
   const mf=b.dataset.mf;
   if(mf==='none'){ $('mqFig').checked=false; if(!chk('mqText')) $('mqText').checked=true; }
-  else{ $('mqFig').checked=true; $('mqArt').value=mf; if(mf==='custom'&&!CLOGO) $('logoFile').click(); }
+  else{ $('mqFig').checked=true; $('mqArt').value=mf; }
   syncRows(); renderEd(); render();
 });
 $('mqTextPick').addEventListener('click',e=>{
@@ -1192,12 +1189,15 @@ $('mqTextPick').addEventListener('click',e=>{
   const mt=b.dataset.mt;
   if(mt==='off'){ $('mqText').checked=false; if(!chk('mqFig')) $('mqFig').checked=true; }
   else if(mt==='house'){ $('mqText').checked=true; $('mqTxt').value='LAVOËT, 1869'; }
-  else{                                             // your own wordmark: clear the house text and type
-    $('mqText').checked=true;
-    if(mqIsHouse()) $('mqTxt').value='';
-    setTimeout(()=>{ try{ $('mqTxt').focus(); }catch(_){} },60);
-  }
+  else{ $('mqText').checked=true; $('mqTxt').value=MY_TXT; }   // back to yours, exactly as you left it
   syncRows(); renderEd(); render();
+});
+/* "Create wordmark…" — an explicit way in: switches to your own text and puts you in the box */
+$('wmCreate').addEventListener('click',()=>{
+  $('mqText').checked=true;
+  $('mqTxt').value=MY_TXT||'';
+  syncRows(); renderEd(); render();
+  setTimeout(()=>{ try{ $('mqTxt').focus(); }catch(_){} },60);
 });
 /* ---------- the emblem editor: crop + colour-erase (everywhere / one patch) with tolerance.
    Edits run on the working canvas at up to 1024px; "Use emblem" stores a ≤512px PNG. ---------- */
@@ -1402,18 +1402,6 @@ $('leCanvas').addEventListener('pointercancel',()=>{
   LEDRAG=null; LEST=null; $('leBox').hidden=true;
 });
 $('leText').addEventListener('click',()=>leSetMode('text'));
-/* start from NOTHING: a blank transparent canvas to paint and set type on */
-function leOpenBlank(){
-  const c=$('leCanvas'); c.width=512; c.height=512;
-  leCtx().clearRect(0,0,512,512);
-  LE.orig=leCtx().getImageData(0,0,512,512); LE.hist=[];
-  LE.mode=''; leSetMode('text');                    // creating a mark usually starts with type
-  LE.loupe=false; syncLoupe();
-  $('leZoom').value='100'; const o2=document.querySelector('output[for="leZoom"]'); if(o2) o2.value='100';
-  document.querySelector('.le-wrap').style.setProperty('--lez',1);
-  $('logoEd').hidden=false;
-}
-$('logoCreate').addEventListener('click',leOpenBlank);
 $('leCut').addEventListener('click',()=>leSetMode('cut'));
 $('leLoupeB').addEventListener('click',()=>{ LE.loupe=!LE.loupe; syncLoupe(); });
 $('leZoom').addEventListener('input',()=>{
@@ -1426,6 +1414,29 @@ $('leAll').addEventListener('click',()=>leSetMode('all'));
 $('leArea').addEventListener('click',()=>leSetMode('area'));
 $('leUndo').addEventListener('click',()=>{ const h=LE.hist.pop(); if(h) lePut(h); });
 $('leReset').addEventListener('click',()=>{ if(LE.orig){ LE.hist=[]; lePut(LE.orig); } });
+/* hold-to-clear: wipe the canvas to blank transparent — deliberate (a hold), and undoable */
+(function initLeClear(){
+  const btn=$('leClear'), lbl=btn.querySelector('.rst-label'), HOLD=600;
+  let timer=0, holding=false;
+  function fire(){
+    holding=false; btn.classList.remove('holding'); lbl.textContent='Cleared ✓';
+    lePush(); const c=$('leCanvas'); leCtx().clearRect(0,0,c.width,c.height);
+    setTimeout(()=>{ lbl.textContent='Hold to clear'; },900);
+  }
+  function stop(){ if(!holding) return; holding=false; clearTimeout(timer); btn.classList.remove('holding'); lbl.textContent='Hold to clear'; }
+  btn.addEventListener('pointerdown',e=>{
+    if(holding) return;
+    holding=true; if(e.pointerId!=null){ try{ btn.setPointerCapture(e.pointerId); }catch(_){} }
+    btn.classList.add('holding'); lbl.textContent='Keep holding…';
+    timer=setTimeout(fire,HOLD);
+  });
+  btn.addEventListener('pointerup',stop);
+  btn.addEventListener('pointercancel',stop);
+  btn.addEventListener('pointermove',e=>{ if(!holding) return; const r=btn.getBoundingClientRect();
+    if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) stop(); });
+  btn.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault();
+    if(!holding&&confirm('Clear the canvas? Undo can bring it back.')) fire(); } });
+})();
 $('leUse').addEventListener('click',()=>{
   const c=$('leCanvas'), k=Math.min(1,512/Math.max(c.width,c.height));
   const o=document.createElement('canvas'); o.width=Math.max(1,Math.round(c.width*k)); o.height=Math.max(1,Math.round(c.height*k));
@@ -1439,7 +1450,18 @@ $('leClose').addEventListener('click',()=>{ $('logoEd').hidden=true; });
 $('logoEd').addEventListener('click',e=>{ if(e.target===$('logoEd')) $('logoEd').hidden=true; });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('logoEd').hidden) $('logoEd').hidden=true; });
 $('logoUp').addEventListener('click',()=>$('logoFile').click());
-$('logoEdit').addEventListener('click',()=>{ if(CLOGO) leOpenFrom(CLOGO.data,false); });
+/* the house bellboy as an editable picture: the symbol's paths, inked dark on transparent */
+function bellboyDataURL(){
+  const sym=document.getElementById('bellboy');
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="77.2 45.3 163.3 213" width="393" height="512"><g style="color:#2B2620">${sym.innerHTML}</g></svg>`;
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+/* Edit opens the CURRENT figure: your custom emblem if that's what's selected, else the house
+   bellboy itself — “Use emblem” then makes the edited version yours (Reset undoes all of it) */
+$('logoEdit').addEventListener('click',()=>{
+  if(val('mqArt')==='custom'&&CLOGO) leOpenFrom(CLOGO.data,false);
+  else leOpenFrom(bellboyDataURL(),false);
+});
 $('logoFile').addEventListener('change',()=>{
   const f=$('logoFile').files[0]; $('logoFile').value='';
   if(f) leOpenFrom(URL.createObjectURL(f),true);
@@ -2219,6 +2241,8 @@ $('edDel').addEventListener('click',()=>{
   let timer=0, holding=false;
   function fire(){
     holding=false; btn.classList.remove('holding'); btn.classList.add('done'); lbl.textContent='Reset ✓';
+    setLogo(null);                                  // emblem edits/uploads → back to the house bellboy
+    MY_TXT=''; saveMyTxt();                          // your wordmark text is a logo mod too
     applyTrunkMotif(); renderEd(); render();
     setTimeout(()=>{ btn.classList.remove('done'); lbl.textContent='Hold to reset'; },600);
   }
@@ -2939,8 +2963,10 @@ function syncRows(){
   off($('mqOpts'), !logoOn);
   off(wrap('dotsInLogo'), logoOn&&!dotsOn);       // (only add-grey when the logo itself is on)
   const fig=chk('mqFig'), custom=val('mqArt')==='custom';
-  off($('logoRow'), logoOn&&(!fig||!custom));     // the upload/edit row matters in custom-figure mode only
-  off($('mqTextRow'), logoOn&&(!chk('mqText')||mqIsHouse()));   // the inputs are for YOUR wordmark — the house one is fixed
+  // upload / edit / create-wordmark are always available while the logo section is on —
+  // they are how a custom emblem or wordmark comes to EXIST (gating them on the picker
+  // cards was circular: the cards only appear once you have one)
+  off($('mqTextRow'), logoOn&&(!chk('mqText')||mqIsHouse()));   // the box holds YOUR wordmark — the house one is fixed
   off(wrap('logo3d'), logoOn&&(!d3||(fig&&custom)));   // 3D needs relief on, and can't re-tint a picture
   syncMqPick();                                   // the picker cards mirror the state everywhere
   // 3D depth 0 → direction, highlight, bevel do nothing; side-shade still feeds a shade line
@@ -2967,6 +2993,7 @@ document.querySelectorAll('input,select').forEach(el=>['input','change'].forEach
   if(el.id==='imgSize') IMGSEL.s=Math.max(0.08,+el.value/100);                       // picked-area size follows the slider
   if(el.id==='imgOn'&&el.checked&&!IMG&&IMGS.length) setActiveImg(IMGS[0]);          // switch on with nothing picked → first picture
   if(el.id==='cOl'||el.id==='cOlB') olAuto=false;
+  if(el.id==='mqTxt'&&!mqIsHouse()){ MY_TXT=val('mqTxt'); saveMyTxt(); }   // your wordmark, remembered as you type
   if(el.id==='edScope') $('shadeScope').checked=el.value==='piece';
   if(el.id==='rndAmt') try{ localStorage.setItem('lavoet-rnd-amt',el.value); }catch(e){}   // Variation is a remembered tool pref
   if(el.id==='mqArt'&&el.value==='custom'&&!CLOGO) $('logoFile').click();   // custom with nothing uploaded → ask for a picture
