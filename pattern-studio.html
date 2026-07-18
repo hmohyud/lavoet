@@ -391,6 +391,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
           <span class="rnd-item"><label class="chk"><input type="checkbox" id="rnd_logo">Logo</label><button type="button" class="rnd-gear" data-gear="logo" title="Limits for Logo" aria-label="Limits for Logo randomization" aria-expanded="false">⚙</button></span>
         </div>
         <div id="rndOpts" class="rnd-opts" hidden></div>
+        <label class="chk" title="Each roll commits to one character — bold, fine, dense or airy — pulling its sliders together instead of scattering them"><input type="checkbox" id="rndTemper">Temperaments — each roll commits to a character</label>
       </div>
       <div id="rndPicBody" class="rnd-opts" aria-label="Picture-pattern randomize settings" hidden></div>
       <div class="row"><label for="rndAmt">Variation</label><input type="range" id="rndAmt" min="5" max="100" value="100"><output for="rndAmt">100</output></div>
@@ -2321,12 +2322,66 @@ function rndNum(id,t,lo,hi){                         // lerp a fraction t toward
 }
 function rndSel(id,t){ const el=$(id); if(el&&rchance(t,0.85)) el.value=rpick([...el.options].map(o=>o.value)); }
 function rndChk(id,t,p){ if(rchance(t,0.6)) $(id).checked=rrand()<p; }
+function hexHsl(h){ const n=parseInt(h.slice(1),16), r=((n>>16)&255)/255,g=((n>>8)&255)/255,b=(n&255)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn,L=(mx+mn)/2;
+  const S=d?d/(1-Math.abs(2*L-1)):0;
+  const H=d?(mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4)*60:0;
+  return [((H%360)+360)%360, S*100, L*100]; }
+/* palette FAMILIES — the shape-archetype idea applied to colour. The eye reads a palette by its
+   CONTRAST STRUCTURE (which layer is light, which dark, how far apart), and the old single
+   formula only ever produced one: deep ground + mid-bright motif. Each family is a distinct
+   structure, jittered within itself; the hue still wanders from the current motif colour. */
+function palFamGuess(){                              // which family the CURRENT palette lives in
+  const [,,bgL]=hexHsl($('cBg').value), [fgH,,fgL]=hexHsl($('cFg').value), [bgH]=hexHsl($('cBg').value);
+  if(bgL>70) return 'papier';
+  if(bgL<15&&fgL>80) return 'contraste';
+  const dH=Math.min(Math.abs(fgH-bgH),360-Math.abs(fgH-bgH));
+  if(dH<24&&fgL<45) return 'nuit';
+  return 'chocolat';
+}
 function rndPalette(t,hue){
   const baseH=hexHue($('cFg').value)+(rrand()*2-1)*t*hue;         // wander from the current motif hue
-  $('cBg').value=hsl2hex(baseH+(rrand()*2-1)*14, 24+rrand()*24, 13+rrand()*12);   // a deep ground
-  $('cFg').value=hsl2hex(baseH+(rrand()*2-1)*t*30, 36+rrand()*26, 48+rrand()*15); // brighter motif — saturation held in a tasteful band
-  $('cAc').value=rchance(0.65)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), 38+rrand()*22, 50+rrand()*12);
-  olAuto=true;                                       // let the outline colour re-derive from the new gold
+  if(!RNDCFG.colour.fam){                            // families off: the plain single-formula wander
+    $('cBg').value=hsl2hex(baseH+(rrand()*2-1)*14, 24+rrand()*24, 13+rrand()*12);
+    $('cFg').value=hsl2hex(baseH+(rrand()*2-1)*t*30, 36+rrand()*26, 48+rrand()*15);
+    $('cAc').value=rchance(0.65)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), 38+rrand()*22, 50+rrand()*12);
+    olAuto=true; return;
+  }
+  // Variation gates the JUMP between families: subtle rolls stay in the current structure
+  const fam=rchance(t,0.85)?rpick(['chocolat','papier','papier','contraste','nuit','ecurie','bicolore'])
+                           :palFamGuess();
+  const j=(a,b)=>a+rrand()*(b-a);
+  if(fam==='papier'){                                // the house look: ivory ground, deep ink motif
+    $('cBg').value=hsl2hex(baseH+j(-16,16), j(16,36), j(86,93));
+    $('cFg').value=hsl2hex(baseH+j(-1,1)*t*30, j(30,58), j(24,40));
+    $('cAc').value=rchance(0.5)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), j(35,55), j(32,46));
+  }else if(fam==='contraste'){                       // near-black under near-cream — poster-strong
+    $('cBg').value=hsl2hex(baseH+j(-20,20), j(8,22), j(7,14));
+    $('cFg').value=hsl2hex(baseH+j(-20,20), j(18,40), j(84,92));
+    $('cAc').value=rchance(0.5)?$('cFg').value:hsl2hex(baseH+j(90,270), j(45,65), j(48,60));
+  }else if(fam==='nuit'){                            // tone-on-tone dark — quiet, almost damask
+    const H=baseH+j(-8,8);
+    $('cBg').value=hsl2hex(H, j(18,40), j(11,17));
+    $('cFg').value=hsl2hex(H+j(-10,10), j(20,42), j(26,40));
+    $('cAc').value=rchance(0.6)?$('cFg').value:hsl2hex(H+j(-10,10), j(20,42), j(38,52));
+  }else if(fam==='ecurie'){                          // the stable stripe: green + red on chocolate or ivory
+    const ivory=rchance(0.4);
+    $('cBg').value=ivory?hsl2hex(j(38,48),j(20,32),j(88,93)):hsl2hex(j(20,32),j(28,45),j(13,20));
+    const green=hsl2hex(j(135,165),j(22,40),ivory?j(24,36):j(28,42));
+    const red=hsl2hex(j(4,14),j(38,55),ivory?j(32,42):j(36,48));
+    const gFirst=rchance(0.5);
+    $('cFg').value=gFirst?green:red; $('cAc').value=gFirst?red:green;
+  }else if(fam==='bicolore'){                        // two REAL colours — the accent guaranteed distinct
+    const dark=rchance(0.55);
+    $('cBg').value=dark?hsl2hex(baseH+j(-14,14),j(14,30),j(10,17)):hsl2hex(baseH+j(-14,14),j(16,32),j(86,93));
+    $('cFg').value=hsl2hex(baseH+j(-1,1)*t*24, j(45,68), dark?j(48,62):j(30,44));
+    $('cAc').value=hsl2hex(baseH+(rrand()<.5?1:-1)*j(95,175), j(45,65), dark?j(50,62):j(34,46));
+  }else{                                             // chocolat: the classic deep ground + brass motif
+    $('cBg').value=hsl2hex(baseH+j(-14,14), j(24,48), j(13,25));
+    $('cFg').value=hsl2hex(baseH+j(-1,1)*t*30, j(36,62), j(48,63));
+    $('cAc').value=rchance(0.55)?$('cFg').value:hsl2hex(baseH+120*(rrand()<.5?1:-1), j(38,60), j(50,62));
+  }
+  olAuto=true;                                       // the outline colour re-derives from the new palette
 }
 /* SCATTER draws a fresh piece from an ARCHETYPE library rather than sprinkling dots at random —
    independent per-dot noise reads as mush, while real ornament shapes have CORRELATED structure:
@@ -2431,13 +2486,14 @@ function rndShape(t,c){
    Tool preferences, not design state: persisted on their own key, never in a config/export. */
 const RND_DEF={
   shape :{amt:100,pos:1,scatter:1,drift:30,round:1,count:1,cntMin:4,cntMax:10,pieces:1,pMin:3,pMax:4,szMin:35,szMax:70},
-  colour:{amt:100,hue:160},
+  colour:{amt:100,hue:160,fam:1},                    // fam: draw palettes from FAMILIES, not one formula
   outline:{amt:100,flip:1},
   dots  :{amt:100,flip:1},
   relief:{amt:100,dMin:0,dMax:60},
   layout:{amt:100,flip:1},
   logo  :{amt:100,slots:1},
   picture:{amt:100,style:1,area:1},
+  roll  :{temper:0},                                 // temper: each roll commits to a character (off by default)
 };
 var RNDCFG=(()=>{ const c=JSON.parse(JSON.stringify(RND_DEF));
   try{ const s=JSON.parse(localStorage.getItem('lavoet-rnd')||'{}');
@@ -2470,6 +2526,9 @@ function setRndMode(m){
   if(RNDMODE==='picture'&&RNDOPEN) toggleRndPanel(RNDOPEN);   // a greyed-open gear panel reads as stuck
 }
 document.querySelectorAll('#rndModeSeg [data-rmode]').forEach(b=>b.addEventListener('click',()=>setRndMode(b.dataset.rmode)));
+/* the temperament toggle is a tool pref like the rest of RNDCFG — persisted, reset by the hold */
+$('rndTemper').checked=!!(RNDCFG.roll&&RNDCFG.roll.temper);
+$('rndTemper').addEventListener('change',()=>{ RNDCFG.roll.temper=$('rndTemper').checked?1:0; saveRnd(); });
 /* Variation opens at 100 on a first visit; after that it keeps whatever you set last */
 try{ const a=+localStorage.getItem('lavoet-rnd-amt');
   if(a>=5&&a<=100){ $('rndAmt').value=a; const o=document.querySelector('output[for="rndAmt"]'); if(o) o.value=a; } }catch(e){}
@@ -2487,7 +2546,10 @@ const RND_PANELS={
     ['chk','pieces','Change how many pieces'],
     ['pair','pMin','pMax','Pieces — between',2,8],
   ]},
-  colour:{t:'Colours',rows:[ ['rng','hue','Hue wander — up to',0,180,'°'] ]},
+  colour:{t:'Colours',rows:[
+    ['chk','fam','Draw from palette families (light, dark, high-contrast, stable-stripe…)'],
+    ['rng','hue','Hue wander — up to',0,180,'°'],
+  ]},
   outline:{t:'Outline',rows:[ ['chk','flip','May switch the outline on or off'] ]},
   dots:{t:'Dots',rows:[ ['chk','flip','May switch the dots on or off'] ]},
   relief:{t:'3D & shading',rows:[ ['pair','dMin','dMax','Depth — between',0,60] ]},
@@ -2557,6 +2619,47 @@ function wireRnd(host,groupOf,redraw){
 }
 wireRnd($('rndOpts'),()=>RNDOPEN,drawRndPanel);
 wireRnd($('rndPicBody'),()=>'picture',drawRndPicture);
+/* a TEMPERAMENT (optional): after the groups roll, one character — bold, fine, dense or airy —
+   pulls the correlated sliders its way. Independent uniform jitter lands every roll in samey
+   middles; a committed character reads as a deliberate design (the same lesson the scatter
+   archetypes taught the piece outline). Locks are honoured: only ticked groups move, on/off
+   flips only where that group's flip permission allows, and configured bounds still bind. */
+function applyTemper(on,tg){
+  const pull=(id,v,t)=>{ const el=$(id); if(!el||!t) return;
+    const min=+el.min, max=+el.max, st=+el.step||1;
+    let nv=+el.value+(Math.max(min,Math.min(max,v))-+el.value)*Math.min(1,t*1.35);
+    nv=Math.round(nv/st)*st;
+    setOut(id,+nv.toFixed(2)); };
+  const temper=rpick(['bold','fin','plein','aere']);
+  const cS=RNDCFG.shape, szLo=Math.min(cS.szMin,cS.szMax), szHi=Math.max(cS.szMin,cS.szMax);
+  const cR=RNDCFG.relief, dLo=Math.min(cR.dMin,cR.dMax), dHi=Math.max(cR.dMin,cR.dMax);
+  const tS=on('shape')?tg('shape'):0, tO=on('outline')?tg('outline'):0,
+        tD=on('dots')?tg('dots'):0, tR=on('relief')?tg('relief'):0;
+  if(temper==='bold'){                               // heavy: big motif, weighty border or deep relief
+    pull('scale',szHi-rrand()*0.15*(szHi-szLo),tS);
+    if(tO&&RNDCFG.outline.flip&&rchance(tO,0.85)) $('outlineOn').checked=true;
+    pull('outlineW',4.5+rrand()*2.5,tO);
+    pull('depth3d',Math.min(dHi,34+rrand()*20),tR); pull('shade3d',40+rrand()*18,tR);
+  }else if(temper==='fin'){                          // fine: hairline border, flat, delicate dots
+    pull('scale',szLo+(szHi-szLo)*(0.25+rrand()*0.2),tS);
+    if(tO&&RNDCFG.outline.flip&&rchance(tO,0.85)) $('outlineOn').checked=true;
+    pull('outlineW',0.4+rrand()*0.8,tO);
+    pull('depth3d',dLo,tR);
+    if(tD&&RNDCFG.dots.flip&&rchance(tD,0.7)) $('accentOn').checked=true;
+    pull('accentSize',4+rrand()*3,tD);
+  }else if(temper==='plein'){                        // dense: large pieces packed tight, dotted
+    pull('scale',szHi-rrand()*0.25*(szHi-szLo),tS);
+    pull('pinGap',4+rrand()*8,tS); pull('pinHole',4+rrand()*10,tS);
+    if(tD&&RNDCFG.dots.flip&&rchance(tD,0.7)) $('accentOn').checked=true;
+    pull('accentSize',8+rrand()*6,tD);
+  }else{                                             // aéré: small motif in open ground, quiet accents
+    pull('scale',szLo+rrand()*0.2*(szHi-szLo),tS);
+    pull('pinGap',22+rrand()*12,tS); pull('pinHole',26+rrand()*16,tS);
+    pull('depth3d',Math.min(dHi,rrand()*14),tR);
+    if(tD&&RNDCFG.dots.flip&&rchance(tD,0.5)) $('accentOn').checked=false;
+    pull('accentSize',3+rrand()*3,tD);
+  }
+}
 function randomize(){
   const T=Math.max(0.05,(+$('rndAmt').value||45)/100);
   const on=g=>{ const el=$('rnd_'+g); return el&&el.checked; };
@@ -2617,6 +2720,7 @@ function randomize(){
     rndChk('mqFig',t,0.85); rndChk('mqText',t,0.6);
     if(!chk('mqFig')&&!chk('mqText')) $('mqFig').checked=true;   // an empty cleared slot is a hole, not a logo
     rndNum('mqSize',t); rndChk('logo3d',t,0.4); }
+  if(RNDCFG.roll&&RNDCFG.roll.temper) applyTemper(on,tg);   // then one character pulls it together
   syncHeaderToggles(); updateMirrors(); syncRows(); renderEd(); render();
 }
 /* the split button's mode: how many shuffles one press deals — 1 applies directly,
@@ -2708,6 +2812,7 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('rndSheet').hid
     $('rsZoom').value='100'; $('rsGrid').style.setProperty('--rsz',1);
     const tick={rnd_shape:1,rnd_colour:1,rnd_outline:1,rnd_layout:1};
     document.querySelectorAll('.rnd-groups input').forEach(cb=>cb.checked=!!tick[cb.id]);
+    $('rndTemper').checked=!!(RNDCFG.roll&&RNDCFG.roll.temper);   // back to its default (off)
     setRndMode('motif');
     if(RNDOPEN) drawRndPanel();                        // an open limits panel refreshes to the defaults
     drawRndPicture(); syncRows();
