@@ -432,7 +432,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Picture pattern</span><label class="acc-sw" title="Picture pattern on/off"><input type="checkbox" id="imgOn" aria-label="Picture pattern on/off"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Make a pattern from a picture instead of the motif — three house pictures are always here to play with. Drag the three dots in Fine-tune to choose what repeats; the picked area is pulled into the tiling shape. <b>Hexagon</b> is the honeycomb kaleidoscope (mirrored or spun slices); <b>Pentagon</b> weaves the Cairo pentagonal tiling; <b>Misc</b> holds the quieter styles — triangle, mirror, kaleidoscope, pinwheel. Uploads stay saved here — remove one with its ×.</p>
       <div class="btns"><button type="button" id="imgUpload">Upload a picture…</button></div>
@@ -460,7 +460,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
         <option value="stretch" selected>Stretch</option>
       </select>
       <input type="range" id="imgSize" min="8" max="100" value="50" hidden aria-hidden="true">
-      <div class="row img-need-on"><label for="imgScale">Zoom</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
+      <div class="row img-need-on"><label for="imgScale">Picture zoom</label><input type="range" id="imgScale" min="40" max="300" value="120"><output for="imgScale">120</output></div>
       <p class="hint" id="imgHint">No picture yet — upload one to start.</p>
     </div>
   </section>
@@ -480,7 +480,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Outline</span><label class="acc-sw" title="Outline on/off"><input type="checkbox" id="outlineOn"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Outline</span><label class="acc-sw" title="Outline on/off"><input type="checkbox" id="outlineOn" aria-label="Outline on/off"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Draws a line on the motif (turn it on with the switch in this section’s header). <b>Around the shape</b> traces one clean line hugging the outside of the whole motif — it doesn’t cut into the fill or show the seams between pieces. <b>Along each edge</b> instead strokes every edge of every piece, right on the outline you drew with the fine-tune points.</p>
       <div id="outlineRow">
@@ -497,7 +497,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Dots</span><label class="acc-sw" title="Dots on/off"><input type="checkbox" id="accentOn" checked><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Dots</span><label class="acc-sw" title="Dots on/off"><input type="checkbox" id="accentOn" checked aria-label="Dots on/off"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>The small accents in the gaps between motifs — use the switch in this section’s header to turn them on or off, then choose a shape, size, and colour.</p>
       <label class="chk"><input type="checkbox" id="dotsInLogoB" data-syncs="dotsInLogo">Dots in the logo area</label>
@@ -519,7 +519,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">3D &amp; shading</span><label class="acc-sw" title="3D on/off"><input type="checkbox" id="sw3d"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">3D &amp; shading</span><label class="acc-sw" title="3D on/off"><input type="checkbox" id="sw3d" aria-label="3D and shading on/off"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Makes the motif look raised — a lit top face over a darker side, lit from one direction. Depth 0 is flat. For a flat light/shadow split across the motif instead, use “Shade line” inside Fine-tune shape.</p>
       <div class="row"><label for="depth3d">Depth</label><input type="range" id="depth3d" min="0" max="60" value="0"><output for="depth3d">0</output></div>
@@ -536,14 +536,14 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
     <div class="acc-head"><span class="acc-title">Layout</span><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>How the motifs are arranged and spaced across the canvas.</p>
-      <div class="row"><label for="cell">Zoom</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
+      <div class="row"><label for="cell">Pattern zoom</label><input type="range" id="cell" min="48" max="240" value="104"><output for="cell">104</output></div>
       <label class="chk"><input type="checkbox" id="quinconce" checked>Diagonal layout</label>
       <label class="chk"><input type="checkbox" id="mirrorAlt">Mirror every other motif</label>
     </div>
   </section>
 
   <section class="acc">
-    <div class="acc-head"><span class="acc-title">Logo</span><label class="acc-sw" title="Logo on/off"><input type="checkbox" id="swLogo"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
+    <div class="acc-head"><span class="acc-title">Logo</span><label class="acc-sw" title="Logo on/off"><input type="checkbox" id="swLogo" aria-label="Logo on/off"><span class="tk"></span></label><button type="button" class="acc-q" aria-label="What is this?">?</button><span class="acc-chev">▸</span></div>
     <div class="acc-body">
       <p class="acc-info" hidden>Places the Lavoët bellboy logo in the centre of a swatch — on the motif pattern it replaces one motif or a block of four; on a picture pattern it sits on top, with a blurred patch or a solid colour behind it for legibility. It shows on swatches only — the downloadable tile stays a clean repeat.</p>
       <div class="mq-motif-only">
@@ -1452,6 +1452,14 @@ let IMGTRI=[[0.30,0.30],[0.75,0.35],[0.42,0.80]];// picked triangle: 3 corners, 
 let EDIMG0=null;                                 // drag baseline for the crop picker
 let TRI_IX=0;                                    // which triangle dot is being dragged
 function imgActive(){ return chk('imgOn') && !!(IMG&&IMG.el&&IMG.el.complete&&IMG.el.naturalWidth); }
+/* wait (briefly) for the active picture to finish decoding — a capture made right after
+   switching pictures would otherwise render the motif fallback instead of the photo */
+async function awaitActiveImage(ms=1500){
+  if(!(chk('imgOn')&&IMG&&IMG.el)) return;
+  const t0=performance.now();
+  while(!(IMG.el.complete&&IMG.el.naturalWidth)&&performance.now()-t0<ms)
+    await new Promise(r=>setTimeout(r,30));
+}
 function imgRegion(){                            // the picked square in source pixels, clamped inside
   const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight, m=Math.min(iw,ih);
   const P=Math.max(8,Math.min(m,IMGSEL.s*m));
@@ -1480,12 +1488,15 @@ function warpTri(ctx,imgEl,S,D,clipPad){
 let IMGTDIMS=null;                               // last tile size, for the footer read-outs
 function buildImgTile(){ const t=buildImgTileCore(); IMGTDIMS={w:t.width,h:t.height}; return t; }
 /* the picked triangle in source px — if the dots were dragged collinear (zero area, which
-   would render nothing), quietly use a safe spread instead so the pattern never goes blank */
+   would render nothing), quietly use a safe spread instead so the pattern never goes blank.
+   Collinearity is tested with |sin θ| — scale-free — NOT by comparing an area (px²) to a
+   length (px), which silently threw away small-but-valid picks on low-res pictures. */
 function imgTriSrc(){
   const iw=IMG.el.naturalWidth, ih=IMG.el.naturalHeight;
   const S=IMGTRI.map(p=>[p[0]*iw,p[1]*ih]);
-  const area=Math.abs((S[1][0]-S[0][0])*(S[2][1]-S[0][1])-(S[2][0]-S[0][0])*(S[1][1]-S[0][1]))/2;
-  return area>Math.min(iw,ih)?S:[[0.30*iw,0.30*ih],[0.75*iw,0.35*ih],[0.42*iw,0.80*ih]];
+  const ax=S[1][0]-S[0][0], ay=S[1][1]-S[0][1], bx=S[2][0]-S[0][0], by=S[2][1]-S[0][1];
+  const cross=Math.abs(ax*by-ay*bx), la=Math.hypot(ax,ay), lb=Math.hypot(bx,by);
+  return (la>1&&lb>1&&cross>0.02*la*lb)?S:[[0.30*iw,0.30*ih],[0.75*iw,0.35*ih],[0.42*iw,0.80*ih]];
 }
 function buildImgTileCore(){                     // one seamless tile on a canvas
   const u=Math.max(20,num('imgScale')||120), T2=2*u;
@@ -1715,7 +1726,26 @@ function buildImgSwatch(W,H,style=''){
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${style}<defs>${defs}</defs><rect width="${W}" height="${H}" fill="url(#fld)"/>${mq}</svg>`;
 }
-function saveIMGS(quiet){ try{ localStorage.setItem('lavoet-images',JSON.stringify(IMGS.filter(r=>!r.builtin))); }catch(e){ if(!quiet) alert('Could not keep this picture for next time (browser storage is full) — it still works for this visit.'); } }
+const IMG_DEAD=new Set();                          // ids deleted in THIS tab — never resurrect them on merge
+function saveIMGS(quiet){
+  try{
+    // merge-on-write: another tab may have added pictures since we loaded — a blind overwrite
+    // of the stored array would silently drop them. Union by id (minus our own deletions).
+    let stored=[]; try{ const v=JSON.parse(localStorage.getItem('lavoet-images')||'[]'); if(Array.isArray(v)) stored=v; }catch(e){}
+    const have=new Set(IMGS.map(r=>r.id));
+    for(const r of stored) if(r&&r.id&&typeof r.data==='string'&&/^data:image\//.test(r.data)&&!r.builtin&&!have.has(r.id)&&!IMG_DEAD.has(r.id)) IMGS.push(r);
+    localStorage.setItem('lavoet-images',JSON.stringify(IMGS.filter(r=>!r.builtin)));
+  }catch(e){ if(!quiet) alert('Could not keep this picture for next time (browser storage is full) — it still works for this visit.'); }
+}
+/* another tab wrote — refresh what it changed so this tab never acts on a stale view */
+window.addEventListener('storage',e=>{
+  if(e.key==='lavoet-images'){
+    let stored=[]; try{ const v=JSON.parse(e.newValue||'[]'); if(Array.isArray(v)) stored=v; }catch(e2){}
+    IMGS=[...IMGS.filter(r=>r.builtin), ...stored.filter(r=>r&&r.id&&typeof r.data==='string'&&/^data:image\//.test(r.data))];
+    drawGallery();
+  }
+  if(e.key==='lavoet-ps-saves'||e.key==='lavoet-ps-autos') renderSaves();
+});
 /* three built-in pictures, generated deterministically (seeded) — always present, never removable */
 function seedRnd(s){ let a=s>>>0; return ()=>{ a=(a*1664525+1013904223)>>>0; return a/4294967296; }; }
 function builtinPics(){
@@ -1768,7 +1798,7 @@ function cleanImgId(id){ return String(id||'').replace(/[^\w-]/g,'').slice(0,40)
 function drawGallery(){
   const g=$('imgGallery'); if(!g) return;
   g.innerHTML=IMGS.map(r=>`<div class="gitem${IMG&&IMG.id===r.id?' active':''}" data-id="${escapeHtml(r.id)}"><img src="${escapeHtml(r.data)}" alt="">${r.builtin?'':`<button type="button" class="gx" data-x="${escapeHtml(r.id)}" aria-label="Remove picture">×</button>`}</div>`).join('');
-  $('imgHint').textContent='Tap a picture to use it; in Fine-tune, drag the square to pick the part that repeats.';
+  $('imgHint').textContent='Tap a picture to use it; in Fine-tune, drag the three dots to pick the part that repeats.';
   drawRndPicture();                                  // the randomizer's pool mirrors the gallery (no-op before init)
 }
 function addImg(rec){
@@ -1823,6 +1853,7 @@ $('imgGallery').addEventListener('click',e=>{
   const x=e.target.closest('[data-x]');
   if(x){ const id=x.dataset.x;
     if(!confirm('Remove this picture? Saved designs that use it will fall back to the motif pattern.')) return;
+    IMG_DEAD.add(id);                                // so a cross-tab merge can't bring it back
     IMGS=IMGS.filter(r=>r.id!==id);
     if(IMG&&IMG.id===id){ IMG=null; $('imgOn').checked=false; }
     saveIMGS(true); drawGallery(); renderEd(); render(); return; }
@@ -2991,15 +3022,18 @@ $('cfgFile').addEventListener('change',async()=>{
   renderEd(); render();
 });
 
-$('dlTile').addEventListener('click',()=>{
+$('dlTile').addEventListener('click',async()=>{
+  await awaitActiveImage();                        // never export the motif fallback mid-decode
   download(`lavoet-tuile-${cfgHash()}.svg`,new Blob([svgWithConfig(buildTile())],{type:'image/svg+xml'}));
 });
 $('dlSwatch').addEventListener('click',async()=>{
+  await awaitActiveImage();
   const [W,H]=swatchDims();
   const style=marqueTextOn()?await embedFont():'';
   download(`lavoet-toile-${cfgHash()}.svg`,new Blob([svgWithConfig(buildSwatch(W,H,{style}))],{type:'image/svg+xml'}));
 });
 $('dlPng').addEventListener('click',async()=>{
+  await awaitActiveImage();
   const [W,H]=swatchDims(), k=2;
   const style=marqueTextOn()?await embedFont():'';
   const svg=buildSwatch(W,H,{style});
@@ -3061,21 +3095,29 @@ function applyParams(p){
   }
   for(const id of HASH_CHK) if(p.has(id)) $(id).checked=p.get(id)==='1';
   if(p.has('cOl')) olAuto=false; // an explicit outline colour was saved
+  // geometry: a present-but-INVALID value resets to the default exactly like an absent one —
+  // silently keeping the PREVIOUS design's geometry under the new config's colours would be
+  // a corrupt-file hybrid nobody asked for
+  SHAPE=null;
   if(p.has('shape')){
     const pts=p.get('shape').split(';').map(s=>s.split(':').map(Number));
     if(pts.length>=3&&pts.length<=24&&pts.every(q=>q.length===3&&q.every(Number.isFinite)&&Math.abs(q[0])<=2&&Math.abs(q[1])<=2&&q[2]>=0&&q[2]<=2)){
       SHAPE={pts};
     }
-  } else { SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())}; }   // no saved shape → the trunk (always custom now)
+  }
+  if(!SHAPE) SHAPE={pts:TRUNK_SHAPE.map(p=>p.slice())};   // absent or invalid → the trunk
+  SHADELINE=null;
   if(p.has('sline')){
     const pts=p.get('sline').split(';').map(s=>s.split(':').map(Number));
     if(pts.length===2&&pts.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&Math.abs(v)<=2))) SHADELINE=pts;
-  } else SHADELINE=null;
+  }
+  IMGSEL={x:0.5,y:0.5,s:0.5};
   if(p.has('imgsel')){
     const q=p.get('imgsel').split(':').map(Number);
     if(q.length===3&&q.every(Number.isFinite)&&q[2]>=0.05&&q[2]<=1)
       IMGSEL={x:Math.max(0,Math.min(1,q[0])), y:Math.max(0,Math.min(1,q[1])), s:q[2]};
   }
+  IMGTRI=[[0.30,0.30],[0.75,0.35],[0.42,0.80]];
   if(p.has('imgtri')){
     const t=p.get('imgtri').split(';').map(s=>s.split(':').map(Number));
     if(t.length===3&&t.every(q=>q.length===2&&q.every(v=>Number.isFinite(v)&&v>=0&&v<=1))) IMGTRI=t;
@@ -3158,8 +3200,9 @@ function cfgKey(s){
 function armAutosave(){                                 // a settled snapshot, ~2.5s after edits stop but ≥30s apart
   clearTimeout(autoT);
   const wait=Math.max(AUTO_SETTLE,AUTO_GAP-(Date.now()-autoAt));   // hold off until the gap has elapsed
-  autoT=setTimeout(()=>{
+  autoT=setTimeout(async()=>{
     if(typeof RND_ROLLING!=='undefined'&&RND_ROLLING) return;   // never snapshot a mid-sheet roll
+    await awaitActiveImage();                           // thumbnail must show the photo, not the fallback
     const cfg=paramsString(), key=cfgKey(cfg), arr=loadJSON(AUTOS_KEY);
     if(key===cfgKey(TRUNK_CFG)) return;                 // the pristine trunk motif isn't worth an autosave
     // only snapshot a state that isn't kept anywhere already: with three slots, a repeat
@@ -3210,9 +3253,10 @@ function stepHistory(d){
   histButtons();
 }
 /* one markup builder per kind, used by BOTH the panel list and the browser overlay, so a row
-   means the same thing (and routes the same way) wherever it is drawn. `i` is the index into
-   the FULL autosave array — never into a displayed slice — since that is what the click
-   handler splices/reads by. */
+   means the same thing (and routes the same way) wherever it is drawn. Autosaves are keyed by
+   their ts — a stable id, like manual saves — never by array index: an index goes stale the
+   moment a new autosave lands (or another tab writes), and a stale index deletes or loads the
+   WRONG snapshot. A stale ts just matches nothing. */
 function saveRow(s,tag){
   const n=escapeHtml(s.name);
   return `<div class="${tag}" data-load="m:${s.id}">${thumbTag(s.thumb,'m:'+s.id)}<div class="sv-meta">`
@@ -3220,10 +3264,10 @@ function saveRow(s,tag){
     +`<button type="button" class="ren" data-ren="${s.id}" title="Rename" aria-label="Rename ${n}">✎</button>`
     +`<button type="button" class="del" data-del="m:${s.id}" title="Delete" aria-label="Delete ${n}">×</button></div></div>`;
 }
-function autoRow(a,i,tag){
-  return `<div class="${tag} auto" data-load="a:${i}">${thumbTag(a.thumb,'a:'+i)}<div class="sv-meta">`
+function autoRow(a,tag){
+  return `<div class="${tag} auto" data-load="a:${a.ts}">${thumbTag(a.thumb,'a:'+a.ts)}<div class="sv-meta">`
     +`<span class="save-tag">Auto</span><span class="nm">${relTime(a.ts)}</span>`
-    +`<button type="button" class="del" data-del="a:${i}" title="Discard" aria-label="Discard autosave">×</button></div></div>`;
+    +`<button type="button" class="del" data-del="a:${a.ts}" title="Discard" aria-label="Discard autosave">×</button></div></div>`;
 }
 function moreBtn(kind,label){ return `<button type="button" class="saves-more" data-browse="${kind}">${label} →</button>`; }
 function renderSaves(){
@@ -3239,7 +3283,7 @@ function renderSaves(){
   h+='</div>';
   if(autos.length){
     h+='<div><div class="saves-h">Autosaves</div>';
-    autos.slice(0,AUTO_SHOW).forEach((a,i)=>{ h+=autoRow(a,i,'save-item'); });
+    autos.slice(0,AUTO_SHOW).forEach(a=>{ h+=autoRow(a,'save-item'); });
     if(autos.length>AUTO_SHOW) h+=moreBtn('a',`Earlier autosaves (${autos.length-AUTO_SHOW})`);
     h+='</div>';
   }
@@ -3253,7 +3297,7 @@ function renderBrowser(){
   const y=box.scrollTop;                                // a re-render (a delete, an autosave landing)
   $('svTitle').textContent=auto?`Autosaves — ${arr.length} kept`:`Your saves — ${arr.length}`;
   box.innerHTML=arr.length
-    ? arr.map((x,i)=>auto?autoRow(x,i,'sv-card'):saveRow(x,'sv-card')).join('')
+    ? arr.map(x=>auto?autoRow(x,'sv-card'):saveRow(x,'sv-card')).join('')
     : '<p class="sv-empty">Nothing here yet.</p>';
   box.scrollTop=y;                                      // …must not yank you back to the top
 }
@@ -3272,7 +3316,8 @@ function closeBrowser(){
   BROWSE_OPENER=null;
   if(back) back.focus();
 }
-$('saveNew').addEventListener('click',()=>{           // no prompt — name it with the moment, rename inline later
+$('saveNew').addEventListener('click',async()=>{      // no prompt — name it with the moment, rename inline later
+  await awaitActiveImage();                            // the thumbnail should show the photo, not the fallback
   const saves=loadJSON(SAVES_KEY), ts=Date.now();
   saves.unshift({id:'s'+ts.toString(36),name:stampName(ts),cfg:paramsString(),thumb:thumbSVG(),ts});
   saveJSON(SAVES_KEY,saves.slice(0,SAVE_KEEP));
@@ -3307,7 +3352,7 @@ function routeSaveClick(e){                            // one router for the pan
   if(del){
     const [t,k]=del.dataset.del.split(':');
     if(t==='m'){ if(!confirm('Delete this saved design?')) return; saveJSON(SAVES_KEY,loadJSON(SAVES_KEY).filter(s=>s.id!==k)); }
-    else { const arr=loadJSON(AUTOS_KEY); arr.splice(+k,1); saveJSON(AUTOS_KEY,arr); }
+    else saveJSON(AUTOS_KEY,loadJSON(AUTOS_KEY).filter(a=>String(a.ts)!==k));
     renderSaves(); if(!$('saveBrowser').hidden) renderBrowser(); return;
   }
   const ren=e.target.closest('[data-ren]');
@@ -3315,7 +3360,7 @@ function routeSaveClick(e){                            // one router for the pan
   const row=e.target.closest('[data-load]');
   if(row){
     const [t,k]=row.dataset.load.split(':');
-    const src=t==='m'?loadJSON(SAVES_KEY).find(s=>s.id===k):loadJSON(AUTOS_KEY)[+k];
+    const src=t==='m'?loadJSON(SAVES_KEY).find(s=>s.id===k):loadJSON(AUTOS_KEY).find(a=>String(a.ts)===k);
     if(src){ applyCfg(src.cfg); closeBrowser(); }      // you picked one — get out of the way
   }
 }
