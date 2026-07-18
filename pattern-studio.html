@@ -3203,6 +3203,7 @@ function armAutosave(){                                 // a settled snapshot, ~
   autoT=setTimeout(async()=>{
     if(typeof RND_ROLLING!=='undefined'&&RND_ROLLING) return;   // never snapshot a mid-sheet roll
     await awaitActiveImage();                           // thumbnail must show the photo, not the fallback
+    if(typeof RND_ROLLING!=='undefined'&&RND_ROLLING) return;   // …and a roll may have started during the wait
     const cfg=paramsString(), key=cfgKey(cfg), arr=loadJSON(AUTOS_KEY);
     if(key===cfgKey(TRUNK_CFG)) return;                 // the pristine trunk motif isn't worth an autosave
     // only snapshot a state that isn't kept anywhere already: with three slots, a repeat
