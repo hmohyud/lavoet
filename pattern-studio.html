@@ -137,11 +137,12 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .rs-zoom>span{font:600 12px/1 var(--sans);color:var(--sepia)}
 .rs-zoom input{width:104px;height:20px;accent-color:var(--brass)}
 /* the emblem picker: figure cards, then the wordmark cards BENEATH — pictures, like Examples */
-.mq-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
-.mq-pick button{display:flex;flex-direction:column;gap:5px;padding:5px;border:1px solid var(--hair);background:none;cursor:pointer;color:var(--ink);font:500 9.5px var(--sans);letter-spacing:.05em;align-items:center;min-width:0}
+/* the cards FLEX to fill the row evenly however many there are — a fixed 3-col grid left a
+   ragged blank third column whenever the "My …" card didn't exist yet */
+.mq-pick{display:flex;gap:8px;margin-top:8px}
+.mq-pick button{flex:1;display:flex;flex-direction:column;gap:5px;padding:5px;border:1px solid var(--hair);background:none;cursor:pointer;color:var(--ink);font:500 9.5px var(--sans);letter-spacing:.05em;align-items:center;min-width:0}
 .mq-pick button:hover{border-color:var(--brass)}
 .mq-pick button[aria-pressed="true"]{border-color:var(--ink);background:color-mix(in srgb,var(--brass) 10%,transparent);font-weight:600}
-.mq-pick .mqp-wide{grid-column:span 2}
 .mqp-th{width:100%;aspect-ratio:5/4;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:repeating-conic-gradient(#e6e0d0 0% 25%,#f7f3e8 0% 50%) 0 0/12px 12px}
 .mqp-th svg{height:88%;color:var(--choc)}
 .mqp-th img{max-width:92%;max-height:92%;display:block}
@@ -354,9 +355,11 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   #stage.pat-focus .ed-bar{display:none}              /* the strip is all canvas; tools return on focus */
   /* the unfocused editor strip invites the tap back — a hint in its blank flank */
   #stage.pat-focus .ed-tap-hint{display:flex;align-items:center;gap:5px;position:absolute;right:10px;top:50%;transform:translateY(-50%);font:600 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--sepia);pointer-events:none;z-index:2}
-  /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room */
+  /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room;
+     a right-edge fade says "more tools this way" instead of a bare mid-button cut */
   .ed-hint{display:none}
-  .ed-bar{padding:6px 10px}
+  .ed-bar{padding:6px 10px;position:relative}
+  .ed-bar::after{content:"";position:absolute;right:0;top:0;bottom:0;width:26px;background:linear-gradient(90deg,transparent,var(--paper));pointer-events:none}
   .ed-btns{flex-wrap:nowrap;overflow-x:auto;width:100%;padding-bottom:3px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
   .ed-btns>*{flex:none}
   .ed-btns button{padding:11px 12px;font-size:12px;white-space:nowrap}
