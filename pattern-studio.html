@@ -265,6 +265,9 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 .starter-card .save-thumb{width:100%;height:auto;aspect-ratio:4/3}
 .starter-nm{font:500 10px var(--sans);letter-spacing:.04em;text-align:center}
 /* undo/redo sit just above the reset, grouping the "step back" controls together */
+/* inline button icons — SVG, not arrow glyphs: U+21B6/21A9/21BB render as tofu or get
+   hijacked into emoji presentation on phones */
+.ic{vertical-align:-2px;margin-right:4px}
 .hist-row{display:flex;gap:8px;margin-bottom:10px}
 .hist-btn{flex:1;font:600 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;padding:9px 8px;background:none;border:1px solid var(--hair);color:var(--ink);cursor:pointer}
 .hist-btn:hover:not(:disabled){border-color:var(--brass);color:var(--brass)}
@@ -348,7 +351,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   .ed-toggle{display:none}                            /* tap-to-focus replaces the title-bar toggle */
   #split{display:none}                                /* the phone split is fixed; drag-resize is desktop-only */
   .stage-foot{display:none}                           /* tile/swatch facts don't earn their space here */
-  #stage.editing #shapeEd{height:35vh!important;flex:none}  /* Fine-tune focused: big canvas… */
+  #stage.editing #shapeEd{height:40vh!important;flex:none}  /* Fine-tune focused: big canvas… */
   #stage.editing #preview{height:16vh}                /* …with the pattern still live below — tap it to focus it */
   #stage.editing.pat-focus #shapeEd{height:16vh!important}  /* Pattern focused: editor shrinks to a strip… */
   #stage.editing.pat-focus #preview{height:38vh}      /* …and the pattern gets the room */
@@ -634,8 +637,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
   <div id="resetBar">
     <div class="hist-row" role="group" aria-label="Undo and redo">
-      <button type="button" id="undoBtn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>↶ Undo</button>
-      <button type="button" id="redoBtn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled>↷ Redo</button>
+      <button type="button" id="undoBtn" class="hist-btn" title="Undo (Ctrl+Z)" aria-label="Undo" disabled><svg class="ic" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.3 2.8 3 6l3.3 3.2"/><path d="M3.4 6h6.2a3.7 3.7 0 0 1 0 7.4H6.2"/></svg>Undo</button>
+      <button type="button" id="redoBtn" class="hist-btn" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled><svg class="ic" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 2.8 13 6l-3.3 3.2"/><path d="M12.6 6H6.4a3.7 3.7 0 0 0 0 7.4h3.4"/></svg>Redo</button>
     </div>
     <button type="button" id="resetAll" class="rst" title="Returns the design to the original trunk motif — and the logo to the house bellboy and LAVOËT wordmark, so any emblem edits or custom wordmark are wiped. Your saved designs and uploaded pictures are kept." aria-label="Hold to reset everything to the original trunk motif, including any logo modifications">
       <span class="rst-fill" aria-hidden="true"></span>
@@ -648,7 +651,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
 <section id="stage">
   <div id="shapeEd">
-    <span class="ed-tap-hint" aria-hidden="true">👆 tap to edit</span>
+    <span class="ed-tap-hint" aria-hidden="true"><svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 10.8V4.6a1.35 1.35 0 0 1 2.7 0v4.7l2.9.8a2 2 0 0 1 1.45 2.2l-.45 2.5a2.6 2.6 0 0 1-2.56 2.2h-2.5a3 3 0 0 1-2.3-1.1l-2.2-2.7a1.25 1.25 0 0 1 1.85-1.65l1.12 1.1"/><path d="M5.4 3.7a5.2 5.2 0 0 1 9.1 0" opacity=".45"/></svg>tap to edit</span>
     <div class="ed-toggle">
       <span>✎ Fine-tune shape</span>
     </div>
@@ -745,7 +748,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
       <div class="row"><label for="leTol">Tolerance</label><input type="range" id="leTol" min="4" max="120" value="40"><output for="leTol">40</output></div>
       <p class="le-hint" id="leHint">Pick a tool. Crop: drag a box over the picture. Erase: click the colour to remove — checkerboard shows through where it’s gone.</p>
       <div class="le-tools">
-        <button type="button" id="leUndo">↩ Undo</button>
+        <button type="button" id="leUndo"><svg class="ic" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.3 2.8 3 6l3.3 3.2"/><path d="M3.4 6h6.2a3.7 3.7 0 0 1 0 7.4H6.2"/></svg>Undo</button>
         <button type="button" id="leReset" title="Back to the picture as it opened">Reset</button>
         <button type="button" id="leClear" class="le-hold" title="Wipe the canvas blank — hold to confirm (Undo brings it back)"><span class="rst-fill" aria-hidden="true"></span><span class="rst-label">Hold to clear</span></button>
         <button type="button" id="leUse" class="le-use">✓ Use emblem</button>
@@ -756,7 +759,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 
 <div id="rndSheet" hidden role="dialog" aria-modal="true" aria-label="Nine shuffles — pick one">
   <div class="sv-panel">
-    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><span class="rs-zoom" title="Thumbnail zoom"><span aria-hidden="true">−</span><input type="range" id="rsZoom" min="100" max="300" value="100" aria-label="Thumbnail zoom"><span aria-hidden="true">+</span></span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set">↻ Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
+    <div class="sv-head"><span class="sv-title" id="rsTitle">Nine ideas — pick one</span><span class="rs-zoom" title="Thumbnail zoom"><span aria-hidden="true">−</span><input type="range" id="rsZoom" min="100" max="300" value="100" aria-label="Thumbnail zoom"><span aria-hidden="true">+</span></span><button type="button" id="rsAgain" class="rs-again" title="Deal a fresh set"><svg class="ic" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1"/><path d="M12 1.6v2.6H9.4"/></svg>Reroll</button><button type="button" class="sv-close" id="rsClose" title="Close" aria-label="Close">×</button></div>
     <div class="rs-grid" id="rsGrid"></div>
   </div>
 </div>
