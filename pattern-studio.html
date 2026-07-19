@@ -65,7 +65,7 @@ main{flex:1;display:flex;min-height:0}
 .acc-info{position:absolute;top:calc(100% - 7px);right:4px;z-index:40;width:max-content;max-width:calc(100% - 8px);margin:0;padding:10px 13px;background:var(--ink);color:var(--paper);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.3);font:400 11px/1.55 var(--sans);letter-spacing:normal;text-transform:none;cursor:default}
 .acc-info::after{content:"";position:absolute;top:-6px;right:22px;border:6px solid transparent;border-top-width:0;border-bottom-color:var(--ink)}
 .acc-info b{color:var(--brass)}
-.view-seg{display:none}                              /* phone-only: focus the editor or the pattern */
+.ed-tap-hint{display:none}                           /* phone-only: shows on the unfocused editor strip */
 .seg-lbl{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sepia);margin:2px 0 6px}
 .seg{display:flex;border:1px solid var(--ink);width:100%}
 .seg button{flex:1;padding:9px 2px;font:500 11px var(--sans);letter-spacing:.08em;background:none;border:none;border-right:1px solid var(--ink);color:var(--ink);cursor:pointer}
@@ -284,7 +284,7 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 #stage{flex:1;display:flex;flex-direction:column;min-width:0}
 #preview{flex:1;min-height:0}
 #preview svg{display:block;width:100%;height:100%}
-#shapeEd{flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
+#shapeEd{position:relative;flex:1.25;min-height:0;display:flex;flex-direction:column;border-bottom:1px solid var(--hair)}
 .ed-body{flex:1;min-height:0;display:flex;flex-direction:column}
 .ed-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:5px 10px 5px 14px;border-bottom:1px solid var(--hair);font:600 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
 /* draggable divider between the editor and the pattern — resize the split to taste */
@@ -327,7 +327,6 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   main{flex-direction:column;overflow-y:auto;overflow-x:hidden}
   #stage{order:-1;position:sticky;top:0;z-index:5;background:var(--paper);flex:none;box-shadow:0 1px 0 var(--hair)}
   #preview{flex:none}
-  .stage-foot{padding:6px 14px;font-size:9px;flex-wrap:wrap;row-gap:2px}   /* wrap, never clip */
   #panel{width:100%;border-right:none;overflow:visible;padding:0 16px 44px}
   .row{grid-template-columns:1fr 96px 36px;min-height:44px}
   input[type=range]{height:34px}
@@ -337,26 +336,24 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
   select{padding:11px 8px;font-size:13px}
   .btns button{padding:14px 10px}
   .col input[type=color]{height:46px}
-  .foot-brand{display:none}                           /* phone: the footer keeps only the tile/swatch facts */
   .rnd-gear{width:36px;height:36px;font-size:15px}    /* the randomize limit gears need a real tap target */
   #saveBrowser{padding:0}                             /* the browser goes full-screen on a phone */
   .sv-panel{max-width:none;height:100%}
   .sv-body{grid-template-columns:repeat(auto-fill,minmax(124px,1fr))}
   .sv-close{width:38px;height:38px}
   .saves-more{padding:13px 8px}
-  /* phone: BOTH views stay stacked and visible — the switcher just decides which one is big.
-     The stage takes most of the screen; the accordions scroll below it. */
-  .view-seg{display:flex;border:none;border-bottom:1px solid var(--hair)}
-  .view-seg button{flex:1;padding:13px 2px;font:500 12px var(--sans);letter-spacing:.1em;background:none;border:none;border-right:1px solid var(--hair);color:var(--ink);cursor:pointer}
-  .view-seg button:last-child{border-right:none}
-  .view-seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-  .ed-toggle{display:none}                            /* the switcher replaces the title-bar toggle */
+  /* phone: BOTH views stay stacked and visible — TAPPING a view focuses it (no switcher bar,
+     no footer: every spare pixel goes to the controls below). */
+  .ed-toggle{display:none}                            /* tap-to-focus replaces the title-bar toggle */
   #split{display:none}                                /* the phone split is fixed; drag-resize is desktop-only */
-  #stage.editing #shapeEd{height:44vh!important;flex:none}  /* Fine-tune focused: big canvas… */
-  #stage.editing #preview{height:16vh}                /* …with the pattern still live below */
+  .stage-foot{display:none}                           /* tile/swatch facts don't earn their space here */
+  #stage.editing #shapeEd{height:35vh!important;flex:none}  /* Fine-tune focused: big canvas… */
+  #stage.editing #preview{height:16vh}                /* …with the pattern still live below — tap it to focus it */
   #stage.editing.pat-focus #shapeEd{height:16vh!important}  /* Pattern focused: editor shrinks to a strip… */
-  #stage.editing.pat-focus #preview{height:48vh}      /* …and the pattern gets the room */
+  #stage.editing.pat-focus #preview{height:38vh}      /* …and the pattern gets the room */
   #stage.pat-focus .ed-bar{display:none}              /* the strip is all canvas; tools return on focus */
+  /* the unfocused editor strip invites the tap back — a hint in its blank flank */
+  #stage.pat-focus .ed-tap-hint{display:flex;align-items:center;gap:5px;position:absolute;right:10px;top:50%;transform:translateY(-50%);font:600 10px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--sepia);pointer-events:none;z-index:2}
   /* the toolbar becomes ONE horizontally-scrollable strip so the canvas keeps its room */
   .ed-hint{display:none}
   .ed-bar{padding:6px 10px}
@@ -647,11 +644,8 @@ select{font:11.5px var(--sans);color:var(--ink);background:var(--paper);border:1
 </aside>
 
 <section id="stage">
-  <div class="view-seg" role="group" aria-label="View">
-    <button type="button" id="vwEd" aria-pressed="true">✎ Fine-tune</button>
-    <button type="button" id="vwPat" aria-pressed="false">▦ Pattern</button>
-  </div>
   <div id="shapeEd">
+    <span class="ed-tap-hint" aria-hidden="true">👆 tap to edit</span>
     <div class="ed-toggle">
       <span>✎ Fine-tune shape</span>
     </div>
@@ -1993,7 +1987,10 @@ function render(){
       ?'Drag the three dots to shape the piece that repeats; drag inside it to move it.'
       :'Drag the points. Pick one, then slide Sharp ↔ Rounded to shape it.';
     const W=Math.max(200,Math.round(preview.clientWidth)), H=Math.max(200,Math.round(preview.clientHeight));
-    preview.innerHTML=buildSwatch(W,H);
+    // phones build the swatch 1.5× the pane and let the viewBox scale it down — 50% more
+    // repeats in view, so the tiny pane still reads as a PATTERN rather than two motifs
+    const zk=matchMedia('(max-width:760px)').matches?1.5:1;
+    preview.innerHTML=buildSwatch(Math.round(W*zk),Math.round(H*zk));
     // cover, don't letterbox — a short strip (e.g. phone while editing) crops instead of shrinking
     const psvg=preview.querySelector('svg'); if(psvg) psvg.setAttribute('preserveAspectRatio','xMidYMid slice');
     const T=tileSize(), tw=(im&&IMGTDIMS)?IMGTDIMS.w:T, th=(im&&IMGTDIMS)?IMGTDIMS.h:T;
@@ -2284,16 +2281,20 @@ $('edDel').addEventListener('click',()=>{
     try{ localStorage.setItem('lavoet-split',parseFloat(ed.style.height)||''); }catch(e){} });
   sp.addEventListener('dblclick',()=>{ ed.style.flex=''; ed.style.height=''; try{ localStorage.removeItem('lavoet-split'); }catch(e){} });
 })();
-// phone focus: both views stay visible, the switcher decides which one is BIG (pat-focus class)
+// phone focus: both views stay visible; TAPPING a view makes it the big one (pat-focus class)
 function setFocus(pat){
   $('stage').classList.toggle('pat-focus',pat);
-  $('vwEd').setAttribute('aria-pressed',pat?'false':'true');
-  $('vwPat').setAttribute('aria-pressed',pat?'true':'false');
   try{ localStorage.setItem('lavoet-focus',pat?'pat':'ed'); }catch(e){}
   renderEd(); render();
 }
-$('vwEd').addEventListener('click',()=>setFocus(false));
-$('vwPat').addEventListener('click',()=>setFocus(true));
+const isPhone=()=>matchMedia('(max-width:760px)').matches;
+$('preview').addEventListener('click',()=>{
+  if(isPhone()&&!$('stage').classList.contains('pat-focus')) setFocus(true);
+});
+$('shapeEd').addEventListener('click',()=>{
+  // any touch on the mini strip — including finishing a dot drag — brings the editor back
+  if(isPhone()&&$('stage').classList.contains('pat-focus')) setFocus(false);
+});
 /* motif extracted photogrammetrically from the Bagage Collection 1930s malle
    courrier photo: 24 motif instances registered and averaged, C4-symmetrized,
    Richardson-Lucy deconvolved, contour-traced */
